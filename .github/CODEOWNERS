@@ -5,7 +5,13 @@
 *  @Universal-Commerce-Protocol/devops-maintainers
 
 # Governance - Managed by Community Leads.
-/GOVERNANCE.md    @Universal-Commerce-Protocol/governance-council
-/CONTRIBUTING.md  @Universal-Commerce-Protocol/governance-council
+/GOVERNANCE.md      @Universal-Commerce-Protocol/governance-council
+/CONTRIBUTING.md    @Universal-Commerce-Protocol/governance-council
 /CODE_OF_CONDUCT.md @Universal-Commerce-Protocol/governance-council
-/SECURITY.md      @Universal-Commerce-Protocol/governance-council
+/SECURITY.md        @Universal-Commerce-Protocol/governance-council
+
+# Infrastructure & Tooling
+/.github/           @Universal-Commerce-Protocol/devops-maintainers
+/renovate.json      @Universal-Commerce-Protocol/devops-maintainers
+/.pre-commit-config.yaml @Universal-Commerce-Protocol/devops-maintainers
+/.gitignore         @Universal-Commerce-Protocol/devops-maintainers

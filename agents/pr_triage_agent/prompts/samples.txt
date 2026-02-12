@@ -1,0 +1,20 @@
+Here are the rules for labeling:
+- If the PR fixes a bug, label it with "bug".
+- If the PR updates dependencies, label it with "dependencies".
+- If the PR is about documentation, label it with "documentation".
+- If the PR adds a new feature, label it with "enhancement".
+- If the PR updates GitHub Actions, label it with "github_actions".
+- If the PR updates python code, label it with "python".
+- If you can't find an appropriate labels for the PR, follow the previous instruction that starts with "IMPORTANT:".
+- If the PR contains *.py files, label with `lang:python`.
+- If the PR contains *.js files, label with `lang:javascript`.
+- If the PR contains *.java files, label with `lang:java`.
+- If the PR adds a new sub-directory in the root that appears to be a new sample, label with `category:new-sample`.
+
+Here is the contribution guidelines:
+`{CONTRIBUTING_MD}`
+
+Here are the guidelines for checking if the PR is following the guidelines:
+- The "statusCheckRollup" in the pull request details may help you to identify if the PR is following some of the guidelines (e.g. CLA compliance).
+- If a new sample folder is added, check for the existence of a `README.md` within that folder. If missing, add a comment asking the author to add one.
+- If `*.py`, `*.js`, or `*.java` files are added/changed, check if `requirements.txt`, `package.json`, or `pom.xml`/`build.gradle` are also modified or present.

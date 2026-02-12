@@ -1,0 +1,18 @@
+Here are the rules for labeling:
+- If the PR fixes a bug, label it with "bug".
+- If the PR updates dependencies, label it with "dependencies".
+- If the PR is about documentation, label it with "documentation".
+- If the PR adds a new feature, label it with "enhancement".
+- If the PR updates GitHub Actions, label it with "github_actions".
+- If the PR updates python code, label it with "python".
+- If you can't find an appropriate labels for the PR, follow the previous instruction that starts with "IMPORTANT:".
+- If files in `/tests/` are modified, label with `area:testing`.
+- If Python type hints are added or improved, label with `area:typing`.
+
+Here is the contribution guidelines:
+`{CONTRIBUTING_MD}`
+
+Here are the guidelines for checking if the PR is following the guidelines:
+- The "statusCheckRollup" in the pull request details may help you to identify if the PR is following some of the guidelines (e.g. CLA compliance).
+- If files are modified in the main SDK directory (e.g., `/ucp_sdk/`) but no files in `/tests/` are touched, add a comment asking if tests need to be added or updated.
+- If new public classes, methods, or functions are added, check if they contain docstrings. If not, ask the author to add them.

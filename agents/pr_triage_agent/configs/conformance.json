@@ -1,0 +1,19 @@
+{
+  "allowed_labels": [
+    "area:test-infra",
+    "bug",
+    "category:new-test",
+    "dependencies",
+    "documentation",
+    "duplicate",
+    "enhancement",
+    "github_actions",
+    "good first issue",
+    "help wanted",
+    "invalid",
+    "python",
+    "question",
+    "TC review",
+    "wontfix"
+  ]
+}

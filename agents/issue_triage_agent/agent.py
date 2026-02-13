@@ -16,6 +16,8 @@ import os
 from typing import Any
 
 from google.adk.agents.llm_agent import Agent
+from issue_triage_agent.category_mappings import CATEGORY_GUIDELINES
+from issue_triage_agent.category_mappings import CATEGORY_TO_OWNER
 from issue_triage_agent.settings import GITHUB_BASE_URL
 from issue_triage_agent.settings import IS_INTERACTIVE
 from issue_triage_agent.settings import OWNER
@@ -29,33 +31,8 @@ from issue_triage_agent.utils import read_file
 import requests
 
 
-CATEGORY_TO_OWNER = {
-    "core-protocol": "technical-committee",
-    "governance": "governance-committee",
-    "capability": "maintainers",
-    "documentation": "maintainers",
-    "infrastructure": "devops-maintainers",
-    "maintenance": "devops-maintainers",
-    "sdk": "devops-maintainers",
-    "samples-conformance": "maintainers",
-}
-
 CATEGORIES = list(CATEGORY_TO_OWNER.keys())
 
-CATEGORY_GUIDELINES = """
-      Category rubric and disambiguation rules:
-      - "core-protocol": Issues related to base communication layer, global context, breaking changes or major refactors.
-      - "governance": Issues related to project governance, contribution guidelines, licensing.
-      - "capability": Issues suggesting new schemas (Discovery, Cart, etc.) or extensions, or bugs in existing ones.
-      - "documentation": Issues about documentation (README, guides).
-      - "infrastructure": Issues about CI/CD, linters, build scripts, repo setup.
-      - "maintenance": Issues about version bumps, lockfile updates, minor bug fixes, dependency updates.
-      - "sdk": Issues related to language specific SDKs.
-      - "samples-conformance": Issues about samples or conformance suite.
-
-      When unsure between categories, prefer the most specific match. If a category
-      cannot be assigned confidently, do not call the labeling tool.
-"""
 
 APPROVAL_INSTRUCTION = (
     "Do not ask for user approval for labeling! If you can't find appropriate"

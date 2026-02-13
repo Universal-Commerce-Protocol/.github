@@ -22,6 +22,7 @@ CATEGORY_TO_OWNER = {
     "maintenance": "devops-maintainers",
     "sdk": "devops-maintainers",
     "samples-conformance": "maintainers",
+    "ucp-schema": "devops-maintainers",
 }
 
 # Guidance for the AI to determine which category an issue belongs to
@@ -29,12 +30,13 @@ CATEGORY_GUIDELINES = """
       Category rubric and disambiguation rules:
       - "core-protocol": Issues related to base communication layer, global context, breaking changes or major refactors.
       - "governance": Issues related to project governance, contribution guidelines, licensing.
-      - "capability": Issues suggesting new schemas (Discovery, Cart, etc.) or extensions, or bugs in existing ones.
+      - "capability": Issues suggesting new schemas (Discovery, Cart, etc.) or extensions, or bugs in the semantic content of existing ones.
       - "documentation": Issues about documentation (README, guides).
       - "infrastructure": Issues about CI/CD, linters, build scripts, repo setup.
       - "maintenance": Issues about version bumps, lockfile updates, minor bug fixes, dependency updates.
       - "sdk": Issues related to language specific SDKs.
       - "samples-conformance": Issues about samples or conformance suite.
+      - "ucp-schema": Issues related to the ucp-schema CLI tool, validator, schema resolution logic, or Rust library.
 
       When unsure between categories, prefer the most specific match. If a category
       cannot be assigned confidently, do not call the labeling tool.

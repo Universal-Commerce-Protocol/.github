@@ -1,0 +1,77 @@
+name: Reusable Weekly Metrics
+on:
+  workflow_call:
+    inputs:
+      repo_full_name:
+        required: true
+        type: string
+    secrets:
+      GH_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  build:
+    name: weekly metrics
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get dates for last week
+        shell: bash
+        run: |
+          last_day=$(date -d "last sunday" +%Y-%m-%d)
+          first_day=$(date -d "$last_day - 6 days" +%Y-%m-%d)
+          echo "weekly_period=$first_day..$last_day" >> "$GITHUB_ENV"
+          echo "Reporting period for ${{ inputs.repo_full_name }}: $first_day to $last_day"
+
+      - name: Run metrics (Issues)
+        uses: github/issue-metrics@v3
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          SEARCH_QUERY: 'repo:${{ inputs.repo_full_name }} is:issue created:${{ env.weekly_period }} -reason:"not planned"'
+          OUTPUT_FILE: 'metrics_issues.md'
+          HIDE_TITLE: true
+
+      - name: Run metrics (PRs)
+        uses: github/issue-metrics@v3
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          SEARCH_QUERY: 'repo:${{ inputs.repo_full_name }} is:pr created:${{ env.weekly_period }} -reason:"not planned"'
+          OUTPUT_FILE: 'metrics_prs.md'
+          HIDE_TITLE: true
+
+      - name: Run metrics (Discussions)
+        uses: github/issue-metrics@v3
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          SEARCH_QUERY: 'repo:${{ inputs.repo_full_name }} type:discussions created:${{ env.weekly_period }}'
+          OUTPUT_FILE: 'metrics_discussions.md'
+          HIDE_TITLE: true
+
+      - name: Combine Reports
+        run: |
+          echo "# Weekly Metrics Report for ${{ inputs.repo_full_name }} (${{ env.weekly_period }})" > full_report.md
+          echo "This report covers the period from Monday to Sunday of last week." >> full_report.md
+          echo "" >> full_report.md
+          
+          echo "## Issues" >> full_report.md
+          if [ -f metrics_issues.md ]; then grep -v "Issue Metrics" metrics_issues.md >> full_report.md; else echo "No issues found." >> full_report.md; fi
+          echo "" >> full_report.md
+          
+          echo "## Pull Requests" >> full_report.md
+          if [ -f metrics_prs.md ]; then grep -v "Issue Metrics" metrics_prs.md >> full_report.md; else echo "No PRs found." >> full_report.md; fi
+          echo "" >> full_report.md
+          
+          echo "## Discussions" >> full_report.md
+          if [ -f metrics_discussions.md ]; then grep -v "Issue Metrics" metrics_discussions.md >> full_report.md; else echo "No discussions found." >> full_report.md; fi
+
+      - name: Create Issue in Calling Repo
+        uses: peter-evans/create-issue-from-file@v6
+        with:
+          title: Weekly Metrics Report (${{ env.weekly_period }})
+          token: ${{ secrets.GH_TOKEN }}
+          repository: ${{ inputs.repo_full_name }}
+          content-filepath: ./full_report.md

@@ -112,7 +112,7 @@ async def main():
         app_name=APP_NAME,
     )
 
-    if EVENT_NAME == "issues" and ISSUE_NUMBER:
+    if (EVENT_NAME == "issues" or EVENT_NAME == "workflow_dispatch") and ISSUE_NUMBER:
         print(f"EVENT: Processing specific issue due to '{EVENT_NAME}' event.")
         issue_number = parse_number_string(ISSUE_NUMBER)
         if not issue_number:

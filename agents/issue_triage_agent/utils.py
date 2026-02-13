@@ -78,3 +78,11 @@ def parse_number_string(number_str: str | None, default_value: int = 0) -> int:
             f" {default_value}."
         )
         return default_value
+
+def read_file(file_path: str) -> str:
+    """Read the content of a file."""
+    try:
+        with open(file_path, "r") as f:
+            return f.read()
+    except FileNotFoundError:
+        return f"File not found: {file_path}"

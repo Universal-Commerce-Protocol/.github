@@ -355,7 +355,7 @@ def add_comment_to_pr(pr_number: int, comment: str) -> dict[str, Any]:
 
 
 root_agent = Agent(
-    model="gemini-2.5-pro",
+    model="gemini-2.0-flash",
     name="ucp_pr_triaging_assistant",
     description="Triage UCP pull requests.",
     instruction=PROMPT_TEMPLATE.format(

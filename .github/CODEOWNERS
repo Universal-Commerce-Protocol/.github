@@ -9,7 +9,7 @@
 /.pre-commit-config.yaml @Universal-Commerce-Protocol/devops-maintainers
 /.gitignore              @Universal-Commerce-Protocol/devops-maintainers
 
-# Governance - Managed by Community Leads.
+# Governance - Managed by Governance Council.
 /GOVERNANCE.md           @Universal-Commerce-Protocol/governance-council
 /CONTRIBUTING.md         @Universal-Commerce-Protocol/governance-council
 /CODE_OF_CONDUCT.md      @Universal-Commerce-Protocol/governance-council

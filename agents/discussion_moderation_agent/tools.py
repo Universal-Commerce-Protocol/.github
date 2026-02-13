@@ -34,6 +34,16 @@ def get_discussion_and_comments(discussion_number: int) -> dict[str, Any]:
           id
           title
           body
+          createdAt
+          updatedAt
+          category {
+            name
+            isAnswerable
+          }
+          answer {
+            id
+            createdAt
+          }
           author {
             login
           }

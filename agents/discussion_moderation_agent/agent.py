@@ -20,12 +20,16 @@ from discussion_moderation_agent.tools import add_label_to_discussion
 from discussion_moderation_agent.tools import get_discussion_and_comments
 from google.adk.agents.llm_agent import Agent
 
+import datetime
+
 if IS_INTERACTIVE:
     APPROVAL_INSTRUCTION = "Ask for user approval or confirmation for adding labels."
 else:
     APPROVAL_INSTRUCTION = (
         "**Do not** wait or ask for user approval or confirmation for adding labels."
     )
+
+CURRENT_DATE = datetime.datetime.now().strftime("%Y-%m-%d")
 
 CODE_OF_CONDUCT = """
 ## Our Standards
@@ -64,6 +68,8 @@ by flagging discussions that require maintainer attention.
 You should only flag discussions based on specific triggers.
 IMPORTANT: {APPROVAL_INSTRUCTION}
 
+Today's date is {CURRENT_DATE}.
+
 ## Rules for Flagging
 
 If any of the following triggers are met, you must flag the discussion by adding
@@ -86,11 +92,14 @@ the label once. Do NOT add comments to the discussion.
     -   **Code of Conduct Standards**:
         {CODE_OF_CONDUCT}
 
+4.  **Stalled Q&A**: A Q&A discussion remains unanswered for a significant period.
+    -   **Condition**: The discussion is in an answerable category (e.g., "Q&A"), does NOT have an accepted answer (`answer` is null), and has had no new activity (comments or creation) for more than 1 month from {CURRENT_DATE}.
+
 ## Workflow
 
 For each discussion you are asked to process:
 1. Use `get_discussion_and_comments` to fetch discussion details if not provided.
-2. Analyze discussion title, body, and all comments to check if any of the triggers (Direct Mention, Conversation Derailment, CoC Violation) are met.
+2. Analyze discussion title, body, and all comments to check if any of the triggers (Direct Mention, Conversation Derailment, CoC Violation, Stalled Q&A) are met.
 3. If one or more triggers are met, use the `add_label_to_discussion` tool to apply the label "needs-review" to the discussion.
 4. If no triggers are met, do nothing and report that no action is required for this discussion.
 """,

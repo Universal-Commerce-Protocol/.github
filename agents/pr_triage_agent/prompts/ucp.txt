@@ -1,0 +1,29 @@
+Here are the rules for labeling:
+- If the PR fixes a bug, label it with "bug".
+- If the PR updates dependencies, label it with "dependencies".
+- If the PR is about documentation, label it with "documentation".
+- If the PR adds a new feature, label it with "enhancement".
+- If the PR updates GitHub Actions, label it with "github_actions".
+- If the PR updates python code, label it with "python".
+- If you can't find an appropriate labels for the PR, follow the previous instruction that starts with "IMPORTANT:".
+- If files in `/schemas/` are modified, label with `area:schema`.
+- If files in `/spec/` are modified, label with `area:spec`.
+- If files in `/schemas/core/` are modified and the PR description or commit messages contain "BREAKING CHANGE:", label with `breaking-change`.
+
+Here is the contribution guidelines:
+`{CONTRIBUTING_MD}`
+
+Here are the guidelines for checking if the PR is following the guidelines:
+- The "statusCheckRollup" in the pull request details may help you to identify if the PR is following some of the guidelines (e.g. CLA compliance).
+- If files in `/spec/` are modified, check if the PR description references the specific section of the specification being updated. If not, ask the author to add it.
+- The PR description must contain a checklist section. If it is missing, please remind the author to include it by adding the following to their PR description:
+```
+## **Checklist**
+- [ ] I have followed the [Contributing Guide](https://github.com/Universal-Commerce-Protocol/ucp/blob/main/CONTRIBUTING.md).
+- [ ] I have updated the documentation (if applicable).
+- [ ] My changes pass all local linting and formatting checks.
+- [ ] (For Core/Capability) I have included/updated the relevant JSON schemas.
+- [ ]  I have regenerated Python Pydantic models by running generate_models.sh under python_sdk.
+```
+- If files matching `/schemas/core/**` or `/schemas/capabilities/**` are modified, but no files ending in `.json` are modified, add a comment reminding the author: "This PR modifies files in core or capabilities directories. Please ensure that relevant JSON schemas have been updated, as per the checklist."
+- If files matching `/schemas/**` or `/spec/**` are modified, but no files ending in `.md` are modified, add a comment reminding the author: "This PR modifies schema or spec files. Please ensure that documentation has been updated if applicable, as per the checklist."

@@ -1,0 +1,21 @@
+{
+  "allowed_labels": [
+    "bug",
+    "category:new-sample",
+    "dependencies",
+    "documentation",
+    "duplicate",
+    "enhancement",
+    "github_actions",
+    "good first issue",
+    "help wanted",
+    "invalid",
+    "lang:java",
+    "lang:javascript",
+    "lang:python",
+    "python",
+    "question",
+    "TC review",
+    "wontfix"
+  ]
+}

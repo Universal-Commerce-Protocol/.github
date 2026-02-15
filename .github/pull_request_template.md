@@ -14,6 +14,8 @@
 - [ ] **Maintenance**: Version bumps, lockfile updates, or minor bug fixes.
 - [ ] **SDK**: Every time a new version is released, update language specific SDK. (Requires DevOps Maintainers Approval)
 - [ ] **Samples / Conformance**: Ensuring samples are up to date for new versions and maintaining the conformance suite. (Requires DevOps Maintainers Approval)
+- [ ] **UCP Schema**: Changes to the `ucp-schema` tool, including resolver, linter, or validator logic.
+- [ ] **Community Health (.github)**: Updates to the `.github` repository, including issue/PR templates, automation workflows, or org-level configurations.
 
 ## Related Issues
 

@@ -1,12 +1,7 @@
-name: 🐞 Bug Report
-description: File a bug report
-title: "[Bug]: "
+name: Bug report
+description: Create a report to help us improve
 labels: ["bug"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for stopping by to let us know something could be better!
   - type: textarea
     id: bug-description
     attributes:
@@ -18,7 +13,7 @@ body:
     id: reproduction
     attributes:
       label: To Reproduce
-      description: Steps to reproduce the behavior.
+      description: "Steps to reproduce the behavior:"
       placeholder: |
         1. Go to '...'
         2. Click on '....'
@@ -34,23 +29,32 @@ body:
     validations:
       required: true
   - type: textarea
-    id: environment
+    id: screenshots
     attributes:
-      label: Environment Details
-      description: Please provide details about your environment (OS, Browser, Version, Device etc.)
-    validations:
-      required: false
+      label: Screenshots
+      description: If applicable, add screenshots to help explain your problem.
   - type: textarea
-    id: logs
+    id: desktop-info
     attributes:
-      label: Relevant log output
-      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
-      render: shell
+      label: "Desktop (please complete the following information):"
+      description: |
+        - OS: [e.g. iOS]
+        - Browser [e.g. chrome, safari]
+        - Version [e.g. 22]
+  - type: textarea
+    id: smartphone-info
+    attributes:
+      label: "Smartphone (please complete the following information):"
+      description: |
+        - Device: [e.g. iPhone6]
+        - OS: [e.g. iOS8.1]
+        - Browser [e.g. stock browser, safari]
+        - Version [e.g. 22]
   - type: textarea
     id: context
     attributes:
       label: Additional context
-      description: Add any other context or screenshots about the problem here.
+      description: Add any other context about the problem here.
   - type: checkboxes
     id: terms
     attributes:

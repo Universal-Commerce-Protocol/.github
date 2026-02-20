@@ -1,0 +1,20 @@
+{
+  "allowed_labels": [
+    "area:schema",
+    "area:spec",
+    "breaking-change",
+    "bug",
+    "dependencies",
+    "documentation",
+    "duplicate",
+    "enhancement",
+    "github_actions",
+    "good first issue",
+    "help wanted",
+    "invalid",
+    "python",
+    "question",
+    "TC review",
+    "wontfix"
+  ]
+}

@@ -6,16 +6,17 @@
 
 *Please select one or more categories that apply to this change.*
 
-- [ ] **Core Protocol**: Changes to the base communication layer, global context, or breaking refactors. (Requires [TC](https://github.com/orgs/Universal-Commerce-Protocol/teams/tech-council) approval)
-- [ ] **Governance/Contributing**: Updates to GOVERNANCE.md or CONTRIBUTING.md
-- [ ] **Capability**: New schemas (Discovery, Cart, etc.) or extensions. (Requires Maintainer's Approval)
-- [ ] **Documentation**: Updates to README, or documentations regarding schema or capabilities.
-- [ ] **Infrastructure**: CI/CD, Linters, or build scripts.
-- [ ] **Maintenance**: Version bumps, lockfile updates, or minor bug fixes.
-- [ ] **SDK**: Every time a new version is released, update language specific SDK. (Requires DevOps Maintainers Approval)
-- [ ] **Samples / Conformance**: Ensuring samples are up to date for new versions and maintaining the conformance suite. (Requires DevOps Maintainers Approval)
-- [ ] **UCP Schema**: Changes to the `ucp-schema` tool, including resolver, linter, or validator logic.
-- [ ] **Community Health (.github)**: Updates to the `.github` repository, including issue/PR templates, automation workflows, or org-level configurations.
+- [ ] **Core Protocol**: Changes to the base communication layer, global context, or breaking refactors. (Requires Technical Council approval)
+- [ ] **Governance/Contributing**: Updates to GOVERNANCE.md, CONTRIBUTING.md, or CODEOWNERS. (Requires Governance Council approval)
+- [ ] **Capability**: New schemas (Discovery, Cart, etc.) or extensions. (Requires Maintainer approval)
+- [ ] **Documentation**: Updates to README, or documentations regarding schema or capabilities. (Requires Maintainer approval)
+- [ ] **Infrastructure**: CI/CD, Linters, or build scripts. (Requires DevOps Maintainer approval)
+- [ ] **Maintenance**: Version bumps, lockfile updates, or minor bug fixes. (Requires DevOps Maintainer approval)
+- [ ] **SDK**: Language-specific SDK updates and releases. (Requires DevOps Maintainer approval)
+- [ ] **Samples / Conformance**: Maintaining samples and the conformance suite. (Requires Maintainer approval)
+- [ ] **UCP Schema**: Changes to the `ucp-schema` tool (resolver, linter, validator). (Requires Maintainer approval)
+- [ ] **Community Health (.github)**: Updates to templates, workflows, or org-level configs. (Requires DevOps Maintainer approval)
+
 
 ## Related Issues
 

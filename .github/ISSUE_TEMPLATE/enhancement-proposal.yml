@@ -1,0 +1,114 @@
+name: Enhancement Proposal
+description: This is a template for submitting an enhancement proposal.
+title: "Descriptive Title of the Enhancement"
+labels: ["enhancement", "proposal"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: |
+        A 1-2 paragraph "elevator pitch" of the enhancement. It should be understandable to someone familiar with UCP but not necessarily the deep technical details of this specific proposal.
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: |
+        Explain the problem this proposal solves. Why is this significant change necessary now? What use cases does it enable? Who is the target user or beneficiary of this change?
+    validations:
+      required: true
+  - type: textarea
+    id: goals
+    attributes:
+      label: Goals
+      description: |
+        List the specific, measurable outcomes of this enhancement.
+      placeholder: |
+        *
+        *
+    validations:
+      required: true
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: Non-Goals
+      description: |
+        Explicitly state what is out of scope for this proposal. This helps focus the discussion and prevents scope creep.
+      placeholder: |
+        *
+        *
+  - type: textarea
+    id: detailed-design
+    attributes:
+      label: Detailed Design
+      description: |
+        This is the core of the proposal. Describe the architecture and implementation details with enough clarity that another contributor could write the code based on this description. Include sub-sections as needed, such as:
+
+        * **API Changes:** Detail any new API endpoints, changes to existing ones, or modifications to request/response schemas.
+        * **Data Structures:** Describe any changes to core data structures or JSON schemas.
+        * **Behavioral Changes:** Explain how the system's fundamental behavior will change.
+    validations:
+      required: true
+  - type: textarea
+    id: risks-mitigations
+    attributes:
+      label: Risks and Mitigations
+      description: |
+        This is a mandatory section. Discuss the potential downsides and risks of this proposal. For every risk identified, list a mitigation strategy.
+
+        * **Security:** Does this introduce new attack vectors or data exposure risks?
+        * **Performance:** Will this negatively impact latency or throughput?
+        * **Backward Compatibility:** Will this break existing clients or workflows? If so, what is the migration plan?
+        * **Complexity:** Does this add significant maintenance burden to the protocol?
+    validations:
+      required: true
+  - type: textarea
+    id: test-plan
+    attributes:
+      label: Test Plan
+      description: |
+        Describe how this feature will be tested. A test plan is required for a proposal to be moved to the "Provisional" stage.
+
+        * **Unit Tests:** Which core logic requires unit coverage?
+        * **Integration Tests:** How will interactions between different components be verified?
+        * **End-to-End Tests:** What user scenarios will be automated to validate the full workflow?
+    validations:
+      required: true
+  - type: textarea
+    id: graduation-criteria
+    attributes:
+      label: Graduation Criteria
+      description: |
+        Define the specific, objective criteria required to move this capability through the maturity levels. See CONTRIBUTING.md for full definitions of each level.
+      value: |
+        **Working Draft → Candidate:**
+        * [ ] Schema merged and documented (with Working Draft disclaimer).
+        * [ ] Unit and integration tests are passing.
+        * [ ] Initial documentation is written.
+        * [ ] TC majority vote to advance.
+
+        **Candidate → Stable:**
+        * [ ] Adoption feedback has been collected and addressed.
+        * [ ] Full documentation and migration guides are published.
+        * [ ] TC majority vote to advance.
+  - type: textarea
+    id: implementation-history
+    attributes:
+      label: Implementation History
+      description: |
+        This section will be updated by the maintainers as the proposal moves through its lifecycle.
+      value: |
+        * [YYYY-MM-DD]: Proposal submitted.
+        * [YYYY-MM-DD]: TC approved "Provisional"; capability enters "Working Draft".
+        * [YYYY-MM-DD]: TC approved advancement to "Candidate".
+        * [YYYY-MM-DD]: TC approved "Implemented"; capability enters "Stable".
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our Code of Conduct
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

@@ -24,7 +24,7 @@
 
 ## Checklist
 
-- [ ] I have followed the [Contributing Guide](https://github.com/agentic-commerce/ucp/blob/main/CONTRIBUTING.md).
+- [ ] I have followed the [Contributing Guide](https://github.com/Universal-Commerce-Protocol/.github/blob/main/CONTRIBUTING.md).
 - [ ] I have updated the documentation (if applicable).
 - [ ] My changes pass all local linting and formatting checks.
 - [ ] (For Core/Capability) I have included/updated the relevant JSON schemas.

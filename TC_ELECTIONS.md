@@ -19,9 +19,8 @@
 ## Overview
 
 UCP Tech Council (TC) includes four seats for non-founding organizations that
-are open for re-election every six months, in June and December
-(see [GOVERNANCE.md](GOVERNANCE.md)) for more details on the UCP Governance
-Process.
+are open for re-election every six months, in June and December. See
+[GOVERNANCE.md](GOVERNANCE.md) for more details on the UCP Governance Process.
 
 ## Election Process
 
@@ -33,16 +32,16 @@ there are open seats.
 
 ## Election Criteria
 
-The primary criteria for nomination is based on following factors:
+The primary criteria for nomination are based on the following factors:
 
-- Organization is aligned and committed to UCP principles of building an open
-  ecosystem and vendor agnostic architecture.
-- Organization has made contributions towards growth and adoption of the
-  protocol by endorsing, implementing and promoting the protocol.
-- Organization has made contributions towards technical health and technical
+- The organization is aligned and committed to UCP principles of building an open
+  ecosystem and vendor-agnostic architecture.
+- The organization has made contributions towards the growth and adoption of the
+  protocol by endorsing, implementing, and promoting the protocol.
+- The organization has made contributions towards the technical health and
   growth of the protocol by contributing via issues, PRs, etc.
 
-## Vacating existing seat
+## Vacating an existing seat
 
 Existing non-founding organization TC members can vacate their seat at any time
 by informing the TC. The open seats will be considered for the upcoming

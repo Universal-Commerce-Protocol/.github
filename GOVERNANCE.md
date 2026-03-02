@@ -61,7 +61,7 @@
   Shopify), each with 1 vote (total 8 votes).
 - Includes 4 members from any org, each with 1 vote (total 4 votes), elected
   by the TC every 6 months, based on their technical contributions towards the
-  protocol. Members can be re-elected any number of times.
+  protocol. Members can be re-elected any number of times. See [TC_ELECTIONS.md](TC_ELECTIONS.md) for more details.
 - Decisions are made with a majority vote.
 - Any TC member may request a review from the Governing Council at any time
   for any additional inputs.

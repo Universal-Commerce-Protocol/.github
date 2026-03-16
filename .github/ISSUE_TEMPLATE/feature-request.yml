@@ -1,5 +1,6 @@
 name: Feature request
 description: Suggest an idea for this project
+title: "[Feat]: "
 body:
   - type: textarea
     id: problem

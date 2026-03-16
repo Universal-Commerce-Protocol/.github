@@ -1,7 +1,7 @@
 name: Enhancement Proposal
 description: This is a template for submitting an enhancement proposal.
-title: "Descriptive Title of the Enhancement"
-labels: ["enhancement", "proposal"]
+title: "[Proposal]: "
+labels: ["enhancement-proposal"]
 body:
   - type: textarea
     id: summary

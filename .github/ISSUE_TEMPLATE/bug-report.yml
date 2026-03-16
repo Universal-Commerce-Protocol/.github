@@ -1,5 +1,6 @@
 name: Bug report
 description: Create a report to help us improve
+title: "[Bug]: "
 labels: ["bug"]
 body:
   - type: textarea
@@ -33,23 +34,6 @@ body:
     attributes:
       label: Screenshots
       description: If applicable, add screenshots to help explain your problem.
-  - type: textarea
-    id: desktop-info
-    attributes:
-      label: "Desktop (please complete the following information):"
-      description: |
-        - OS: [e.g. iOS]
-        - Browser [e.g. chrome, safari]
-        - Version [e.g. 22]
-  - type: textarea
-    id: smartphone-info
-    attributes:
-      label: "Smartphone (please complete the following information):"
-      description: |
-        - Device: [e.g. iPhone6]
-        - OS: [e.g. iOS8.1]
-        - Browser [e.g. stock browser, safari]
-        - Version [e.g. 22]
   - type: textarea
     id: context
     attributes:

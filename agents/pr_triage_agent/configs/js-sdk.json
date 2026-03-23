@@ -1,0 +1,19 @@
+{
+  "allowed_labels": [
+    "area:testing",
+    "bug",
+    "dependencies",
+    "documentation",
+    "duplicate",
+    "enhancement",
+    "github_actions",
+    "good first issue",
+    "help wanted",
+    "invalid",
+    "lang:typescript",
+    "python",
+    "question",
+    "TC review",
+    "wontfix"
+  ]
+}

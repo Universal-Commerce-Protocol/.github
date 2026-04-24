@@ -23,7 +23,7 @@ _Please select one or more categories that apply to this change._
 
 ## Checklist
 
-- [ ] I have followed the [Contributing Guide](https://github.com/Universal-Commerce-Protocol/.github/blob/main/CONTRIBUTING.md).
+- [ ] I have followed the [Contributing Guide](https://github.com/Universal-Commerce-Protocol/.github/blob/main/CONTRIBUTING.md) (including Conventional Commits title requirements and `!` for breaking changes).
 - [ ] I have updated the documentation (if applicable).
 - [ ] My changes pass all local linting and formatting checks.
 - [ ] I have added tests that prove my fix is effective or that my feature works.
@@ -34,23 +34,3 @@ _Please select one or more categories that apply to this change._
 ## Screenshots / Logs (if applicable)
 
 <!-- If applicable, add screenshots or log output to help explain your changes. -->
-
----
-
-### Pull Request Title & Breaking Changes
-
-This organization enforces **Conventional Commits** (`type: description`).
-
-**Common Types:** `feat`, `fix`, `docs`, `chore`, `refactor`.
-
-**Breaking Changes:**
-If this PR introduces a breaking change or removes existing fields/files:
-- [ ] **I have added `!` to my PR title** (e.g., `feat!: remove field`).
-- [ ] **I have provided a justification below.**
-
-```text
-## Breaking Changes / Removal Justification
-
-(Please provide a detailed technical and strategic rationale here for why this
-breaking change or removal is necessary.)
-```

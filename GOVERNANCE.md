@@ -57,10 +57,10 @@
 - Responsible for maintaining core technical changes to the spec, e.g., adding
   new features, reviewing enhancement proposals etc.
 - Elected by the Governing Council (GC).
-- Includes 8 core members, 4 from each founding organization (Google &
+- Includes 16 members, 4 permanent members from each founding organization (Google &
   Shopify), each with 1 vote (total 8 votes).
-- Includes 4 members from any org, each with 1 vote (total 4 votes), elected
-  by the founding members of the TC every 6 months, based on their technical
+- Includes 8 members from any organization, each with 1 vote (total 8 votes), elected
+  by the permanent founding members of the TC every 6 months, based on their technical
   contributions towards the protocol. Members can be re-elected any number of
   times. See [TC_ELECTIONS.md](TC_ELECTIONS.md) for more details.
 - Decisions are made with a majority vote.

@@ -17,24 +17,6 @@ _Please select one or more categories that apply to this change._
 - [ ] **UCP Schema**: Changes to the `ucp-schema` tool (resolver, linter, validator). (Requires Maintainer approval)
 - [ ] **Community Health (.github)**: Updates to templates, workflows, or org-level configs. (Requires DevOps Maintainer approval)
 
----
-
-### Is this a Breaking Change or Removal?
-
-Does this introduce a breaking change to the schema or protocol, or remove any existing fields/files?
-If yes:
-- [ ] **I have added `!` to my PR title** (e.g., `feat!: remove field`).
-- [ ] **I have provided a detailed justification below:**
-
-```text
-## Breaking Changes / Removal Justification
-
-(Please provide a detailed technical and strategic rationale here for why this
-breaking change or removal is necessary.)
-```
-
----
-
 ## Related Issues
 
 <!-- Link to any related issues here. e.g., "Fixes #123" -->
@@ -55,17 +37,20 @@ breaking change or removal is necessary.)
 
 ---
 
-### Pull Request Title Requirements
+### Pull Request Title & Breaking Changes
 
-This organization enforces **Conventional Commits**. Your PR title must follow this format: `type: description` or `type!: description` for breaking changes.
+This organization enforces **Conventional Commits** (`type: description`).
 
-**Common Types:**
-- `feat`: A new feature
-- `fix`: A bug fix
-- `docs`: Documentation only changes
-- `chore`: Changes to the build process or auxiliary tools and libraries
-- `refactor`: A code change that neither fixes a bug nor adds a feature
+**Common Types:** `feat`, `fix`, `docs`, `chore`, `refactor`.
 
 **Breaking Changes:**
-If your change is a breaking change (e.g., removing a field or file), you **must** add `!` before the colon in your title:
-`type!: description` (Example: `feat!: remove deprecated buyer field from checkout`)
+If this PR introduces a breaking change or removes existing fields/files:
+- [ ] **I have added `!` to my PR title** (e.g., `feat!: remove field`).
+- [ ] **I have provided a justification below.**
+
+```text
+## Breaking Changes / Removal Justification
+
+(Please provide a detailed technical and strategic rationale here for why this
+breaking change or removal is necessary.)
+```

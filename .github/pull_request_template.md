@@ -17,6 +17,24 @@ _Please select one or more categories that apply to this change._
 - [ ] **UCP Schema**: Changes to the `ucp-schema` tool (resolver, linter, validator). (Requires Maintainer approval)
 - [ ] **Community Health (.github)**: Updates to templates, workflows, or org-level configs. (Requires DevOps Maintainer approval)
 
+---
+
+### Is this a Breaking Change or Removal?
+
+Does this introduce a breaking change to the schema or protocol, or remove any existing fields/files?
+If yes:
+- [ ] **I have added `!` to my PR title** (e.g., `feat!: remove field`).
+- [ ] **I have provided a detailed justification below:**
+
+```text
+## Breaking Changes / Removal Justification
+
+(Please provide a detailed technical and strategic rationale here for why this
+breaking change or removal is necessary.)
+```
+
+---
+
 ## Related Issues
 
 <!-- Link to any related issues here. e.g., "Fixes #123" -->
@@ -26,9 +44,28 @@ _Please select one or more categories that apply to this change._
 - [ ] I have followed the [Contributing Guide](https://github.com/Universal-Commerce-Protocol/.github/blob/main/CONTRIBUTING.md).
 - [ ] I have updated the documentation (if applicable).
 - [ ] My changes pass all local linting and formatting checks.
+- [ ] I have added tests that prove my fix is effective or that my feature works.
+- [ ] New and existing unit tests pass locally with my changes.
 - [ ] (For Core/Capability) I have included/updated the relevant JSON schemas.
 - [ ] I have regenerated Python Pydantic models by running generate_models.sh under python_sdk.
 
 ## Screenshots / Logs (if applicable)
 
 <!-- If applicable, add screenshots or log output to help explain your changes. -->
+
+---
+
+### Pull Request Title Requirements
+
+This organization enforces **Conventional Commits**. Your PR title must follow this format: `type: description` or `type!: description` for breaking changes.
+
+**Common Types:**
+- `feat`: A new feature
+- `fix`: A bug fix
+- `docs`: Documentation only changes
+- `chore`: Changes to the build process or auxiliary tools and libraries
+- `refactor`: A code change that neither fixes a bug nor adds a feature
+
+**Breaking Changes:**
+If your change is a breaking change (e.g., removing a field or file), you **must** add `!` before the colon in your title:
+`type!: description` (Example: `feat!: remove deprecated buyer field from checkout`)

@@ -18,7 +18,7 @@
 
 ## Overview
 
-UCP Tech Council (TC) includes eight seats for non-founding organizations
+UCP Tech Council (TC) includes elected seats for non-founding organizations
 that are open for re-election every six months, in June and December. The
 UCP Governing Council may decide to conduct elections at any time if there
 are open seats. See [GOVERNANCE.md](GOVERNANCE.md) for more details on the UCP

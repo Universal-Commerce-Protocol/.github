@@ -29,7 +29,7 @@ Governance Process.
 The election date is finalized by the Governance Council and the [nomination
 form] is shared on the [UCP announcement board].
 Organizations must submit the form by the deadline to be considered for the
-TC. 
+TC.
 
 ## Election Criteria
 

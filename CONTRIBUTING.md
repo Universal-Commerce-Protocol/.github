@@ -245,3 +245,15 @@ This project uses [uv](https://docs.astral.sh/uv/) for Python dependency managem
 3. Run the development server: `uv run mkdocs serve --watch source`
 4. Open **<http://127.0.0.1:8000>** in your browser
 5. Before submitting, run `uv run mkdocs build --strict` to check for warnings/errors
+
+Alternatively, you can use the local build script to build the full site including spec versions:
+
+```bash
+./scripts/build_local.sh
+```
+
+This will build the site and start a local server. You can use the `--draft-only` flag to skip release branches and only build the current draft:
+
+```bash
+./scripts/build_local.sh --draft-only
+```

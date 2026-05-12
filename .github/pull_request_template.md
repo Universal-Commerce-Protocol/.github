@@ -23,12 +23,14 @@ _Please select one or more categories that apply to this change._
 
 ## Checklist
 
-- [ ] I have followed the [Contributing Guide](https://github.com/Universal-Commerce-Protocol/.github/blob/main/CONTRIBUTING.md).
+- [ ] I have followed the [Contributing Guide](https://github.com/Universal-Commerce-Protocol/.github/blob/main/CONTRIBUTING.md) (including Conventional Commits title requirements and `!` for breaking changes).
 - [ ] I have updated the documentation (if applicable).
 - [ ] My changes pass all local linting and formatting checks.
+- [ ] I have added tests that prove my fix is effective or that my feature works.
+- [ ] New and existing unit tests pass locally with my changes.
 - [ ] (For Core/Capability) I have included/updated the relevant JSON schemas.
 - [ ] I have regenerated Python Pydantic models by running generate_models.sh under python_sdk.
 
 ## Screenshots / Logs (if applicable)
 
-<!-- If applicable, add screenshots or log output to help explain your changes. -->
+<!-- If applicable, add screenshots or log output to help explain your changes. For any edits to the rendering of UCP.dev content, a screenshot is appreciated; for fixes, a before/after comparison is especially helpful for reviewers. -->

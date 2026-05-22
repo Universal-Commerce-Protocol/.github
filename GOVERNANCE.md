@@ -71,8 +71,8 @@
 
 - Responsible for governance, overall health and adoption of the protocol.
 - GC serves as the ultimate owner of all UCP assets. Google
-  acts as the custodian of the UCP.dev domain, holding and managing it solely
-  for the benefit of the Council and the partnership’s collective interests.
+  acts as the custodian of the UCP.dev domain, holding and managing it to
+  foster adoption of UCP.
 - Includes a total of 5 members.
 - Includes 1 permanent member from each founding organization (Google &
   Shopify) each having 1 vote (total 2 votes).
@@ -84,8 +84,25 @@
   Google holds proxy vote for all open seats until Dec 2028 to facilitate rapid
   early stage growth & adoption of the protocol.
 - Can add/remove TC members via simple majority vote.
+- Can elect new members to GC based on their ability to drive protocol
+  adoption, represent key industry domains, and demonstrate commitment to open
+  protocols.
 - May choose to review and veto TC decision or recommendation.
 - Decisions are made with a majority vote.
+
+## Process for nominating new Domain Tech Councils
+
+- Submit a DTC charter nomination (using the
+  [DTC charter template](DOMAIN_TECH_COUNCIL_CHARTER.md)) as a new issue
+  in the [UCP Issues
+  tracker](https://github.com/Universal-Commerce-Protocol/ucp/issues).
+- GC reviews DTC charter and approves/rejects DTC nomination.
+- GC opens up nomination for inducting DTC members, using the process
+  specified in [TC_ELECTIONS.md](TC_ELECTIONS.md).
+- GC elects and announces the new DTC members, finalizes the DTC
+  composition and updates the governance documentation.
+- GC may nominate additional members to the DTC, as consulting members for
+  a period of time.
 
 ## Communication
 

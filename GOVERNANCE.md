@@ -101,8 +101,6 @@
   specified in [TC_ELECTIONS.md](TC_ELECTIONS.md).
 - GC elects and announces the new DTC members, finalizes the DTC
   composition and updates the governance documentation.
-- GC may nominate additional members to the DTC, as consulting members for
-  a period of time.
 
 ## Communication
 

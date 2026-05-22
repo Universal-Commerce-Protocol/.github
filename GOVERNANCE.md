@@ -90,7 +90,7 @@
 - May choose to review and veto TC decision or recommendation.
 - Decisions are made with a majority vote.
 
-## Process for nominating new Domain Tech Councils
+## Process for nominating new Domain Tech Councils (DTC)
 
 - Submit a DTC charter nomination (using the
   [DTC charter template](DOMAIN_TECH_COUNCIL_CHARTER.md)) as a new issue

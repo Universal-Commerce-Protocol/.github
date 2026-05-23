@@ -46,3 +46,10 @@ List the initial set of businesses ready to implement capabilities via UCP.
 
 - [Business Name 1]
 - [Business Name 2]
+
+## Commitment
+
+By submitting this charter, the named platforms and businesses formally
+commit to a long-term collaboration focused on developing and actively
+promoting the industry-wide adoption of the primitives proposed by this
+Domain Tech Council (DTC).

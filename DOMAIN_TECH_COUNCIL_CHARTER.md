@@ -31,7 +31,7 @@ Outline the phased approach for modeling use cases within UCP.
 
 - **Phase 1 (MVP):** [Insert immediate use cases]
 - **Phase 2 (Expansion):** [Insert mid-term use cases]
-- **Phase 3 (Long-term):** [Insert future/automated use cases]
+- **Phase 3 (Long-term):** [Insert long-term use cases]
 
 ## Platforms
 

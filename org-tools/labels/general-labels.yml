@@ -1,25 +1,25 @@
 ---
 - name: bug
-  color: d73a4a
+  color: "d73a4a"
   description: Something isn't working
 
 - name: dependencies
-  color: 0366d6
+  color: "0366d6"
   description: Pull requests that update a dependency file
 
 - name: devops
-  color: eb376c
+  color: "eb376c"
 
 - name: documentation
-  color: 0075ca
+  color: "0075ca"
   description: Improvements or additions to documentation
 
 - name: duplicate
-  color: cfd3d7
+  color: "cfd3d7"
   description: This issue or pull request already exists
 
 - name: enhancement
-  color: a2eeef
+  color: "a2eeef"
   description: New feature or request
 
 - name: github_actions
@@ -27,29 +27,29 @@
   description: Pull requests that update GitHub Actions code
 
 - name: governance
-  color: 7dd2d6
+  color: "7dd2d6"
 
 - name: payments
-  color: 2504F2
+  color: "2504F2"
 
 - name: python:uv
-  color: 2b67c6
+  color: "2b67c6"
   description: Pull requests that update python:uv code
 
 - name: question
-  color: d876e3
+  color: "d876e3"
   description: Further information is requested
 
 - name: TC review
-  color: 88b91e
+  color: "88b91e"
   description: Ready for TC review
 
 - name: Triage
-  color: f1d66a
+  color: "f1d66a"
 
 - name: WIP
-  color: d5854f
+  color: "d5854f"
 
 - name: wontfix
-  color: ffffff
+  color: "ffffff"
   description: This will not be worked on

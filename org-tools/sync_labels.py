@@ -50,6 +50,10 @@ def parse_yaml_labels(file_path: str) -> List[Dict[str, Any]]:
         name_str = str(name).strip() if name is not None else ""
 
         color = item.get("color")
+        if color is not None and not isinstance(color, str):
+            raise ValueError(
+                f"Configuration Error: The color value for label '{name_str}' must be enclosed in quotes (e.g., color: \"{color}\")."
+            )
         color_str = str(color).strip() if color is not None else ""
 
         description = item.get("description", "")

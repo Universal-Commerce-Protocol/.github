@@ -73,7 +73,7 @@ This tool is designed to run easily with **`uv`**, which handles dependencies au
 
 ### 🔑 Prerequisites (Token Permissions)
 
-Before running the tool, ensure your GitHub Personal Access Token (`--token`) has proper access to the organization and its repositories and manage labels.
+Before running the tool, ensure you have a [GitHub Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) (`--token`) with proper access to the organization and its repositories to manage labels.
 
 ### 1. Dry Run (Preview Changes)
 

@@ -6,8 +6,6 @@ rules:
   - name: "governance_and_licensing"
     patterns:
       - "LICENSE"
-      # Consider updating this path if renaming to owners.yaml
-      - ".github/CODEOWNERS"
     requires:
       # Strictly Governance Council (L4)
       - team: "governance-council"
@@ -28,8 +26,6 @@ rules:
       - "README.md"
       - "src/**"
       - "templates/**"
-    excludes:
-      - ".github/CODEOWNERS" # Covered by Governance rule
     requires:
       # Grants access to devops (L1), maintainers (L2), tech-council (L3),
       # and governance-council (L4)

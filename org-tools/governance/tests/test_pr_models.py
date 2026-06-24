@@ -27,6 +27,10 @@ from pr_models import (
     Review,
     ReviewState,
     TeamMemberships,
+    RuleRequirement,
+    Team,
+    RequirementTargetType,
+    merge_requirements,
 )
 
 
@@ -47,8 +51,8 @@ class TestPRModels(unittest.TestCase):
             is_draft=False,
             changed_files=["README.md"],
             reviews=[review_input],
-            assigned_users=["Dave", "EVE"],
-            assigned_teams=["Tech-Council", "ADMINS"],
+            assigned_user_names=["Dave", "EVE"],
+            assigned_team_names=["Tech-Council", "ADMINS"],
         )
 
         expected = PullRequest(
@@ -57,8 +61,8 @@ class TestPRModels(unittest.TestCase):
             is_draft=False,
             changed_files=["README.md"],
             reviews=[Review(user="bob", state=ReviewState.APPROVED)],
-            assigned_users=["dave", "eve"],
-            assigned_teams=["tech-council", "admins"],
+            assigned_user_names=["dave", "eve"],
+            assigned_team_names=["tech-council", "admins"],
         )
         self.assertEqual(expected, pr)
 
@@ -77,6 +81,27 @@ class TestPRModels(unittest.TestCase):
                 "admins": {"charlie", "dave"},
             },
         )
+
+    def test_merge_requirements(self):
+        """Test that merge_requirements correctly merges requirements."""
+        team_devops = Team.create(name="devops", level=1)
+        team_admin = Team.create(name="admins", level=2)
+
+        req1 = RuleRequirement(min_approvals=1, team=team_devops)
+        req2 = RuleRequirement(min_approvals=3, team=team_devops)
+        req3 = RuleRequirement(min_approvals=2, team=team_admin)
+
+        merged = merge_requirements([req1, req2, req3])
+
+        self.assertEqual(len(merged), 2)
+
+        devops_req = next(r for r in merged if r.team == team_devops)
+        admin_req = next(r for r in merged if r.team == team_admin)
+
+        self.assertEqual(devops_req.min_approvals, 3)
+        self.assertEqual(admin_req.min_approvals, 2)
+        self.assertEqual(devops_req.target_key, (RequirementTargetType.TEAM, "devops"))
+        self.assertEqual(admin_req.target_key, (RequirementTargetType.TEAM, "admins"))
 
 
 if __name__ == "__main__":

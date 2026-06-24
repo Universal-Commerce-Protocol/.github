@@ -40,7 +40,10 @@ sys.modules["github"] = mock_github
 
 from pr_validator import (  # noqa: E402
     PullRequestValidator,
-    fetch_team_memberships,
+    GitHubClient,
+    main,
+    RepoName,
+    REPO_RULES_MAPPING,
 )
 from pr_models import (  # noqa: E402
     MergeableReason,
@@ -285,6 +288,8 @@ class TestPullRequestValidator(unittest.TestCase):
         res = self.validator.validate(pr)
         self.assertFalse(res.is_mergeable)
         self.assertEqual(res.error, ValidationErrorReason.CHANGES_REQUESTED)
+        self.assertEqual(len(res.requirement_statuses), 1)
+        self.assertEqual(len(res.file_statuses), 1)
 
     def test_unauthorized_changes_requested_does_not_block(self):
         """Test that unauthorized changes requested do not block validation."""
@@ -316,6 +321,8 @@ class TestPullRequestValidator(unittest.TestCase):
         res = self.validator.validate(pr)
         self.assertFalse(res.is_mergeable)
         self.assertEqual(res.error, ValidationErrorReason.CHANGES_REQUESTED)
+        self.assertEqual(len(res.requirement_statuses), 1)
+        self.assertEqual(len(res.file_statuses), 1)
 
     def test_self_approval_restrictions(self):
         """Test restrictions on self-approval."""
@@ -466,8 +473,8 @@ class TestPullRequestValidator(unittest.TestCase):
             is_draft=False,
             changed_files=["source/main.py"],
             reviews=[],
-            assigned_users=["tc-member2"],
-            assigned_teams=[],
+            assigned_user_names=["tc-member2"],
+            assigned_team_names=[],
         )
         res = self.validator.validate(pr)
         self.assertFalse(res.is_mergeable)
@@ -627,7 +634,7 @@ class TestPullRequestValidator(unittest.TestCase):
 
 
 class TestFetchTeamMemberships(unittest.TestCase):
-    """Tests for fetch_team_memberships function."""
+    """Tests for GitHubClient.fetch_team_memberships method."""
 
     def test_fetch_success(self):
         """Test fetch_team_memberships successfully fetches team memberships."""
@@ -666,7 +673,8 @@ class TestFetchTeamMemberships(unittest.TestCase):
             proxy_reviewers=set(),
         )
 
-        memberships = fetch_team_memberships(mock_github, "my-org", config)
+        github_client = GitHubClient(mock_github)
+        memberships = github_client.fetch_team_memberships("my-org", config)
 
         self.assertEqual(
             memberships.members_by_team,
@@ -691,8 +699,9 @@ class TestFetchTeamMemberships(unittest.TestCase):
             proxy_reviewers=set(),
         )
 
+        github_client = GitHubClient(mock_github)
         with self.assertRaises(RuntimeError) as ctx:
-            fetch_team_memberships(mock_github, "my-org", config)
+            github_client.fetch_team_memberships("my-org", config)
 
         self.assertIn("Failed to fetch organization 'my-org'", str(ctx.exception))
 
@@ -713,8 +722,9 @@ class TestFetchTeamMemberships(unittest.TestCase):
             proxy_reviewers=set(),
         )
 
+        github_client = GitHubClient(mock_github)
         with self.assertRaises(RuntimeError) as ctx:
-            fetch_team_memberships(mock_github, "my-org", config)
+            github_client.fetch_team_memberships("my-org", config)
 
         self.assertIn("Could not fetch members for team 'devops'", str(ctx.exception))
 
@@ -727,8 +737,6 @@ class TestPRValidatorMain(unittest.TestCase):
     @patch("pr_validator.argparse.ArgumentParser.parse_args")
     def test_main_invalid_repo_name(self, mock_parse_args, mock_print, mock_exit):
         """Test main fails when repo name is invalid."""
-        from pr_validator import main
-
         mock_args = MagicMock()
         mock_args.repo_name = "invalid-repo"
         mock_parse_args.return_value = mock_args
@@ -740,15 +748,14 @@ class TestPRValidatorMain(unittest.TestCase):
         self.assertEqual(cm.exception.code, 1)
         mock_exit.assert_called_once_with(1)
         mock_print.assert_any_call(
-            "❌ ERROR: Invalid repository name 'invalid-repo'. Must be one of: ['ucp', 'python-sdk']",
+            "❌ ERROR: Invalid repository name 'invalid-repo'. Must be one of: ['python-sdk']",
             file=sys.stderr,
         )
 
     @patch("pr_validator.sys.exit")
     @patch("pr_validator.ValidationLogger")
     @patch("pr_validator.PullRequestValidator")
-    @patch("pr_validator.fetch_pull_request")
-    @patch("pr_validator.fetch_team_memberships")
+    @patch("pr_validator.GitHubClient")
     @patch("pr_validator.Github")
     @patch("pr_validator.Auth.Token")
     @patch("pr_validator.GovernanceConfigParser")
@@ -759,21 +766,18 @@ class TestPRValidatorMain(unittest.TestCase):
         mock_parser_class,
         mock_token,
         mock_github_class,
-        mock_fetch_members,
-        mock_fetch_pr,
+        mock_github_client_class,
         mock_validator_class,
         mock_logger_class,
         mock_exit,
     ):
         """Test main succeeds and parses file with valid repo name."""
-        from pr_validator import main, RepoName, REPO_RULES_MAPPING
-
         mock_args = MagicMock()
         mock_args.token = "token"
         mock_args.org = "org"
         mock_args.repo = "repo"
         mock_args.pr = 123
-        mock_args.repo_name = "ucp"
+        mock_args.repo_name = "python-sdk"
         mock_parse_args.return_value = mock_args
         mock_exit.side_effect = SystemExit(0)
 
@@ -782,6 +786,10 @@ class TestPRValidatorMain(unittest.TestCase):
         mock_parser_class.return_value = mock_parser
         dummy_config = MagicMock()
         mock_parser.parse_file.return_value = dummy_config
+
+        # Mock gateway
+        mock_gateway = MagicMock()
+        mock_github_client_class.return_value = mock_gateway
 
         # Mock validation result to be mergeable
         mock_validator = MagicMock()
@@ -796,7 +804,9 @@ class TestPRValidatorMain(unittest.TestCase):
 
         self.assertEqual(cm.exception.code, 0)
         # Check parse_file was called with the mapped rules file
-        mock_parser.parse_file.assert_called_once_with(REPO_RULES_MAPPING[RepoName.UCP])
+        mock_parser.parse_file.assert_called_once_with(
+            REPO_RULES_MAPPING[RepoName.PYTHON_SDK]
+        )
         mock_exit.assert_called_once_with(0)
 
 

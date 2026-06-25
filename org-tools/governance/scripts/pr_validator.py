@@ -51,7 +51,7 @@ from validation_logger import ValidationLogger
 class RepoName(Enum):
     """Supported repository names mapping to governance rules."""
 
-    PYTHON_SDK = "UniversalCommerceProtocol/python-sdk"
+    PYTHON_SDK = "Universal-Commerce-Protocol/python-sdk"
 
 
 REPO_RULES_MAPPING = {

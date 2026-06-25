@@ -784,7 +784,7 @@ class TestPRValidatorMain(unittest.TestCase):
     def test_main_invalid_repo_name(self, mock_parse_args, mock_print, mock_exit):
         """Test main fails when repo name is invalid."""
         mock_args = MagicMock()
-        mock_args.repo = "UniversalCommerceProtocol/invalid-repo"
+        mock_args.repo = "Universal-Commerce-Protocol/invalid-repo"
         mock_parse_args.return_value = mock_args
         mock_exit.side_effect = SystemExit(1)
 
@@ -794,7 +794,7 @@ class TestPRValidatorMain(unittest.TestCase):
         self.assertEqual(cm.exception.code, 1)
         mock_exit.assert_called_once_with(1)
         mock_print.assert_any_call(
-            "❌ ERROR: Invalid repository name 'UniversalCommerceProtocol/invalid-repo'. Must be one of: ['UniversalCommerceProtocol/python-sdk']",
+            "❌ ERROR: Invalid repository name 'Universal-Commerce-Protocol/invalid-repo'. Must be one of: ['Universal-Commerce-Protocol/python-sdk']",
             file=sys.stderr,
         )
 
@@ -821,7 +821,7 @@ class TestPRValidatorMain(unittest.TestCase):
         mock_args = MagicMock()
         mock_args.token = "token"
         mock_args.org = "org"
-        mock_args.repo = "UniversalCommerceProtocol/python-sdk"
+        mock_args.repo = "Universal-Commerce-Protocol/python-sdk"
         mock_args.pr = 123
         mock_parse_args.return_value = mock_args
         mock_exit.side_effect = SystemExit(0)

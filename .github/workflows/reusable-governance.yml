@@ -58,8 +58,8 @@ jobs:
             --token "${{ secrets.ORG_READ_TOKEN }}" \
             --org "${{ github.repository_owner }}" \
             --repo "${{ github.repository }}" \
-            --pr "${{ github.event.pull_request.number }}" \
-            --repo-name "${{ inputs.repo-name }}"
+            --pr "${{ github.event.pull_request.number }}"
+
 
           EVAL_EXIT_CODE=$?
           set -e

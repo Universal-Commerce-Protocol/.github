@@ -146,8 +146,8 @@ The test suite mock-patches the GitHub API and local git files to allow fast, is
 
 ```bash
 # Run pr_validator tests
-python3 tests/test_pr_validator.py
+python3 org-tools/governance/tests/test_pr_validator.py
 
 # Run config parser and validator tests
-python3 tests/test_governance_config_parser.py
+python3 org-tools/governance/tests/test_governance_config_parser.py
 ```

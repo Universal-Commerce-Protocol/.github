@@ -19,39 +19,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
+from pr_models import Team, RuleRequirement, merge_requirements
 import yaml
-
-
-@dataclass(frozen=True)
-class Team:
-    """Represents a review team group in the hierarchy."""
-
-    name: str
-    level: int
-
-    @classmethod
-    def create(cls, name: str, level: int) -> "Team":
-        # Normalize to lowercase. GitHub team slugs are case-insensitive.
-        return cls(name=name.lower(), level=level)
-
-
-@dataclass(frozen=True)
-class RuleRequirement:
-    """Represents a requirement for a rule, specifying min approvals and the target Team."""
-
-    min_approvals: int
-    team: Optional[Team] = None
-    min_team: Optional[Team] = None
-
-    def __post_init__(self):
-        if self.min_approvals is None or not isinstance(self.min_approvals, int):
-            raise ValueError("min_approvals must be an integer")
-        if self.min_approvals <= 0:
-            raise ValueError("min_approvals must be a positive integer")
-        if (self.team is None) == (self.min_team is None):
-            raise ValueError(
-                "RuleRequirement must specify exactly one of 'team' or 'min_team'"
-            )
 
 
 @dataclass(frozen=True)
@@ -116,6 +85,30 @@ class GovernanceConfig:
     rules: List[GovernanceRule]
     fallback: List[RuleRequirement]
     proxy_reviewers: Set[str]
+
+    def _get_requirements_for_file(self, file_path: str) -> List[RuleRequirement]:
+        """Get the merged requirements that apply to a specific file."""
+        matched_rules = []
+        for rule in self.rules:
+            if rule.matches(file_path):
+                matched_rules.append(rule)
+
+        if not matched_rules:
+            return self.fallback
+
+        # De-duplicate rules by name, preserving order
+        unique_rules = list({r.name: r for r in matched_rules}.values())
+        requirements = []
+        for r in unique_rules:
+            requirements.extend(r.requires_all)
+
+        return merge_requirements(requirements)
+
+    def get_applicable_requirements(
+        self, changed_files: List[str]
+    ) -> Dict[str, List[RuleRequirement]]:
+        """Identify all rule requirements that apply to each of the PR's changed files."""
+        return {file: self._get_requirements_for_file(file) for file in changed_files}
 
 
 @dataclass
@@ -184,7 +177,7 @@ class GovernanceConfigParser:
 
     def _parse_proxy_reviewers(self, data: dict) -> Set[str]:
         """Parses the set of proxy reviewers."""
-        return set(data.get("proxy_reviewers", []))
+        return {r.lower() for r in data.get("proxy_reviewers", [])}
 
     def _parse_fallback(
         self, data: dict, teams: Dict[str, Team]

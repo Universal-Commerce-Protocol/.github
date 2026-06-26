@@ -85,7 +85,7 @@ rules:
 
 ### 4. `proxy_reviewers`
 
-A list of GitHub usernames allowed to approve PRs on behalf of any required team.
+A list of GitHub usernames allowed to approve PRs on behalf of any required team (see [GOVERNANCE.md](../../GOVERNANCE.md#governing-council-gc) for details on proxy voting rights).
 
 ```yaml
 proxy_reviewers:
@@ -121,24 +121,24 @@ When evaluating a pull request:
 
 ## CLI Usage
 
-Run the validator CLI command in the root of the checked-out repository:
+Run the validator CLI command from this directory:
 
 ```bash
-python3 org-tools/governance/scripts/pr_validator.py \
+python3 scripts/pr_validator.py \
   --token "<GITHUB_TOKEN>" \
   --org "<ORG_NAME>" \
-  --repo "<REPO_NAME>" \
+  --repo "<REPO_PATH>" \
   --pr <PR_NUMBER> \
-  --repo-name "<REPO_KEY>"
+  --rules-file "<PATH_TO_RULES_YAML>"
 ```
 
 ### CLI Arguments:
 
 - `--token`: Org-level read token for GitHub REST API calls (requires permission to read team memberships).
 - `--org`: The GitHub organization name.
-- `--repo`: The GitHub repository name.
+- `--repo`: The full GitHub repository path (e.g. `Universal-Commerce-Protocol/python-sdk`). If `--rules-file` is not provided, the script resolves the rules file by convention: it looks for a file named `<repo-name-suffix>-rules.yml` under `org-tools/governance/rules/` (e.g., `python-sdk-rules.yml`).
 - `--pr`: The PR number to validate.
-- `--repo-name`: A lookup key mapping to the rules configuration file (e.g. `python-sdk` maps to `org-tools/governance/rules/python-sdk-rules.yml`).
+- `--rules-file`: Optional path to the governance rules YAML file. If provided, it overrides the convention-based path resolution.
 
 ---
 

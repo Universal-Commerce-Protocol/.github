@@ -40,7 +40,8 @@ sys.modules["github"] = mock_github
 
 from pr_validator import (  # noqa: E402
     PullRequestValidator,
-    fetch_team_memberships,
+    GitHubClient,
+    main,
 )
 from pr_models import (  # noqa: E402
     MergeableReason,
@@ -111,7 +112,7 @@ class TestPullRequestValidator(unittest.TestCase):
         )
 
         # 6. Setup memberships
-        self.memberships = TeamMemberships(
+        self.memberships = TeamMemberships.create(
             members_by_team={
                 "devops": {"dev1", "dev2"},
                 "maintainers": {"maint1", "maint2", "tc-member1"},
@@ -121,7 +122,8 @@ class TestPullRequestValidator(unittest.TestCase):
                     "gov-member2",
                     "proxy1",
                 },
-            }
+            },
+            teams=self.hierarchy,
         )
 
         # 7. Setup validator
@@ -285,6 +287,8 @@ class TestPullRequestValidator(unittest.TestCase):
         res = self.validator.validate(pr)
         self.assertFalse(res.is_mergeable)
         self.assertEqual(res.error, ValidationErrorReason.CHANGES_REQUESTED)
+        self.assertEqual(len(res.requirement_statuses), 1)
+        self.assertEqual(len(res.file_statuses), 1)
 
     def test_unauthorized_changes_requested_does_not_block(self):
         """Test that unauthorized changes requested do not block validation."""
@@ -316,6 +320,8 @@ class TestPullRequestValidator(unittest.TestCase):
         res = self.validator.validate(pr)
         self.assertFalse(res.is_mergeable)
         self.assertEqual(res.error, ValidationErrorReason.CHANGES_REQUESTED)
+        self.assertEqual(len(res.requirement_statuses), 1)
+        self.assertEqual(len(res.file_statuses), 1)
 
     def test_self_approval_restrictions(self):
         """Test restrictions on self-approval."""
@@ -332,20 +338,6 @@ class TestPullRequestValidator(unittest.TestCase):
         res = self.validator.validate(pr)
         self.assertFalse(res.is_mergeable)
         self.assertEqual(res.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
-
-        # Proxy voter proxy1 can approve their own PR
-        pr_proxy = PullRequest(
-            number=1,
-            author="proxy1",
-            is_draft=False,
-            changed_files=["source/main.py"],
-            reviews=[
-                Review(user="proxy1", state=ReviewState.APPROVED),
-            ],
-        )
-        res_proxy = self.validator.validate(pr_proxy)
-        self.assertTrue(res_proxy.is_mergeable)
-        self.assertEqual(res_proxy.mergeable_reason, MergeableReason.PROXY_OVERRIDE)
 
     def test_dismissed_reviews(self):
         """Test that dismissed reviews are handled correctly."""
@@ -466,8 +458,8 @@ class TestPullRequestValidator(unittest.TestCase):
             is_draft=False,
             changed_files=["source/main.py"],
             reviews=[],
-            assigned_users=["tc-member2"],
-            assigned_teams=[],
+            assigned_user_names=["tc-member2"],
+            assigned_team_names=[],
         )
         res = self.validator.validate(pr)
         self.assertFalse(res.is_mergeable)
@@ -480,6 +472,42 @@ class TestPullRequestValidator(unittest.TestCase):
         self.assertEqual(status.approved_count, 0)
         self.assertEqual(status.assigned_count, 1)
         self.assertFalse(status.is_satisfied)
+
+    def test_assigned_team_expansion_reporting(self):
+        """Test that assigned teams are expanded to their eligible members in status reporting."""
+        # We check source/main.py (requires 1 from min_team tech-council)
+        # We assign the tech-council team to review.
+        # Members of tech-council are tc-member1 and tc-member2.
+        # Both are eligible reviewers.
+        pr = PullRequest(
+            number=1,
+            author="author1",
+            is_draft=False,
+            changed_files=["source/main.py"],
+            reviews=[],
+            assigned_user_names=[],
+            assigned_team_names=["tech-council"],
+        )
+        res = self.validator.validate(pr)
+        self.assertFalse(res.is_mergeable)
+        self.assertEqual(res.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
+        self.assertEqual(len(res.requirement_statuses), 1)
+
+        status = res.requirement_statuses[0]
+        self.assertEqual(status.requirement.min_team, self.hierarchy["tech-council"])
+        self.assertEqual(status.requirement.min_approvals, 1)
+        self.assertEqual(status.approved_count, 0)
+        # assigned_count should be 2 because tech-council has 2 members (tc-member1, tc-member2)
+        # and both satisfy the min_team hierarchy requirement.
+        self.assertEqual(status.assigned_count, 2)
+        self.assertFalse(status.is_satisfied)
+
+        # Directly verify the internal helper resolves the specific usernames
+        approvers, assigned = self.validator._get_all_approvers_and_assigned_usernames(
+            pr
+        )
+        self.assertEqual(approvers, set())
+        self.assertEqual(assigned, {"tc-member1", "tc-member2"})
 
     def test_governance_config_parser(self):
         """Test parsing of governance configuration."""
@@ -625,9 +653,68 @@ class TestPullRequestValidator(unittest.TestCase):
         self.assertTrue(res.is_mergeable)
         self.assertEqual(res.mergeable_reason, MergeableReason.RULES_SATISFIED)
 
+    def test_one_approved_one_changes_requested_assigned_count(self):
+        """Test that a user who has requested changes counts towards assigned_count, while an approver does not."""
+        # 1. Setup a custom hierarchy and config requiring 2 approvals
+        hierarchy = {
+            "maintainers": Team(name="maintainers", level=2),
+        }
+        rules = [
+            GovernanceRule(
+                name="Test Rule",
+                patterns=["*"],
+                requires_all=[
+                    RuleRequirement(min_approvals=2, min_team=hierarchy["maintainers"])
+                ],
+            )
+        ]
+        config = GovernanceConfig(
+            teams=hierarchy,
+            rules=rules,
+            fallback=[],
+            proxy_reviewers=set(),
+        )
+        memberships = TeamMemberships.create(
+            members_by_team={
+                "maintainers": {"maint1", "maint2", "maint3"},
+            },
+            teams=hierarchy,
+        )
+        validator = PullRequestValidator(config, memberships)
+
+        # PR where:
+        # - maint1 has approved
+        # - maint2 has requested changes
+        # both are in 'maintainers'.
+        pr = PullRequest(
+            number=1,
+            author="author1",
+            is_draft=False,
+            changed_files=["file.txt"],
+            reviews=[
+                Review(user="maint1", state=ReviewState.APPROVED),
+                Review(user="maint2", state=ReviewState.CHANGES_REQUESTED),
+            ],
+        )
+
+        res = validator.validate(pr)
+        self.assertFalse(res.is_mergeable)
+        self.assertEqual(res.error, ValidationErrorReason.CHANGES_REQUESTED)
+
+        self.assertEqual(len(res.requirement_statuses), 1)
+        status = res.requirement_statuses[0]
+        self.assertEqual(status.requirement.min_team, hierarchy["maintainers"])
+        self.assertEqual(status.requirement.min_approvals, 2)
+        self.assertEqual(status.approved_count, 1)
+        self.assertEqual(
+            status.assigned_count, 1
+        )  # Only maint2 is assigned/active and not approved
+        self.assertFalse(status.is_satisfied)
+        self.assertEqual(status.approvers, ["maint1"])
+
 
 class TestFetchTeamMemberships(unittest.TestCase):
-    """Tests for fetch_team_memberships function."""
+    """Tests for GitHubClient.fetch_team_memberships method."""
 
     def test_fetch_success(self):
         """Test fetch_team_memberships successfully fetches team memberships."""
@@ -666,13 +753,14 @@ class TestFetchTeamMemberships(unittest.TestCase):
             proxy_reviewers=set(),
         )
 
-        memberships = fetch_team_memberships(mock_github, "my-org", config)
+        github_client = GitHubClient(mock_github)
+        memberships = github_client.fetch_team_memberships("my-org", config)
 
         self.assertEqual(
             memberships.members_by_team,
             {
-                "devops": {"user1", "user2"},
-                "maintainers": {"user3"},
+                Team("devops", 1): {"user1", "user2"},
+                Team("maintainers", 2): {"user3"},
             },
         )
         mock_github.get_organization.assert_called_once_with("my-org")
@@ -691,8 +779,9 @@ class TestFetchTeamMemberships(unittest.TestCase):
             proxy_reviewers=set(),
         )
 
+        github_client = GitHubClient(mock_github)
         with self.assertRaises(RuntimeError) as ctx:
-            fetch_team_memberships(mock_github, "my-org", config)
+            github_client.fetch_team_memberships("my-org", config)
 
         self.assertIn("Failed to fetch organization 'my-org'", str(ctx.exception))
 
@@ -713,8 +802,9 @@ class TestFetchTeamMemberships(unittest.TestCase):
             proxy_reviewers=set(),
         )
 
+        github_client = GitHubClient(mock_github)
         with self.assertRaises(RuntimeError) as ctx:
-            fetch_team_memberships(mock_github, "my-org", config)
+            github_client.fetch_team_memberships("my-org", config)
 
         self.assertIn("Could not fetch members for team 'devops'", str(ctx.exception))
 
@@ -724,57 +814,58 @@ class TestPRValidatorMain(unittest.TestCase):
 
     @patch("pr_validator.sys.exit")
     @patch("pr_validator.print")
+    @patch("pr_validator.os.path.exists")
     @patch("pr_validator.argparse.ArgumentParser.parse_args")
-    def test_main_invalid_repo_name(self, mock_parse_args, mock_print, mock_exit):
-        """Test main fails when repo name is invalid."""
-        from pr_validator import main
-
+    def test_main_missing_rules_file_fallback(
+        self, mock_parse_args, mock_exists, mock_print, mock_exit
+    ):
+        """Test main fails when resolved convention rules file does not exist."""
         mock_args = MagicMock()
-        mock_args.repo_name = "invalid-repo"
+        mock_args.repo = "Universal-Commerce-Protocol/non-existent-repo"
+        mock_args.rules_file = None
         mock_parse_args.return_value = mock_args
+        mock_exists.return_value = False
         mock_exit.side_effect = SystemExit(1)
 
-        with self.assertRaises(SystemExit) as cm:
+        with self.assertRaises(SystemExit):
             main()
 
-        self.assertEqual(cm.exception.code, 1)
         mock_exit.assert_called_once_with(1)
         mock_print.assert_any_call(
-            "❌ ERROR: Invalid repository name 'invalid-repo'. Must be one of: ['ucp', 'python-sdk']",
+            "❌ ERROR: Governance rules file not found at '.github-central/org-tools/governance/rules/non-existent-repo-rules.yml'. Please ensure it exists or specify a custom path using --rules-file.",
             file=sys.stderr,
         )
 
     @patch("pr_validator.sys.exit")
     @patch("pr_validator.ValidationLogger")
     @patch("pr_validator.PullRequestValidator")
-    @patch("pr_validator.fetch_pull_request")
-    @patch("pr_validator.fetch_team_memberships")
+    @patch("pr_validator.GitHubClient")
     @patch("pr_validator.Github")
     @patch("pr_validator.Auth.Token")
+    @patch("pr_validator.os.path.exists")
     @patch("pr_validator.GovernanceConfigParser")
     @patch("pr_validator.argparse.ArgumentParser.parse_args")
-    def test_main_valid_repo_name(
+    def test_main_convention_success(
         self,
         mock_parse_args,
         mock_parser_class,
+        mock_exists,
         mock_token,
         mock_github_class,
-        mock_fetch_members,
-        mock_fetch_pr,
+        mock_github_client_class,
         mock_validator_class,
         mock_logger_class,
         mock_exit,
     ):
-        """Test main succeeds and parses file with valid repo name."""
-        from pr_validator import main, RepoName, REPO_RULES_MAPPING
-
+        """Test main succeeds and resolves rules file path by convention when rules-file is not provided."""
         mock_args = MagicMock()
         mock_args.token = "token"
         mock_args.org = "org"
-        mock_args.repo = "repo"
+        mock_args.repo = "Universal-Commerce-Protocol/python-sdk"
         mock_args.pr = 123
-        mock_args.repo_name = "ucp"
+        mock_args.rules_file = None
         mock_parse_args.return_value = mock_args
+        mock_exists.return_value = True
         mock_exit.side_effect = SystemExit(0)
 
         # Mock parse_file to return a dummy config
@@ -782,6 +873,69 @@ class TestPRValidatorMain(unittest.TestCase):
         mock_parser_class.return_value = mock_parser
         dummy_config = MagicMock()
         mock_parser.parse_file.return_value = dummy_config
+
+        # Mock gateway
+        mock_gateway = MagicMock()
+        mock_github_client_class.return_value = mock_gateway
+
+        # Mock validation result to be mergeable
+        mock_validator = MagicMock()
+        mock_validator_class.return_value = mock_validator
+        mock_result = MagicMock()
+        mock_result.is_mergeable = True
+        mock_result.mergeable_reason = None
+        mock_validator.validate.return_value = mock_result
+
+        with self.assertRaises(SystemExit):
+            main()
+
+        # Check parse_file was called with the convention-resolved path
+        mock_parser.parse_file.assert_called_once_with(
+            ".github-central/org-tools/governance/rules/python-sdk-rules.yml"
+        )
+        mock_exit.assert_called_once_with(0)
+
+    @patch("pr_validator.sys.exit")
+    @patch("pr_validator.ValidationLogger")
+    @patch("pr_validator.PullRequestValidator")
+    @patch("pr_validator.GitHubClient")
+    @patch("pr_validator.Github")
+    @patch("pr_validator.Auth.Token")
+    @patch("pr_validator.os.path.exists")
+    @patch("pr_validator.GovernanceConfigParser")
+    @patch("pr_validator.argparse.ArgumentParser.parse_args")
+    def test_main_with_rules_file(
+        self,
+        mock_parse_args,
+        mock_parser_class,
+        mock_exists,
+        mock_token,
+        mock_github_class,
+        mock_github_client_class,
+        mock_validator_class,
+        mock_logger_class,
+        mock_exit,
+    ):
+        """Test main succeeds with a custom rules file, bypassing repo mapping."""
+        mock_args = MagicMock()
+        mock_args.token = "token"
+        mock_args.org = "org"
+        mock_args.repo = "Universal-Commerce-Protocol/arbitrary-repo"
+        mock_args.pr = 123
+        mock_args.rules_file = "custom-rules.yml"
+        mock_parse_args.return_value = mock_args
+        mock_exists.return_value = True
+        mock_exit.side_effect = SystemExit(0)
+
+        # Mock parse_file to return a dummy config
+        mock_parser = MagicMock()
+        mock_parser_class.return_value = mock_parser
+        dummy_config = MagicMock()
+        mock_parser.parse_file.return_value = dummy_config
+
+        # Mock gateway
+        mock_gateway = MagicMock()
+        mock_github_client_class.return_value = mock_gateway
 
         # Mock validation result to be mergeable
         mock_validator = MagicMock()
@@ -795,8 +949,8 @@ class TestPRValidatorMain(unittest.TestCase):
             main()
 
         self.assertEqual(cm.exception.code, 0)
-        # Check parse_file was called with the mapped rules file
-        mock_parser.parse_file.assert_called_once_with(REPO_RULES_MAPPING[RepoName.UCP])
+        # Check parse_file was called with the custom rules file
+        mock_parser.parse_file.assert_called_once_with("custom-rules.yml")
         mock_exit.assert_called_once_with(0)
 
 

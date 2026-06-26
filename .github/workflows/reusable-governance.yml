@@ -17,10 +17,10 @@ name: Reusable Governance Gate
 on:
   workflow_call:
     inputs:
-      repo-name:
-        required: true
+      rules-file:
+        required: false
         type: string
-        description: "Path to the governance rules configuration file"
+        description: "Optional path to the governance rules configuration file (e.g., .github-central/org-tools/governance/rules/python-sdk-rules.yml). If not provided, resolved via --repo mapping."
     secrets:
       ORG_READ_TOKEN:
         required: true
@@ -54,12 +54,18 @@ jobs:
         run: |
           set +e
 
+          RULES_FILE_ARG=""
+          if [ -n "${{ inputs.rules-file }}" ]; then
+            RULES_FILE_ARG="--rules-file ${{ inputs.rules-file }}"
+          fi
+
           uv run .github-central/org-tools/governance/scripts/pr_validator.py \
             --token "${{ secrets.ORG_READ_TOKEN }}" \
             --org "${{ github.repository_owner }}" \
             --repo "${{ github.repository }}" \
             --pr "${{ github.event.pull_request.number }}" \
-            --repo-name "${{ inputs.repo-name }}"
+            $RULES_FILE_ARG
+
 
           EVAL_EXIT_CODE=$?
           set -e

@@ -128,15 +128,17 @@ python3 scripts/pr_validator.py \
   --token "<GITHUB_TOKEN>" \
   --org "<ORG_NAME>" \
   --repo "<REPO_PATH>" \
-  --pr <PR_NUMBER>
+  --pr <PR_NUMBER> \
+  --rules-file "<PATH_TO_RULES_YAML>"
 ```
 
 ### CLI Arguments:
 
 - `--token`: Org-level read token for GitHub REST API calls (requires permission to read team memberships).
 - `--org`: The GitHub organization name.
-- `--repo`: The full GitHub repository path (e.g. `Universal-Commerce-Protocol/python-sdk`), which is used to map directly to the governance rules configuration file.
+- `--repo`: The full GitHub repository path (e.g. `Universal-Commerce-Protocol/python-sdk`).
 - `--pr`: The PR number to validate.
+- `--rules-file`: Path to the governance rules YAML file.
 
 ---
 

@@ -22,7 +22,6 @@
 """Pull Request validator using governance rules and team memberships under the Venn Diagram model."""
 
 import argparse
-from enum import Enum
 import sys
 
 from github import Auth, Github, GithubException
@@ -48,15 +47,7 @@ from pr_models import (
 from validation_logger import ValidationLogger
 
 
-class RepoName(Enum):
-    """Supported repository names mapping to governance rules."""
 
-    PYTHON_SDK = "Universal-Commerce-Protocol/python-sdk"
-
-
-REPO_RULES_MAPPING = {
-    RepoName.PYTHON_SDK: ".github-central/org-tools/governance/rules/python-sdk-rules.yml",
-}
 
 
 class GitHubClient:
@@ -346,27 +337,18 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         help="GitHub Repository name (e.g. 'your-organization/your-repo').",
     )
     parser.add_argument("--pr", type=int, required=True, help="Pull Request number.")
+    parser.add_argument(
+        "--rules-file",
+        required=True,
+        help="Path to the governance rules YAML file.",
+    )
     return parser.parse_args(args)
 
 
 def run_validation(args: argparse.Namespace) -> ValidationResult:
     """Execute the core validation flow."""
-    try:
-        repo_enum = RepoName(args.repo)
-    except ValueError as e:
-        raise ValueError(
-            f"Invalid repository name '{args.repo}'. Must be one of: "
-            f"{[e.value for e in RepoName]}"
-        ) from e
-
-    rules_file = REPO_RULES_MAPPING.get(repo_enum)
-    if not rules_file:
-        raise ValueError(
-            f"No governance rules mapped for repository '{repo_enum.value}'."
-        )
-
     # 1. Load config
-    config = GovernanceConfigParser().parse_file(rules_file)
+    config = GovernanceConfigParser().parse_file(args.rules_file)
 
     # 2. Authenticate and fetch data
     auth = Auth.Token(args.token)

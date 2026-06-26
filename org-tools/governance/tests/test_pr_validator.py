@@ -42,8 +42,6 @@ from pr_validator import (  # noqa: E402
     PullRequestValidator,
     GitHubClient,
     main,
-    RepoName,
-    REPO_RULES_MAPPING,
 )
 from pr_models import (  # noqa: E402
     MergeableReason,
@@ -475,6 +473,40 @@ class TestPullRequestValidator(unittest.TestCase):
         self.assertEqual(status.assigned_count, 1)
         self.assertFalse(status.is_satisfied)
 
+    def test_assigned_team_expansion_reporting(self):
+        """Test that assigned teams are expanded to their eligible members in status reporting."""
+        # We check source/main.py (requires 1 from min_team tech-council)
+        # We assign the tech-council team to review.
+        # Members of tech-council are tc-member1 and tc-member2.
+        # Both are eligible reviewers.
+        pr = PullRequest(
+            number=1,
+            author="author1",
+            is_draft=False,
+            changed_files=["source/main.py"],
+            reviews=[],
+            assigned_user_names=[],
+            assigned_team_names=["tech-council"],
+        )
+        res = self.validator.validate(pr)
+        self.assertFalse(res.is_mergeable)
+        self.assertEqual(res.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
+        self.assertEqual(len(res.requirement_statuses), 1)
+
+        status = res.requirement_statuses[0]
+        self.assertEqual(status.requirement.min_team, self.hierarchy["tech-council"])
+        self.assertEqual(status.requirement.min_approvals, 1)
+        self.assertEqual(status.approved_count, 0)
+        # assigned_count should be 2 because tech-council has 2 members (tc-member1, tc-member2)
+        # and both satisfy the min_team hierarchy requirement.
+        self.assertEqual(status.assigned_count, 2)
+        self.assertFalse(status.is_satisfied)
+
+        # Directly verify the internal helper resolves the specific usernames
+        approvers, assigned = self.validator._get_all_approvers_and_assigned_usernames(pr)
+        self.assertEqual(approvers, set())
+        self.assertEqual(assigned, {"tc-member1", "tc-member2"})
+
     def test_governance_config_parser(self):
         """Test parsing of governance configuration."""
         yaml_data = {
@@ -779,26 +811,6 @@ class TestPRValidatorMain(unittest.TestCase):
     """Tests for the main function of pr_validator."""
 
     @patch("pr_validator.sys.exit")
-    @patch("pr_validator.print")
-    @patch("pr_validator.argparse.ArgumentParser.parse_args")
-    def test_main_invalid_repo_name(self, mock_parse_args, mock_print, mock_exit):
-        """Test main fails when repo name is invalid."""
-        mock_args = MagicMock()
-        mock_args.repo = "Universal-Commerce-Protocol/invalid-repo"
-        mock_parse_args.return_value = mock_args
-        mock_exit.side_effect = SystemExit(1)
-
-        with self.assertRaises(SystemExit) as cm:
-            main()
-
-        self.assertEqual(cm.exception.code, 1)
-        mock_exit.assert_called_once_with(1)
-        mock_print.assert_any_call(
-            "❌ ERROR: Invalid repository name 'Universal-Commerce-Protocol/invalid-repo'. Must be one of: ['Universal-Commerce-Protocol/python-sdk']",
-            file=sys.stderr,
-        )
-
-    @patch("pr_validator.sys.exit")
     @patch("pr_validator.ValidationLogger")
     @patch("pr_validator.PullRequestValidator")
     @patch("pr_validator.GitHubClient")
@@ -806,7 +818,7 @@ class TestPRValidatorMain(unittest.TestCase):
     @patch("pr_validator.Auth.Token")
     @patch("pr_validator.GovernanceConfigParser")
     @patch("pr_validator.argparse.ArgumentParser.parse_args")
-    def test_main_valid_repo_name(
+    def test_main_success(
         self,
         mock_parse_args,
         mock_parser_class,
@@ -817,12 +829,13 @@ class TestPRValidatorMain(unittest.TestCase):
         mock_logger_class,
         mock_exit,
     ):
-        """Test main succeeds and parses file with valid repo name."""
+        """Test main succeeds when rules-file is provided."""
         mock_args = MagicMock()
         mock_args.token = "token"
         mock_args.org = "org"
         mock_args.repo = "Universal-Commerce-Protocol/python-sdk"
         mock_args.pr = 123
+        mock_args.rules_file = "my-rules.yml"
         mock_parse_args.return_value = mock_args
         mock_exit.side_effect = SystemExit(0)
 
@@ -848,10 +861,8 @@ class TestPRValidatorMain(unittest.TestCase):
             main()
 
         self.assertEqual(cm.exception.code, 0)
-        # Check parse_file was called with the mapped rules file
-        mock_parser.parse_file.assert_called_once_with(
-            REPO_RULES_MAPPING[RepoName.PYTHON_SDK]
-        )
+        # Check parse_file was called with the provided rules file
+        mock_parser.parse_file.assert_called_once_with("my-rules.yml")
         mock_exit.assert_called_once_with(0)
 
 

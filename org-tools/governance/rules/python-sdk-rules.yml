@@ -18,9 +18,11 @@ rules:
   # ---------------------------------------------------------
   - name: "infra_and_tooling"
     patterns:
+      - ".codespellignore"
       - ".github/**"
       - ".gitignore"
       - ".pre-commit-config.yaml"
+      - ".prettierrc"
       - "pyproject.toml"
       - "uv.lock"
       - "generate_models.sh"

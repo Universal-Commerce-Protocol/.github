@@ -1,5 +1,5 @@
-# Target Repository: ucp
-# Repository URL: https://github.com/Universal-Commerce-Protocol/ucp
+# Target Repository: meeting-minutes
+# Repository URL: https://github.com/Universal-Commerce-Protocol/meeting-minutes
 ---
 rules:
   # ---------------------------------------------------------
@@ -8,64 +8,45 @@ rules:
   - name: "governance_and_licensing"
     patterns:
       - "LICENSE"
-      - "MAINTAINERS.md"
     requires:
       # Strictly Governance Council (L4)
       - team: "governance-council"
         min_approvals: 2
 
   # ---------------------------------------------------------
-  # Core Protocol
+  # Technical Council Minutes
   # ---------------------------------------------------------
-  - name: "core_protocol_src"
+  - name: "tech_council_minutes"
     patterns:
-      - "source/**"
+      - "tc/**"
+    requires:
+      # Grants access to tech-council (L3) and governance-council (L4)
+      - min_team: "tech-council"
+        min_approvals: 2
+
+  # ---------------------------------------------------------
+  # Governing Council Minutes
+  # ---------------------------------------------------------
+  - name: "governance_council_minutes"
+    patterns:
+      - "gc/**"
     requires:
       # Grants access to governance-council (L4)
       - min_team: "governance-council"
         min_approvals: 2
 
   # ---------------------------------------------------------
-  # Specific Documentation
-  # ---------------------------------------------------------
-  - name: "documentation_spec"
-    patterns:
-      - "docs/specification/**"
-    requires:
-      # Grants access to maintainers (L2), tech-council (L3) and
-      # governance-council (L4)
-      - min_team: "maintainers"
-        min_approvals: 2
-
-  # ---------------------------------------------------------
-  # Infrastructure, Tooling, Configuration & General Docs
+  # Infrastructure, Tooling & General Files
   # ---------------------------------------------------------
   - name: "infra_and_tooling"
     patterns:
       - ".github/**"
-      - "scripts/**"
-      - "generated/**"
-      - "hooks.py"
-      - "main.py"
-      - ".cspell/**"
-      - ".cspell.json"
-      - ".pre-commit-config.yaml"
-      - ".prettierignore"
-      - ".prettierrc"
-      - ".stylelintrc.json"
-      - "biome.json"
-      - "mkdocs.yml"
       - ".gitignore"
-      - ".linkignore"
-      - "AGENTS.md"
-      - "CLAUDE.md"
-      - "pyproject.toml"
-      - "uv.lock"
-      - "package.json"
-      - "package-lock.json"
-      - "docs/**"
+      - ".pre-commit-config.yaml"
+      - "README.md"
+      - "CONTRIBUTING.md"
+      - "SECURITY.md"
     excludes:
-      - "docs/specification/**" # Covered by Documentation Specification
       - ".github/CODEOWNERS"
     requires:
       # Grants access to devops (L1), maintainers (L2), tech-council (L3),

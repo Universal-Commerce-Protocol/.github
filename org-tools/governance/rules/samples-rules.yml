@@ -18,11 +18,13 @@ rules:
   # ---------------------------------------------------------
   - name: "infra_and_tooling"
     patterns:
+      - ".codespellignore"
       - ".cspell.json"
       - ".cspell/**"
       - ".github/**"
       - ".gitignore"
       - ".pre-commit-config.yaml"
+      - ".prettierrc"
       - "README.md"
       - "SECURITY.md"
       - "a2a/**"

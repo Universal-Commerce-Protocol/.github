@@ -76,7 +76,7 @@ class TestCheckCopyright(unittest.TestCase):
                 check_copyright.check_file(
                     file_path, check_copyright.DEFAULT_GENERATED_FILENAME_RE
                 ),
-                f"Failed for: {content}"
+                f"Failed for: {content}",
             )
 
     def test_missing_copyright_header(self):

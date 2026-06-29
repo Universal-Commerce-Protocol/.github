@@ -25,13 +25,13 @@ jobs:
     steps:
       # 1. Check out the caller repository (the PR code)
       - name: Check out PR code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       # 2. Check out the central tools repository containing check_copyright.py
       - name: Check out central tools
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.repository_owner }}/${{ inputs.central_repo }}
           path: .github-central

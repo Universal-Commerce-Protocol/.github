@@ -38,7 +38,6 @@ jobs:
   evaluate:
     name: Approvals
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
     steps:
       # 1. Check out the caller repository (the PR code)
       - name: Check out PR code

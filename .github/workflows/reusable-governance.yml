@@ -21,6 +21,14 @@ on:
         required: false
         type: string
         description: "Optional path to the governance rules configuration file (e.g., .github-central/org-tools/governance/rules/python-sdk-rules.yml). If not provided, resolved via --repo mapping."
+      pr-number:
+        required: false
+        type: number
+        description: "Optional PR number. Falls back to pull_request context if not provided."
+      commit-sha:
+        required: false
+        type: string
+        description: "Optional commit SHA. Falls back to pull_request context if not provided."
     secrets:
       ORG_READ_TOKEN:
         required: true
@@ -54,6 +62,17 @@ jobs:
         run: |
           set +e
 
+          # Resolve PR number (input vs event fallback)
+          PR_NUMBER="${{ inputs.pr-number }}"
+          if [ -z "$PR_NUMBER" ]; then
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          fi
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "::error::PR number could not be resolved."
+            exit 1
+          fi
+
           RULES_FILE_ARG=""
           if [ -n "${{ inputs.rules-file }}" ]; then
             RULES_FILE_ARG="--rules-file ${{ inputs.rules-file }}"
@@ -63,7 +82,7 @@ jobs:
             --token "${{ secrets.ORG_READ_TOKEN }}" \
             --org "${{ github.repository_owner }}" \
             --repo "${{ github.repository }}" \
-            --pr "${{ github.event.pull_request.number }}" \
+            --pr "$PR_NUMBER" \
             $RULES_FILE_ARG
 
 
@@ -108,11 +127,25 @@ jobs:
             // Construct the exact URL to the current GitHub Actions workflow run logs
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
 
+            // Resolve SHA (input vs event fallback)
+            let sha = '${{ inputs.commit-sha }}';
+            if (!sha) {
+              sha = context.payload.pull_request ? context.payload.pull_request.head.sha : null;
+            }
+            if (!sha && context.payload.workflow_run) {
+              sha = context.payload.workflow_run.head_sha;
+            }
+
+            if (!sha) {
+              core.setFailed('SHA could not be resolved.');
+              return;
+            }
+
             // Post the status to the specific commit hash
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              sha: context.payload.pull_request.head.sha,
+              sha: sha,
               state: state,
               context: 'Governance / Approvals',
               description: description,

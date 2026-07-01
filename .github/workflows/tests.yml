@@ -38,3 +38,6 @@ jobs:
 
       - name: Run label-sync tests
         run: uv run --with PyGithub --with PyYAML python org-tools/test_sync_labels.py
+
+      - name: Run copyright check tool tests
+        run: uv run python org-tools/test_check_copyright.py

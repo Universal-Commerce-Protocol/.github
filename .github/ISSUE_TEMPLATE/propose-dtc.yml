@@ -1,0 +1,83 @@
+# Copyright 2026 UCP Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Domain Tech Council (DTC) Charter Proposal
+description: Submit a new DTC charter for the Universal Commerce Protocol.
+title: "[DTC Charter]: <Domain Name>"
+labels: ["dtc-charter", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Domain Tech Council (DTC) Charter Template
+        Please fill out the details below to propose a new DTC.
+        
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: Problem Statement
+      description: Describe the specific market gap, technical bottleneck, or industry fragmentation this DTC proposal aims to resolve for the domain.
+    validations:
+      required: true
+
+  - type: textarea
+    id: ucp-fit
+    attributes:
+      label: UCP Strategic Fit
+      description: Explain why the Universal Commerce Protocol is the right fit for this domain.
+    validations:
+      required: true
+
+  - type: textarea
+    id: roadmap
+    attributes:
+      label: Use Case Roadmap
+      description: Outline the phased approach for modeling use cases within UCP.
+      value: |
+        - **Phase 1 (MVP):** [Insert immediate use cases]
+        - **Phase 2 (Expansion):** [Insert mid-term use cases]
+        - **Phase 3 (Long-term):** [Insert long-term use cases]
+    validations:
+      required: true
+
+  - type: textarea
+    id: platforms
+    attributes:
+      label: Platforms
+      description: List the initial set of platforms committing to consume UCP capabilities.
+      value: |
+        - [Platform Name 1]
+        - [Platform Name 2]
+    validations:
+      required: true
+
+  - type: textarea
+    id: businesses
+    attributes:
+      label: Businesses
+      description: List the initial set of businesses ready to implement capabilities via UCP.
+      value: |
+        - [Business Name 1]
+        - [Business Name 2]
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: commitment
+    attributes:
+      label: Commitment
+      description: Formal commitment to the DTC process.
+      options:
+        - label: By submitting this charter, the named platforms and businesses formally commit to a long-term collaboration focused on developing and actively promoting the industry-wide adoption of the primitives proposed by this Domain Tech Council (DTC).
+          required: true

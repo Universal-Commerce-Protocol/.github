@@ -12,22 +12,29 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-name: pre-commit
+name: Tests
 
 on:
-  pull_request:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
 
 jobs:
-  pre-commit:
+  run-tests:
+    name: Run Unit Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           python-version: "3.12"
-      - uses: pre-commit/action@v3.0.1
-        env:
-          #  workaround for pre-commit/action not being updated to node24
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+      - name: Run governance tests
+        run: uv run --with PyGithub --with PyYAML python -m unittest discover -s org-tools/governance/tests
+
+      - name: Run label-sync tests
+        run: uv run --with PyGithub --with PyYAML python org-tools/test_sync_labels.py

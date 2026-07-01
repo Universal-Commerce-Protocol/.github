@@ -1,0 +1,72 @@
+# Target Repository: meeting-minutes
+# Repository URL: https://github.com/Universal-Commerce-Protocol/meeting-minutes
+---
+rules:
+  # ---------------------------------------------------------
+  # Governance
+  # ---------------------------------------------------------
+  - name: "governance_and_licensing"
+    patterns:
+      - "LICENSE"
+    requires:
+      # Strictly Governance Council (L4)
+      - team: "governance-council"
+        min_approvals: 1
+
+  # ---------------------------------------------------------
+  # Technical Council Minutes
+  # ---------------------------------------------------------
+  - name: "tech_council_minutes"
+    patterns:
+      - "tc/**"
+    requires:
+      # Grants access to tech-council (L3) and governance-council (L4)
+      - min_team: "tech-council"
+        min_approvals: 1
+
+  # ---------------------------------------------------------
+  # Governing Council Minutes
+  # ---------------------------------------------------------
+  - name: "governance_council_minutes"
+    patterns:
+      - "gc/**"
+    requires:
+      # Grants access to governance-council (L4)
+      - min_team: "governance-council"
+        min_approvals: 1
+
+  # ---------------------------------------------------------
+  # Infrastructure, Tooling & General Files
+  # ---------------------------------------------------------
+  - name: "infra_and_tooling"
+    patterns:
+      - ".codespellignore"
+      - ".github/**"
+      - ".gitignore"
+      - ".pre-commit-config.yaml"
+      - "README.md"
+      - "CONTRIBUTING.md"
+      - "SECURITY.md"
+    excludes:
+      - ".github/CODEOWNERS"
+    requires:
+      # Grants access to devops (L1), maintainers (L2), tech-council (L3),
+      # and governance-council (L4)
+      - min_team: "devops-maintainers"
+        min_approvals: 1
+
+fallback:
+  requires:
+    # Default for all files (*).
+    # Strictest rule possible
+    - min_team: "governance-council"
+      min_approvals: 1
+
+proxy_reviewers:
+  - amithanda
+
+team_hierarchy:
+  devops-maintainers: 1
+  maintainers: 2
+  tech-council: 3
+  governance-council: 4

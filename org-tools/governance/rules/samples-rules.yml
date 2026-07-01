@@ -1,0 +1,52 @@
+# Target Repository: samples
+# Repository URL: https://github.com/Universal-Commerce-Protocol/samples
+---
+rules:
+  # ---------------------------------------------------------
+  # Governance
+  # ---------------------------------------------------------
+  - name: "governance_and_licensing"
+    patterns:
+      - "LICENSE"
+    requires:
+      # Strictly Governance Council (L4)
+      - team: "governance-council"
+        min_approvals: 2
+
+  # ---------------------------------------------------------
+  # Infrastructure, Tooling & Configuration
+  # ---------------------------------------------------------
+  - name: "infra_and_tooling"
+    patterns:
+      - ".codespellignore"
+      - ".cspell.json"
+      - ".cspell/**"
+      - ".github/**"
+      - ".gitignore"
+      - ".pre-commit-config.yaml"
+      - ".prettierrc"
+      - "README.md"
+      - "SECURITY.md"
+      - "a2a/**"
+      - "rest/**"
+    requires:
+      # Grants access to devops (L1), maintainers (L2), tech-council (L3),
+      # and governance-council (L4)
+      - min_team: "devops-maintainers"
+        min_approvals: 2
+
+fallback:
+  requires:
+    # Default for all files (*).
+    # Strictest rule possible
+    - min_team: "governance-council"
+      min_approvals: 2
+
+proxy_reviewers:
+  - amithanda
+
+team_hierarchy:
+  devops-maintainers: 1
+  maintainers: 2
+  tech-council: 3
+  governance-council: 4

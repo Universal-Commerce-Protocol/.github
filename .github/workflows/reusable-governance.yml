@@ -1,0 +1,120 @@
+#   Copyright 2026 UCP Authors
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+name: Reusable Governance Gate
+
+on:
+  workflow_call:
+    inputs:
+      rules-file:
+        required: false
+        type: string
+        description: "Optional path to the governance rules configuration file (e.g., .github-central/org-tools/governance/rules/python-sdk-rules.yml). If not provided, resolved via --repo mapping."
+    secrets:
+      ORG_READ_TOKEN:
+        required: true
+        description: "Org-level read token for team membership checks"
+
+jobs:
+  evaluate:
+    name: Approvals
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      # 1. Check out the caller repository (the PR code)
+      - name: Check out PR code
+        uses: actions/checkout@v7
+
+      # 2. Check out the central governance scripts from the central repository
+      - name: Check out central governance scripts
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository_owner }}/.github
+          path: .github-central
+          token: ${{ secrets.ORG_READ_TOKEN }}
+
+      # 3. Set up uv using the standard action
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      # 4. Run governance gate check and capture the exit code
+      - name: Evaluate Required Approvals
+        id: validator
+        run: |
+          set +e
+
+          RULES_FILE_ARG=""
+          if [ -n "${{ inputs.rules-file }}" ]; then
+            RULES_FILE_ARG="--rules-file ${{ inputs.rules-file }}"
+          fi
+
+          uv run .github-central/org-tools/governance/scripts/pr_validator.py \
+            --token "${{ secrets.ORG_READ_TOKEN }}" \
+            --org "${{ github.repository_owner }}" \
+            --repo "${{ github.repository }}" \
+            --pr "${{ github.event.pull_request.number }}" \
+            $RULES_FILE_ARG
+
+
+          EVAL_EXIT_CODE=$?
+          set -e
+
+          # Save the exit code to the GitHub step outputs
+          echo "exit_code=$EVAL_EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+          # --- NEW: Create the Job Summary and Annotation ---
+          if [ -f summary.txt ]; then
+            # 1. Write the rich Markdown report directly to the GitHub Job Summary page
+            cat summary.txt >> "$GITHUB_STEP_SUMMARY"
+
+            # 2. Properly escape newlines (%0A) and carriage returns (%0D)
+            # to prevent truncation in the inline workflow annotations
+            SUMMARY_TEXT=$(cat summary.txt | tr -d '\r' | sed ':a;N;$!ba;s/\n/%0A/g')
+
+            # 3. Post it as an annotation in the UI
+            if [ "$EVAL_EXIT_CODE" -eq 0 ]; then
+              echo "::notice title=Approval Status::$SUMMARY_TEXT"
+            else
+              echo "::error title=Missing Approvals::$SUMMARY_TEXT"
+            fi
+          fi
+          # ----------------------------------
+
+          exit 0
+
+      # 5. Post the static Commit Status to the GitHub API with a clickable log link
+      - name: Post Static Status Check
+        uses: actions/github-script@v9
+        with:
+          script: |
+            // Read the exit code from the previous step
+            const exitCode = parseInt('${{ steps.validator.outputs.exit_code }}', 10);
+
+            // Map the exit code to a GitHub status state
+            const state = (exitCode === 0) ? 'success' : 'failure';
+            const description = (exitCode === 0) ? 'Governance approvals met' : 'Pending required approvals';
+
+            // Construct the exact URL to the current GitHub Actions workflow run logs
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // Post the status to the specific commit hash
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: state,
+              context: 'Governance / Approvals',
+              description: description,
+              target_url: runUrl  // <-- This makes the status check clickable
+            });

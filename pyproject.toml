@@ -1,0 +1,10 @@
+[project]
+name = "github-org-tools"
+version = "0.1.0"
+description = "Organization-wide utilities and automation scripts"
+requires-python = ">=3.11"
+dependencies = [
+    "PyGithub",
+    "PyYAML",
+    "click",
+]

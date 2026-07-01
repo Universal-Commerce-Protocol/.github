@@ -62,12 +62,17 @@ jobs:
           set +e
 
           # Resolve PR number (input vs event fallback)
+          echo "Debug: inputs.pr-number is '${{ inputs.pr-number }}'"
+          echo "Debug: github.event.pull_request.number is '${{ github.event.pull_request.number }}'"
+
           PR_NUMBER="${{ inputs.pr-number }}"
-          if [ -z "$PR_NUMBER" ]; then
+          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ] || [ "$PR_NUMBER" = "0" ]; then
             PR_NUMBER="${{ github.event.pull_request.number }}"
           fi
 
-          if [ -z "$PR_NUMBER" ]; then
+          echo "Debug: Resolved PR_NUMBER is '$PR_NUMBER'"
+
+          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ] || [ "$PR_NUMBER" = "0" ]; then
             echo "::error::PR number could not be resolved."
             exit 1
           fi
@@ -128,14 +133,19 @@ jobs:
 
             // Resolve SHA (input vs event fallback)
             let sha = '${{ inputs.commit-sha }}';
-            if (!sha) {
+            console.log(`Debug: inputs.commit-sha is '${sha}'`);
+            console.log(`Debug: payload.pull_request.head.sha is '${context.payload.pull_request ? context.payload.pull_request.head.sha : 'undefined'}'`);
+            console.log(`Debug: payload.workflow_run.head_sha is '${context.payload.workflow_run ? context.payload.workflow_run.head_sha : 'undefined'}'`);
+
+            if (!sha || sha === 'null') {
               sha = context.payload.pull_request ? context.payload.pull_request.head.sha : null;
             }
-            if (!sha && context.payload.workflow_run) {
+            if ((!sha || sha === 'null') && context.payload.workflow_run) {
               sha = context.payload.workflow_run.head_sha;
             }
+            console.log(`Debug: Resolved sha is '${sha}'`);
 
-            if (!sha) {
+            if (!sha || sha === 'null') {
               core.setFailed('SHA could not be resolved.');
               return;
             }

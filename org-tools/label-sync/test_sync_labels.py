@@ -320,16 +320,13 @@ class TestLabelSync(unittest.TestCase):
 
     def test_live_configuration_files(self):
         """Verify that live general-labels.yml and triage-labels.yml are syntactically valid and conflict-free"""
-        workspace_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        workspace_dir = os.path.dirname(__file__)
         general_path = os.path.join(
             workspace_dir,
-            "org-tools",
             "labels",
             "general-labels.yml",
         )
-        triage_path = os.path.join(
-            workspace_dir, "org-tools", "labels", "triage-labels.yml"
-        )
+        triage_path = os.path.join(workspace_dir, "labels", "triage-labels.yml")
 
         # Confirm files exist
         self.assertTrue(

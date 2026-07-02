@@ -2,30 +2,51 @@
 __pycache__/
 *.py[cod]
 *$py.class
-.venv/
-venv/
-ENV/
-env/
+*.so
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+*.pyo
+
+# Environments
 .env
 .venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# Node
+# Node / JS
 node_modules/
+/dist
+/build
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# IDE / Editor
+# IDEs / Editors
 .idea/
 .vscode/
+*.swp
+*~
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-*.swp
-*~
 
 # OS files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db

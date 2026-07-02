@@ -430,12 +430,12 @@ differ from the YAML configurations. It will NEVER delete existing labels from y
     )
     parser.add_argument(
         "--general-config",
-        default="org-tools/labels/general-labels.yml",
+        default="org-tools/label-sync/labels/general-labels.yml",
         help="Path to general labels YAML config.",
     )
     parser.add_argument(
         "--triage-config",
-        default="org-tools/labels/triage-labels.yml",
+        default="org-tools/label-sync/labels/triage-labels.yml",
         help="Path to triage labels YAML config.",
     )
 

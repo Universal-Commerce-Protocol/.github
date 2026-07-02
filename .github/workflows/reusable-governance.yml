@@ -85,7 +85,7 @@ jobs:
             if [ -n "$COMMIT_SHA" ] && [ "$COMMIT_SHA" != "null" ]; then
               echo "Attempting to resolve PR number for SHA $COMMIT_SHA..."
               export GH_TOKEN="${{ secrets.ORG_READ_TOKEN }}"
-              PR_NUMBER=$(gh pr list --repo "${{ github.repository }}" --commit "$COMMIT_SHA" --state all --json number --jq '.[0].number' 2>/dev/null)
+              PR_NUMBER=$(gh pr list --repo "${{ github.repository }}" --search "$COMMIT_SHA" --state all --json number --jq '.[0].number' 2>/dev/null)
               echo "Resolved PR_NUMBER from gh CLI: '$PR_NUMBER'"
             fi
           fi

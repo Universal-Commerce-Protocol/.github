@@ -73,6 +73,24 @@ jobs:
           echo "Debug: Resolved PR_NUMBER is '$PR_NUMBER'"
 
           if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ] || [ "$PR_NUMBER" = "0" ]; then
+            # Try to resolve from commit SHA using gh CLI
+            COMMIT_SHA="${{ inputs.commit-sha }}"
+            if [ -z "$COMMIT_SHA" ] || [ "$COMMIT_SHA" = "null" ]; then
+              COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
+            fi
+            if [ -z "$COMMIT_SHA" ] || [ "$COMMIT_SHA" = "null" ]; then
+              COMMIT_SHA="${{ github.event.workflow_run.head_sha }}"
+            fi
+
+            if [ -n "$COMMIT_SHA" ] && [ "$COMMIT_SHA" != "null" ]; then
+              echo "Attempting to resolve PR number for SHA $COMMIT_SHA..."
+              export GH_TOKEN="${{ secrets.ORG_READ_TOKEN }}"
+              PR_NUMBER=$(gh pr list --repo "${{ github.repository }}" --search "$COMMIT_SHA" --state all --json number --jq '.[0].number' 2>/dev/null)
+              echo "Resolved PR_NUMBER from gh CLI: '$PR_NUMBER'"
+            fi
+          fi
+
+          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ] || [ "$PR_NUMBER" = "0" ]; then
             echo "::error::PR number could not be resolved."
             exit 1
           fi

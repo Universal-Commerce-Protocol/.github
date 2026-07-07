@@ -42,7 +42,7 @@ jobs:
     env:
       # Comma-separated list of repositories to triage by default when running on a schedule (cron).
       # Edit this list to configure which repositories are triaged automatically.
-      DEFAULT_REPOS: "python-sdk"
+      DEFAULT_REPOS: "python-sdk, js-sdk, conformance, samples, ucp-schema"
     steps:
       - name: Check out central triage scripts
         uses: actions/checkout@v7

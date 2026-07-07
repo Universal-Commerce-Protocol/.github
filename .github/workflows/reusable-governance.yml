@@ -23,7 +23,7 @@ on:
         description: "Optional path to the governance rules configuration file (e.g., .github-central/org-tools/governance/rules/python-sdk-rules.yml). If not provided, resolved via --repo mapping."
       pr-number:
         required: false
-        type: number
+        type: string
         description: "Optional PR number. Falls back to pull_request context if not provided."
       commit-sha:
         required: false

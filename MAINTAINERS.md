@@ -1,0 +1,86 @@
+<!--
+   Copyright 2026 UCP Authors
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+# UCP Maintainers
+
+## Shopping Tech Council
+
+The Shopping Tech Council is responsible for the technical direction and overall
+design of the protocol for Shopping Domain.
+
+<!-- cSpell:ignore Amit Handa Anurag Sinha Daniel Wyckoff Drew Olson -->
+<!-- cSpell:ignore Greg Smith Ilya Grigorik Imran Hoosain James Andersen -->
+<!-- cSpell:ignore Jing Li Lee Richmond Maxime Najim Uddhav Kambli -->
+<!-- cSpell:ignore Patrick Jordan Prasad Wangikar Scot DeDeo Twum Djin -->
+<!-- cSpell:ignore Victoria Duggan -->
+| Name | Company |
+| :--- | :--- |
+| Amit Handa | Google |
+| Anurag Sinha | Google |
+| Daniel Wyckoff | Shopify |
+| Drew Olson | Google |
+| Greg Smith | Amazon |
+| Ilya Grigorik | Shopify |
+| Imran Hoosain | Etsy |
+| James Andersen | Meta |
+| Jing Li | Google |
+| Lee Richmond | Shopify |
+| Maxime Najim | Target |
+| Patrick Jordan | Microsoft |
+| Prasad Wangikar | Stripe |
+| Scot DeDeo | Salesforce |
+| Uddhav Kambli | Wayfair |
+| Victoria Duggan | Shopify |
+
+## Food Tech Council
+
+The Food Tech Council is responsible for the technical direction and overall
+design of the protocol for Food Ordering Domain.
+
+<!-- cSpell:ignore Amit Handa Andrew Mackowski Jing Li Johnny Li Jon Hines -->
+<!-- cSpell:ignore Luke Wulf Malvi Hemani Nimish Sheth Teresa Qin -->
+<!-- cSpell:ignore Travis McPhail -->
+| Name | Company |
+| :--- | :--- |
+| Amit Handa | Google |
+| Andrew Mackowski | Google |
+| Jing Li | Google |
+| Johnny Li | Square |
+| Jon Hines | Toast |
+| Luke Wulf | DoorDash |
+| Malvi Hemani | Google |
+| Nimish Sheth | Uber Eats |
+| Teresa Qin | Google |
+| Travis McPhail | Google |
+| Open | to be elected |
+| Open | to be elected |
+| Open | to be elected |
+| Open | to be elected |
+| Open | to be elected |
+| Open | to be elected |
+
+## Governance Council
+
+The Governance Council is responsible for the overall adoption and health of
+the protocol.
+
+| Name | Company |
+| :--- | :--- |
+| Amit Handa | Google |
+| Ilya Grigorik | Shopify |
+| Twum Djin | Stripe |
+| Open | to be elected |
+| Open | to be elected |

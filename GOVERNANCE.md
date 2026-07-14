@@ -64,15 +64,13 @@
   contributions towards the protocol. Members can be re-elected any number of
   times. See [TC_ELECTIONS.md](TC_ELECTIONS.md) for more details.
 
-
 ### Shopping Tech Council (Shopping TC)
 
 - Responsible for building and maintaining core specification for the
   Shopping domain.
 - Includes 16 members, 4 permanent members from each founding organization (Google &
   Shopify), each with 1 vote (total 8 votes).
-- Includes 8 members from any organization, each with 1 vote (total 8 votes), 
-
+- Includes 8 members from any organization, each with 1 vote (total 8 votes).
 
 ### Food Tech Council (Food TC)
 
@@ -107,16 +105,17 @@
 - Decisions are made with a majority vote.
 - May participate in any TC.
 
-## Process for nominating new Domain Tech Councils (DTC)
+## Nominating new Domain Tech Councils (DTC) or Domain Working Groups (DWG)
 
-- Submit a DTC charter nomination (using the
-  [DTC charter template](DOMAIN_TECH_COUNCIL_CHARTER.md)) as a new issue
+- Submit a DTC or DWG charter nomination (using the
+  [DTC charter template](DOMAIN_TECH_COUNCIL_CHARTER.md) or
+  [DWG charter template](DOMAIN_WORKING_GROUP_CHARTER.md)) as a new issue
   in the [UCP Issues
   tracker](https://github.com/Universal-Commerce-Protocol/ucp/issues).
-- GC reviews DTC charter and approves/rejects DTC nomination.
-- GC opens up nomination for inducting DTC members, using the process
+- GC reviews the charter and approves/rejects the nomination.
+- GC opens up nomination for inducting members, using the process
   specified in [TC_ELECTIONS.md](TC_ELECTIONS.md).
-- GC elects and announces the new DTC members, finalizes the DTC
+- GC elects and announces the new members, finalizes the
   composition and updates the governance documentation.
 
 ## Communication

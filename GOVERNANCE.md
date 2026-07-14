@@ -52,7 +52,7 @@
   to form a DWG (e.g., "Travel WG"). Once chartered, the DWG has autonomy to
   define capabilities for their domain and submit for TC approvals.
 
-## Shopping Tech Council (TC)
+## Shopping Tech Council (Shopping TC)
 
 - Responsible for building and maintaining core specification for the
   Shopping domain.
@@ -60,15 +60,14 @@
 - Includes 16 members, 4 permanent members from each founding organization (Google &
   Shopify), each with 1 vote (total 8 votes).
 - Includes 8 members from any organization, each with 1 vote (total 8 votes), elected
-  by the permanent founding members of the TC every 6 months, based on their technical
+  by the members of the GC every 6 months, based on their technical
   contributions towards the protocol. Members can be re-elected any number of
   times. See [TC_ELECTIONS.md](TC_ELECTIONS.md) for more details.
 - Decisions are made with a majority vote.
-- Any TC member may request a review from the Governing Council at any time
+- Any Shopping TC member may request a review from the Governing Council at any time
   for any additional inputs.
-- Shopping TC members - See [MAINTAINERS.md](MAINTAINERS.md) for the current list.
 
-## Food Tech Council (TC)
+## Food Tech Council (Food TC)
 
 - Responsible for building and maintaining core specification for the
   Food Ordering domain.
@@ -77,14 +76,13 @@
   6 from Google, 1 from DoorDash, Toast, Square, Uber Eats each with 1 vote
   (total 10 votes).
 - Includes 6 members from any organization, each with 1 vote (total 6 votes),
-  elected by the permanent founding members of the TC every 6 months, based on
+  elected by the members of the GC every 6 months, based on
   their technical contributions towards the protocol. Members can be
   re-elected any number of times. See [TC_ELECTIONS.md](TC_ELECTIONS.md) for
   more details.
 - Decisions are made with a majority vote.
-- Any TC member may request a review from the Governing Council at any time
+- Any Food TC member may request a review from the Governing Council at any time
   for any additional inputs.
-- Food TC members - See [MAINTAINERS.md](MAINTAINERS.md) for the current list.
 
 ## Governing Council (GC)
 

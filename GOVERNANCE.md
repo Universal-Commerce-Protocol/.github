@@ -52,37 +52,36 @@
   to form a DWG (e.g., "Travel WG"). Once chartered, the DWG has autonomy to
   define capabilities for their domain and submit for TC approvals.
 
-## Shopping Tech Council (Shopping TC)
+## Domain Tech Councils (Domain TC)
+
+- Members are responsible for building and maintaining core specification for the
+  respective domain.
+- Members are elected by the Governing Council (GC).
+- Decisions are made with a majority vote.
+- Any Domain TC member may request a review from the Governing Council at any time
+  for any additional inputs.
+- Members are elected by the GC every 6 months, based on their technical
+  contributions towards the protocol. Members can be re-elected any number of
+  times. See [TC_ELECTIONS.md](TC_ELECTIONS.md) for more details.
+
+
+### Shopping Tech Council (Shopping TC)
 
 - Responsible for building and maintaining core specification for the
   Shopping domain.
-- Elected by the Governing Council (GC).
 - Includes 16 members, 4 permanent members from each founding organization (Google &
   Shopify), each with 1 vote (total 8 votes).
-- Includes 8 members from any organization, each with 1 vote (total 8 votes), elected
-  by the members of the GC every 6 months, based on their technical
-  contributions towards the protocol. Members can be re-elected any number of
-  times. See [TC_ELECTIONS.md](TC_ELECTIONS.md) for more details.
-- Decisions are made with a majority vote.
-- Any Shopping TC member may request a review from the Governing Council at any time
-  for any additional inputs.
+- Includes 8 members from any organization, each with 1 vote (total 8 votes), 
 
-## Food Tech Council (Food TC)
+
+### Food Tech Council (Food TC)
 
 - Responsible for building and maintaining core specification for the
   Food Ordering domain.
-- Elected by the Governing Council (GC).
 - Includes 16 members, with 10 permanent members from founding organizations,
   6 from Google, 1 from DoorDash, Toast, Square, Uber Eats each with 1 vote
   (total 10 votes).
-- Includes 6 members from any organization, each with 1 vote (total 6 votes),
-  elected by the members of the GC every 6 months, based on
-  their technical contributions towards the protocol. Members can be
-  re-elected any number of times. See [TC_ELECTIONS.md](TC_ELECTIONS.md) for
-  more details.
-- Decisions are made with a majority vote.
-- Any Food TC member may request a review from the Governing Council at any time
-  for any additional inputs.
+- Includes 6 members from any organization, each with 1 vote (total 6 votes).
 
 ## Governing Council (GC)
 
@@ -106,8 +105,7 @@
   protocols.
 - May choose to review and veto TC decision or recommendation.
 - Decisions are made with a majority vote.
-- May serve as observers on any TC for a finite amount of time (e.g. to ensure
-  smooth induction of new Domain Tech Councils).
+- May participate in any TC.
 
 ## Process for nominating new Domain Tech Councils (DTC)
 

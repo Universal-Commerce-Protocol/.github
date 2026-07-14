@@ -144,6 +144,22 @@ class TestTriageLabelerPRRules(unittest.TestCase):
 
         self.assertFalse(self.labeler._is_eligible_for_triage(pr))
 
+    def test_pr_with_generic_label_should_not_be_triaged(self):
+        """Test that a PR carrying any generic label returns False."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+        pr.requested_reviewers = []
+        pr.requested_teams = []
+        pr.get_reviews.return_value.totalCount = 0
+
+        mock_label = Mock()
+        mock_label.name = "some-random-label"
+        pr.labels = [mock_label]
+
+        self.assertFalse(self.labeler._is_eligible_for_triage(pr))
+
 
 class TestTriageLabelerLabelApplication(unittest.TestCase):
     """Tests for applying the 'status:needs-triage' label to PRs on GitHub."""
@@ -269,10 +285,7 @@ class TestTriageLabelerBulkExecution(unittest.TestCase):
         self.assertIn("is:pr", query)
         self.assertIn("is:open", query)
         self.assertIn("-is:draft", query)
-        self.assertIn("-label:status:needs-triage", query)
-        self.assertIn("-label:status:backlog", query)
-        self.assertIn("-label:status:stale", query)
-        self.assertIn("-label:status:under-review", query)
+        self.assertIn("no:label", query)
         self.assertIn("repo:mock-org/mock-repo", query)
 
     def test_bulk_triage_raises_runtime_error_on_search_failure(self):

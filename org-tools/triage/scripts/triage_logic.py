@@ -28,7 +28,6 @@ import github
 logger = logging.getLogger("triage")
 
 TARGET_LABEL = "status:needs-triage"
-SKIP_LABELS = {"status:backlog", "status:stale", "status:under-review"}
 
 
 def log_error(message: str, *args) -> None:
@@ -82,13 +81,8 @@ class TriageLabeler:
         """
         logger.info("\nProcessing Repository: %s", self.repo.full_name)
 
-        # Construct query to filter out drafts and labeled/skip PRs at the API level.
-        exclude_labels_query = " ".join(
-            f"-label:{label}" for label in [TARGET_LABEL] + list(SKIP_LABELS)
-        )
-        query = (
-            f"is:pr is:open -is:draft {exclude_labels_query} repo:{self.repo.full_name}"
-        )
+        # Construct query to find PRs with no labels.
+        query = f"is:pr is:open -is:draft no:label repo:{self.repo.full_name}"
         logger.info("  Search Query: %s", query)
 
         try:
@@ -160,12 +154,9 @@ class TriageLabeler:
             )
             return False
 
-        for skip_label in SKIP_LABELS:
-            if skip_label in labels:
-                logger.info(
-                    "Skipping: PR #%s has skip label '%s'.", pull.number, skip_label
-                )
-                return False
+        if len(labels) > 0:
+            logger.info("Skipping: PR #%s has other labels: %s", pull.number, labels)
+            return False
 
         return True
 

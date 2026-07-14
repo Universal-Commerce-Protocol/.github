@@ -52,10 +52,10 @@
   to form a DWG (e.g., "Travel WG"). Once chartered, the DWG has autonomy to
   define capabilities for their domain and submit for TC approvals.
 
-## Tech Council (TC)
+## Shopping Tech Council (TC)
 
-- Responsible for maintaining core technical changes to the spec, e.g., adding
-  new features, reviewing enhancement proposals etc.
+- Responsible for building and maintaining core specification for the
+  Shopping domain.
 - Elected by the Governing Council (GC).
 - Includes 16 members, 4 permanent members from each founding organization (Google &
   Shopify), each with 1 vote (total 8 votes).
@@ -66,6 +66,25 @@
 - Decisions are made with a majority vote.
 - Any TC member may request a review from the Governing Council at any time
   for any additional inputs.
+- Shopping TC members - See [MAINTAINERS.md](MAINTAINERS.md) for the current list.
+
+## Food Tech Council (TC)
+
+- Responsible for building and maintaining core specification for the
+  Food Ordering domain.
+- Elected by the Governing Council (GC).
+- Includes 16 members, with 10 permanent members from founding organizations,
+  6 from Google, 1 from DoorDash, Toast, Square, Uber Eats each with 1 vote
+  (total 10 votes).
+- Includes 6 members from any organization, each with 1 vote (total 6 votes),
+  elected by the permanent founding members of the TC every 6 months, based on
+  their technical contributions towards the protocol. Members can be
+  re-elected any number of times. See [TC_ELECTIONS.md](TC_ELECTIONS.md) for
+  more details.
+- Decisions are made with a majority vote.
+- Any TC member may request a review from the Governing Council at any time
+  for any additional inputs.
+- Food TC members - See [MAINTAINERS.md](MAINTAINERS.md) for the current list.
 
 ## Governing Council (GC)
 
@@ -89,6 +108,8 @@
   protocols.
 - May choose to review and veto TC decision or recommendation.
 - Decisions are made with a majority vote.
+- May serve as observers on any TC for a finite amount of time (e.g. to ensure
+  smooth induction of new Domain Tech Councils).
 
 ## Process for nominating new Domain Tech Councils (DTC)
 

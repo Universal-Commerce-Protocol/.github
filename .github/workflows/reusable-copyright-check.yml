@@ -82,4 +82,4 @@ jobs:
           fi
           ARGS+=("${CHANGED_FILES[@]}")
 
-          uv run python3 .github-central/org-tools/check_copyright.py "${ARGS[@]}"
+          uv run python3 .github-central/org-tools/copyright-check/check_copyright.py "${ARGS[@]}"

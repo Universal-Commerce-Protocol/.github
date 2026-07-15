@@ -1,0 +1,85 @@
+#   Copyright 2026 UCP Authors
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+name: Reusable Copyright Check
+
+on:
+  workflow_call:
+    inputs:
+      central_repo:
+        required: false
+        type: string
+        default: ".github"
+        description: "Name of the central organization tools repository"
+      exclude_filename_regex:
+        required: false
+        type: string
+        default: ""
+        description: "Optional custom regex pattern to identify and exclude auto-generated files by filename."
+    secrets:
+      ORG_READ_TOKEN:
+        required: false
+        description: "Org-level read token to check out central repository if private"
+
+jobs:
+  check-copyright:
+    name: Check Copyright Headers
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Check out the caller repository (the PR code)
+      - name: Check out PR code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # 2. Check out the central tools repository containing check_copyright.py
+      - name: Check out central tools
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository_owner }}/${{ inputs.central_repo }}
+          path: .github-central
+          token: ${{ secrets.ORG_READ_TOKEN || github.token }}
+
+      # 3. Set up uv using the standard action
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      # 4. Get changed files and run check_copyright.py
+      - name: Run Copyright Check
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+          fi
+
+          # Get list of added/modified files
+          mapfile -t CHANGED_FILES < <(git diff --name-only --diff-filter=AM "$BASE_SHA" HEAD || true)
+
+          if [ ${#CHANGED_FILES[@]} -eq 0 ] || [ -z "${CHANGED_FILES[0]}" ]; then
+            echo "No relevant source files changed. Skipping check."
+            exit 0
+          fi
+
+          echo "Checking copyright headers for:"
+          printf '%s\n' "${CHANGED_FILES[@]}"
+
+          # Build execution command arguments
+          ARGS=()
+          if [ -n "${{ inputs.exclude_filename_regex }}" ]; then
+            ARGS+=("--exclude-filename-regex" "${{ inputs.exclude_filename_regex }}")
+          fi
+          ARGS+=("${CHANGED_FILES[@]}")
+
+          uv run python3 .github-central/org-tools/copyright-check/check_copyright.py "${ARGS[@]}"

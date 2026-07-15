@@ -41,3 +41,6 @@ jobs:
 
       - name: Run triage tests
         run: uv run python -m unittest discover -s org-tools/triage/tests
+
+      - name: Run copyright check tool tests
+        run: uv run python -m unittest discover -s org-tools/copyright-check

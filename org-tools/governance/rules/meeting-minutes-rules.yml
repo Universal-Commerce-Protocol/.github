@@ -1,5 +1,5 @@
-# Target Repository: python-sdk
-# Repository URL: https://github.com/Universal-Commerce-Protocol/python-sdk
+# Target Repository: meeting-minutes
+# Repository URL: https://github.com/Universal-Commerce-Protocol/meeting-minutes
 ---
 rules:
   # ---------------------------------------------------------
@@ -14,7 +14,29 @@ rules:
         min_approvals: 1
 
   # ---------------------------------------------------------
-  # Infrastructure, Tooling & Configuration
+  # Technical Council Minutes
+  # ---------------------------------------------------------
+  - name: "tech_council_minutes"
+    patterns:
+      - "tc/**"
+    requires:
+      # Grants access to tech-council (L3) and governance-council (L4)
+      - min_team: "tech-council"
+        min_approvals: 1
+
+  # ---------------------------------------------------------
+  # Governing Council Minutes
+  # ---------------------------------------------------------
+  - name: "governance_council_minutes"
+    patterns:
+      - "gc/**"
+    requires:
+      # Grants access to governance-council (L4)
+      - min_team: "governance-council"
+        min_approvals: 1
+
+  # ---------------------------------------------------------
+  # Infrastructure, Tooling & General Files
   # ---------------------------------------------------------
   - name: "infra_and_tooling"
     patterns:
@@ -22,15 +44,11 @@ rules:
       - ".github/**"
       - ".gitignore"
       - ".pre-commit-config.yaml"
-      - ".prettierrc"
-      - "pyproject.toml"
-      - "uv.lock"
-      - "generate_models.sh"
-      - "preprocess_schemas.py"
       - "README.md"
-      - "src/**"
-      - "templates/**"
-      - "tests/**"
+      - "CONTRIBUTING.md"
+      - "SECURITY.md"
+    excludes:
+      - ".github/CODEOWNERS"
     requires:
       # Grants access to devops (L1), maintainers (L2), tech-council (L3),
       # and governance-council (L4)

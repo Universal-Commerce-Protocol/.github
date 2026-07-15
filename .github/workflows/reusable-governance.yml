@@ -21,6 +21,14 @@ on:
         required: false
         type: string
         description: "Optional path to the governance rules configuration file (e.g., .github-central/org-tools/governance/rules/python-sdk-rules.yml). If not provided, resolved via --repo mapping."
+      pr-number:
+        required: false
+        type: string
+        description: "Optional PR number. Falls back to pull_request context if not provided."
+      commit-sha:
+        required: false
+        type: string
+        description: "Optional commit SHA. Falls back to pull_request context if not provided."
     secrets:
       ORG_READ_TOKEN:
         required: true
@@ -30,7 +38,6 @@ jobs:
   evaluate:
     name: Approvals
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
     steps:
       # 1. Check out the caller repository (the PR code)
       - name: Check out PR code
@@ -54,6 +61,40 @@ jobs:
         run: |
           set +e
 
+          # Resolve PR number (input vs event fallback)
+          echo "Debug: inputs.pr-number is '${{ inputs.pr-number }}'"
+          echo "Debug: github.event.pull_request.number is '${{ github.event.pull_request.number }}'"
+
+          PR_NUMBER="${{ inputs.pr-number }}"
+          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ] || [ "$PR_NUMBER" = "0" ]; then
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          fi
+
+          echo "Debug: Resolved PR_NUMBER is '$PR_NUMBER'"
+
+          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ] || [ "$PR_NUMBER" = "0" ]; then
+            # Try to resolve from commit SHA using gh CLI
+            COMMIT_SHA="${{ inputs.commit-sha }}"
+            if [ -z "$COMMIT_SHA" ] || [ "$COMMIT_SHA" = "null" ]; then
+              COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
+            fi
+            if [ -z "$COMMIT_SHA" ] || [ "$COMMIT_SHA" = "null" ]; then
+              COMMIT_SHA="${{ github.event.workflow_run.head_sha }}"
+            fi
+
+            if [ -n "$COMMIT_SHA" ] && [ "$COMMIT_SHA" != "null" ]; then
+              echo "Attempting to resolve PR number for SHA $COMMIT_SHA..."
+              export GH_TOKEN="${{ secrets.ORG_READ_TOKEN }}"
+              PR_NUMBER=$(gh pr list --repo "${{ github.repository }}" --search "$COMMIT_SHA" --state all --json number --jq '.[0].number' 2>/dev/null)
+              echo "Resolved PR_NUMBER from gh CLI: '$PR_NUMBER'"
+            fi
+          fi
+
+          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ] || [ "$PR_NUMBER" = "0" ]; then
+            echo "::error::PR number could not be resolved."
+            exit 1
+          fi
+
           RULES_FILE_ARG=""
           if [ -n "${{ inputs.rules-file }}" ]; then
             RULES_FILE_ARG="--rules-file ${{ inputs.rules-file }}"
@@ -63,7 +104,7 @@ jobs:
             --token "${{ secrets.ORG_READ_TOKEN }}" \
             --org "${{ github.repository_owner }}" \
             --repo "${{ github.repository }}" \
-            --pr "${{ github.event.pull_request.number }}" \
+            --pr "$PR_NUMBER" \
             $RULES_FILE_ARG
 
 
@@ -108,11 +149,30 @@ jobs:
             // Construct the exact URL to the current GitHub Actions workflow run logs
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
 
+            // Resolve SHA (input vs event fallback)
+            let sha = '${{ inputs.commit-sha }}';
+            console.log(`Debug: inputs.commit-sha is '${sha}'`);
+            console.log(`Debug: payload.pull_request.head.sha is '${context.payload.pull_request ? context.payload.pull_request.head.sha : 'undefined'}'`);
+            console.log(`Debug: payload.workflow_run.head_sha is '${context.payload.workflow_run ? context.payload.workflow_run.head_sha : 'undefined'}'`);
+
+            if (!sha || sha === 'null') {
+              sha = context.payload.pull_request ? context.payload.pull_request.head.sha : null;
+            }
+            if ((!sha || sha === 'null') && context.payload.workflow_run) {
+              sha = context.payload.workflow_run.head_sha;
+            }
+            console.log(`Debug: Resolved sha is '${sha}'`);
+
+            if (!sha || sha === 'null') {
+              core.setFailed('SHA could not be resolved.');
+              return;
+            }
+
             // Post the status to the specific commit hash
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              sha: context.payload.pull_request.head.sha,
+              sha: sha,
               state: state,
               context: 'Governance / Approvals',
               description: description,

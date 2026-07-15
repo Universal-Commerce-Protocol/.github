@@ -1,5 +1,5 @@
-# Target Repository: python-sdk
-# Repository URL: https://github.com/Universal-Commerce-Protocol/python-sdk
+# Target Repository: js-sdk
+# Repository URL: https://github.com/Universal-Commerce-Protocol/js-sdk
 ---
 rules:
   # ---------------------------------------------------------
@@ -23,14 +23,17 @@ rules:
       - ".gitignore"
       - ".pre-commit-config.yaml"
       - ".prettierrc"
-      - "pyproject.toml"
-      - "uv.lock"
-      - "generate_models.sh"
-      - "preprocess_schemas.py"
       - "README.md"
+      - "generate_models.sh"
+      - "index.ts"
+      - "package-lock.json"
+      - "package.json"
+      - "scripts/**"
       - "src/**"
-      - "templates/**"
-      - "tests/**"
+      - "tsconfig.cjs.json"
+      - "tsconfig.esm.json"
+      - "tsconfig.json"
+      - "tsconfig.types.json"
     requires:
       # Grants access to devops (L1), maintainers (L2), tech-council (L3),
       # and governance-council (L4)

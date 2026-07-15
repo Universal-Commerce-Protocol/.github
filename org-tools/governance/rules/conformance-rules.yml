@@ -1,5 +1,5 @@
-# Target Repository: python-sdk
-# Repository URL: https://github.com/Universal-Commerce-Protocol/python-sdk
+# Target Repository: conformance
+# Repository URL: https://github.com/Universal-Commerce-Protocol/conformance
 ---
 rules:
   # ---------------------------------------------------------
@@ -11,38 +11,35 @@ rules:
     requires:
       # Strictly Governance Council (L4)
       - team: "governance-council"
-        min_approvals: 1
+        min_approvals: 2
 
   # ---------------------------------------------------------
   # Infrastructure, Tooling & Configuration
   # ---------------------------------------------------------
   - name: "infra_and_tooling"
     patterns:
-      - ".codespellignore"
+      - ".cspell.json"
+      - ".cspell/**"
       - ".github/**"
       - ".gitignore"
       - ".pre-commit-config.yaml"
-      - ".prettierrc"
-      - "pyproject.toml"
-      - "uv.lock"
-      - "generate_models.sh"
-      - "preprocess_schemas.py"
       - "README.md"
-      - "src/**"
-      - "templates/**"
-      - "tests/**"
+      - "*.py"
+      - "pyproject.toml"
+      - "shopping-agent-test.json"
+      - "test_data/**"
     requires:
       # Grants access to devops (L1), maintainers (L2), tech-council (L3),
       # and governance-council (L4)
       - min_team: "devops-maintainers"
-        min_approvals: 1
+        min_approvals: 2
 
 fallback:
   requires:
     # Default for all files (*).
     # Strictest rule possible
     - min_team: "governance-council"
-      min_approvals: 1
+      min_approvals: 2
 
 proxy_reviewers:
   - amithanda

@@ -34,10 +34,13 @@ jobs:
           python-version: "3.12"
 
       - name: Run governance tests
-        run: uv run --with PyGithub --with PyYAML python -m unittest discover -s org-tools/governance/tests
+        run: uv run python -m unittest discover -s org-tools/governance/tests
 
       - name: Run label-sync tests
-        run: uv run --with PyGithub --with PyYAML python org-tools/test_sync_labels.py
+        run: uv run python -m unittest discover -s org-tools/label-sync
+
+      - name: Run triage tests
+        run: uv run python -m unittest discover -s org-tools/triage/tests
 
       - name: Run copyright check tool tests
         run: uv run python org-tools/test_check_copyright.py

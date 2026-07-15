@@ -30,6 +30,7 @@ rules:
       - "README.md"
       - "src/**"
       - "templates/**"
+      - "tests/**"
     requires:
       # Grants access to devops (L1), maintainers (L2), tech-council (L3),
       # and governance-council (L4)

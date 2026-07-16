@@ -35,7 +35,7 @@
 - Responsible for reviewing and approving code changes to ensure they align
   with the project's technical standards and governance principles.
 - Build tools and documentation to facilitate adoption of the protocol.
-- Domain Tech Council (DTC) can add, remove & nominate maintainers for their 
+- Domain Tech Council (DTC) can add, remove & nominate maintainers for their
   domain as needed.
 - All code changes require approval from at least one Maintainer.
 
@@ -65,7 +65,6 @@
   contributions towards the protocol. Members can be re-elected any number of
   times. See [TC_ELECTIONS.md](TC_ELECTIONS.md) for more details.
 
-
 ### Shopping Tech Council (Shopping TC)
 
 - Responsible for building and maintaining core specification for the
@@ -73,7 +72,6 @@
 - Includes 16 members, 4 permanent members from each founding organization (Google &
   Shopify), each with 1 vote (total 8 votes).
 - Includes 8 members from any organization, each with 1 vote (total 8 votes).
-
 
 ### Food Tech Council (Food TC)
 

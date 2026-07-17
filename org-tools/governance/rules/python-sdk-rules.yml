@@ -26,7 +26,6 @@ rules:
       - "pyproject.toml"
       - "uv.lock"
       - "generate_models.sh"
-      - "preprocess_schemas.py"
       - "README.md"
       - "src/**"
       - "templates/**"

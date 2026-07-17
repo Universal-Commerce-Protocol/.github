@@ -26,11 +26,11 @@ rules:
       - "pyproject.toml"
       - "uv.lock"
       - "generate_models.sh"
-      - "preprocess_schemas.py"
       - "README.md"
       - "src/**"
       - "templates/**"
       - "tests/**"
+      - "**/*.py"
     requires:
       # Grants access to devops (L1), maintainers (L2), tech-council (L3),
       # and governance-council (L4)

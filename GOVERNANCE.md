@@ -27,30 +27,31 @@
 
 - Open - Anyone can contribute but needs to sign a contributor license.
   See [`CONTRIBUTING.md`](CONTRIBUTING.md) for details.
-- All code changes need to be approved by at least 1 maintainer elected by
-  Tech Council (TC) and all TC members are cc’ed.
+- All code changes need to be approved by at least 1 maintainer elected by the
+  respective Domain Tech Council (DTC), and all members of that DTC are cc’ed.
 
 ## Maintainers
 
 - Responsible for reviewing and approving code changes to ensure they align
   with the project's technical standards and governance principles.
 - Build tools and documentation to facilitate adoption of the protocol.
-- Tech Council (TC) can add, remove & nominate maintainers as needed.
+- Domain Tech Council (DTC) can add, remove & nominate maintainers for their
+  domain as needed.
 - All code changes require approval from at least one Maintainer.
 
 ### Domain Working Groups (DWG)
 
-- Because the TC cannot be experts in every field, Domain Working Groups
+- Because the DTC cannot be experts in every field, Domain Working Groups
   (DWG) may be formed as a natural part of expanding the protocol.
-- DWG are subject to TC oversight - all DWG artifacts must be reviewed and
-  approved by the TC.
+- DWG are subject to DTC oversight - all DWG artifacts must be reviewed and
+  approved by the DTC.
 - Acts as the consensus venue for industry participants (e.g., multiple
   airlines) to agree on shared interoperability standards within the
   protocol, maintain the specific documentation and implementation guides for
   their domain's capabilities.
 - A group of 3+ organizations can submit a charter to the Governing Council
   to form a DWG (e.g., "Travel WG"). Once chartered, the DWG has autonomy to
-  define capabilities for their domain and submit for TC approvals.
+  define capabilities for their domain and submit for DTC approvals.
 
 ## Domain Tech Councils (Domain TC)
 
@@ -64,15 +65,13 @@
   contributions towards the protocol. Members can be re-elected any number of
   times. See [TC_ELECTIONS.md](TC_ELECTIONS.md) for more details.
 
-
 ### Shopping Tech Council (Shopping TC)
 
 - Responsible for building and maintaining core specification for the
   Shopping domain.
 - Includes 16 members, 4 permanent members from each founding organization (Google &
   Shopify), each with 1 vote (total 8 votes).
-- Includes 8 members from any organization, each with 1 vote (total 8 votes), 
-
+- Includes 8 members from any organization, each with 1 vote (total 8 votes).
 
 ### Food Tech Council (Food TC)
 
@@ -99,13 +98,13 @@
 - Open elected seats may be filled at any time via GC election and approval.
   Google holds proxy vote for all open seats until Dec 2028 to facilitate rapid
   early stage growth & adoption of the protocol.
-- Can add/remove TC members via simple majority vote.
+- Can add/remove DTC members via simple majority vote.
 - Can elect new members to GC based on their ability to drive protocol
   adoption, represent key industry domains, and demonstrate commitment to open
   protocols.
-- May choose to review and veto TC decision or recommendation.
+- May choose to review and veto a DTC decision or recommendation.
 - Decisions are made with a majority vote.
-- May participate in any TC.
+- May participate in any DTC.
 
 ## Process for nominating new Domain Tech Councils (DTC)
 
@@ -129,9 +128,9 @@ launches, etc.) shall take place on a shared Google group with a mailing list.
 This includes discussion on enhancement proposals, announcements about official
 specification changes and final governance votes.
 
-- **TC & DWG Meetings:** Agendas should be posted 24 hours in advance. Minutes
+- **DTC & DWG Meetings:** Agendas should be posted 24 hours in advance. Minutes
   and meeting notes should be published to the repository within 1 week of the
-  meeting conclusion. TC reserves the right to redact or edit meeting notes as
+  meeting conclusion. DTC reserves the right to redact or edit meeting notes as
   needed.
 - **Governing Council Meetings:** Summaries of strategic decisions and budget
   allocations will be published quarterly (specific sensitive partnership

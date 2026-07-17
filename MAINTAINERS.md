@@ -26,24 +26,25 @@ design of the protocol for Shopping Domain.
 <!-- cSpell:ignore Jing Li Lee Richmond Maxime Najim Uddhav Kambli -->
 <!-- cSpell:ignore Patrick Jordan Prasad Wangikar Scot DeDeo Twum Djin -->
 <!-- cSpell:ignore Victoria Duggan -->
-| Name | Company |
-| :--- | :--- |
-| Amit Handa | Google |
-| Anurag Sinha | Google |
-| Daniel Wyckoff | Shopify |
-| Drew Olson | Google |
-| Greg Smith | Amazon |
-| Ilya Grigorik | Shopify |
-| Imran Hoosain | Etsy |
-| James Andersen | Meta |
-| Jing Li | Google |
-| Lee Richmond | Shopify |
-| Maxime Najim | Target |
-| Patrick Jordan | Microsoft |
-| Prasad Wangikar | Stripe |
-| Scot DeDeo | Salesforce |
-| Uddhav Kambli | Wayfair |
-| Victoria Duggan | Shopify |
+
+| Name            | Company    |
+| :-------------- | :--------- |
+| Amit Handa      | Google     |
+| Anurag Sinha    | Google     |
+| Daniel Wyckoff  | Shopify    |
+| Drew Olson      | Google     |
+| Greg Smith      | Amazon     |
+| Ilya Grigorik   | Shopify    |
+| Imran Hoosain   | Etsy       |
+| James Andersen  | Meta       |
+| Jing Li         | Google     |
+| Lee Richmond    | Shopify    |
+| Maxime Najim    | Target     |
+| Patrick Jordan  | Microsoft  |
+| Prasad Wangikar | Stripe     |
+| Scot DeDeo      | Salesforce |
+| Uddhav Kambli   | Wayfair    |
+| Victoria Duggan | Shopify    |
 
 ## Food Tech Council
 
@@ -53,34 +54,35 @@ design of the protocol for Food Ordering Domain.
 <!-- cSpell:ignore Amit Handa Andrew Mackowski Jing Li Johnny Li Jon Hines -->
 <!-- cSpell:ignore Luke Wulf Malvi Hemani Nimish Sheth Teresa Qin -->
 <!-- cSpell:ignore Travis McPhail -->
-| Name | Company |
-| :--- | :--- |
-| Amit Handa | Google |
-| Andrew Mackowski | Google |
-| Jing Li | Google |
-| Johnny Li | Square |
-| Jon Hines | Toast |
-| Luke Wulf | DoorDash |
-| Malvi Hemani | Google |
-| Nimish Sheth | Uber Eats |
-| Teresa Qin | Google |
-| Travis McPhail | Google |
-| Open | to be elected |
-| Open | to be elected |
-| Open | to be elected |
-| Open | to be elected |
-| Open | to be elected |
-| Open | to be elected |
+
+| Name             | Company       |
+| :--------------- | :------------ |
+| Amit Handa       | Google        |
+| Andrew Mackowski | Google        |
+| Jing Li          | Google        |
+| Johnny Li        | Square        |
+| Jon Hines        | Toast         |
+| Luke Wulf        | DoorDash      |
+| Malvi Hemani     | Google        |
+| Nimish Sheth     | Uber Eats     |
+| Teresa Qin       | Google        |
+| Travis McPhail   | Google        |
+| Open             | to be elected |
+| Open             | to be elected |
+| Open             | to be elected |
+| Open             | to be elected |
+| Open             | to be elected |
+| Open             | to be elected |
 
 ## Governance Council
 
 The Governance Council is responsible for the overall adoption and health of
 the protocol.
 
-| Name | Company |
-| :--- | :--- |
-| Amit Handa | Google |
-| Ilya Grigorik | Shopify |
-| Twum Djin | Stripe |
-| Open | to be elected |
-| Open | to be elected |
+| Name          | Company       |
+| :------------ | :------------ |
+| Amit Handa    | Google        |
+| Ilya Grigorik | Shopify       |
+| Twum Djin     | Stripe        |
+| Open          | to be elected |
+| Open          | to be elected |

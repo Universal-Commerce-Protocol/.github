@@ -325,7 +325,7 @@ class TestTriageLabelerBulkExecution(unittest.TestCase):
 
         self.labeler.triage_all_outstanding()
 
-        self.assertEqual(self.mock_client.search_issues.call_count, 4)
+        self.assertEqual(self.mock_client.search_issues.call_count, 5)
         calls = self.mock_client.search_issues.call_args_list
 
         query1 = calls[0][0][0]
@@ -355,6 +355,13 @@ class TestTriageLabelerBulkExecution(unittest.TestCase):
         self.assertIn("-is:draft", query4)
         self.assertIn('label:"status:stale"', query4)
         self.assertIn("repo:mock-org/mock-repo", query4)
+
+        query5 = calls[4][0][0]
+        self.assertIn("is:pr", query5)
+        self.assertIn("is:open", query5)
+        self.assertIn("-is:draft", query5)
+        self.assertIn('label:"status:stale-review"', query5)
+        self.assertIn("repo:mock-org/mock-repo", query5)
 
     def test_bulk_triage_raises_runtime_error_on_search_failure(self):
         """Test that a failure during the Search API call raises a RuntimeError."""
@@ -930,6 +937,194 @@ class TestTriageLabelerStaleRecoveryRules(unittest.TestCase):
 
         # Should remove status:stale (via mutual exclusivity inside _apply_label)
         pr.remove_from_labels.assert_called_once_with("status:stale")
+        # Should add status:under-review
+        pr.add_to_labels.assert_called_once_with("status:under-review")
+
+
+class TestTriageLabelerStaleReviewRecoveryRules(unittest.TestCase):
+    """Tests for stale-review recovery eligibility rules in TriageLabeler."""
+
+    def setUp(self):
+        self.mock_client = Mock()
+        self.mock_repo = Mock()
+        self.mock_repo.full_name = "mock-org/mock-repo"
+        self.labeler = TriageLabeler(self.mock_client, self.mock_repo, dry_run=False)
+
+    def test_non_stale_review_pr_should_not_be_recovered(self):
+        """PR without status:stale-review label should not be eligible for recovery."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+        pr.labels = []
+        self.assertFalse(self.labeler._is_eligible_for_stale_review_recovery(pr))
+
+    def test_stale_review_pr_with_no_activity_should_not_be_recovered(self):
+        """PR with status:stale-review and no new activity should not be recovered."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:stale-review"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled stale-review 5 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:stale-review"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=5)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock author
+        mock_author = Mock()
+        mock_author.login = "pr-author"
+        pr.user = mock_author
+
+        # Mock no activity
+        pr.get_issue_comments.return_value = []
+        pr.get_review_comments.return_value = []
+        pr.get_reviews.return_value = []
+
+        self.assertFalse(self.labeler._is_eligible_for_stale_review_recovery(pr))
+
+    def test_stale_review_pr_with_reviewer_comment_should_be_recovered(self):
+        """PR with status:stale-review and a new comment by reviewer should be recovered."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:stale-review"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled stale-review 5 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:stale-review"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=5)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock author
+        mock_author = Mock()
+        mock_author.login = "pr-author"
+        pr.user = mock_author
+
+        # Mock reviewer comment (2 days ago)
+        comment = Mock()
+        comment.user.login = "reviewer-1"
+        comment.created_at = datetime.now(timezone.utc) - timedelta(days=2)
+        pr.get_issue_comments.return_value = [comment]
+        pr.get_review_comments.return_value = []
+        pr.get_reviews.return_value = []
+
+        self.assertTrue(self.labeler._is_eligible_for_stale_review_recovery(pr))
+
+    def test_stale_review_pr_with_author_comment_should_not_be_recovered(self):
+        """PR with status:stale-review and a new comment by author should not be recovered."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:stale-review"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled stale-review 5 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:stale-review"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=5)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock author
+        mock_author = Mock()
+        mock_author.login = "pr-author"
+        pr.user = mock_author
+
+        # Mock author comment (2 days ago)
+        comment = Mock()
+        comment.user.login = "pr-author"
+        comment.created_at = datetime.now(timezone.utc) - timedelta(days=2)
+        pr.get_issue_comments.return_value = [comment]
+        pr.get_review_comments.return_value = []
+        pr.get_reviews.return_value = []
+
+        self.assertFalse(self.labeler._is_eligible_for_stale_review_recovery(pr))
+
+    def test_stale_review_pr_with_reviewer_review_should_be_recovered(self):
+        """PR with status:stale-review and a new review by reviewer should be recovered."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:stale-review"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled stale-review 5 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:stale-review"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=5)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock author
+        mock_author = Mock()
+        mock_author.login = "pr-author"
+        pr.user = mock_author
+
+        # Mock reviewer review (2 days ago)
+        review = Mock()
+        review.user.login = "reviewer-1"
+        review.state = "APPROVED"
+        review.submitted_at = datetime.now(timezone.utc) - timedelta(days=2)
+        pr.get_reviews.return_value = [review]
+
+        pr.get_issue_comments.return_value = []
+        pr.get_review_comments.return_value = []
+
+        self.assertTrue(self.labeler._is_eligible_for_stale_review_recovery(pr))
+
+    def test_triage_stale_review_recovery_applies_under_review(self):
+        """Test that _triage_stale_review_recovery applies status:under-review when eligible."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:stale-review"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled stale-review 5 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:stale-review"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=5)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock author
+        mock_author = Mock()
+        mock_author.login = "pr-author"
+        pr.user = mock_author
+
+        # Mock reviewer comment (2 days ago)
+        comment = Mock()
+        comment.user.login = "reviewer-1"
+        comment.created_at = datetime.now(timezone.utc) - timedelta(days=2)
+        pr.get_issue_comments.return_value = [comment]
+        pr.get_review_comments.return_value = []
+        pr.get_reviews.return_value = []
+
+        self.labeler._triage_stale_review_recovery(pr)
+
+        # Should remove status:stale-review (via mutual exclusivity inside _apply_label)
+        pr.remove_from_labels.assert_called_once_with("status:stale-review")
         # Should add status:under-review
         pr.add_to_labels.assert_called_once_with("status:under-review")
 

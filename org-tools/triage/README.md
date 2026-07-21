@@ -81,6 +81,15 @@ When a PR has the `status:under-review` label, the tool checks if there has been
 | Open, has `status:under-review`, lacks `status:stale-review`, and no activity for **> 21 days** | Apply `status:stale-review` |
 | Otherwise                                                                                       |            Skip             |
 
+### Stale Review Recovery
+
+If a PR has the `status:stale-review` label and new **reviewer activity** (reviews or comments by anyone other than the PR author) is detected, the tool will apply `status:under-review` (which automatically removes `status:stale-review` due to mutual exclusivity):
+
+| PR Condition                                               |           Action            |
+| :--------------------------------------------------------- | :-------------------------: |
+| Open, has `status:stale-review`, and new reviewer activity | Apply `status:under-review` |
+| Otherwise                                                  |            Skip             |
+
 > [!IMPORTANT]
 > Since the triage tool does not automatically skip PRs with active reviewers or reviews, applying any label (such as `status:under-review`) is the primary way to signal that a PR is currently active and should not be marked as needing triage.
 

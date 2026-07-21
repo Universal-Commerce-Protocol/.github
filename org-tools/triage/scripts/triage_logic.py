@@ -361,9 +361,27 @@ class TriageLabeler:
         pull: github.PullRequest.PullRequest,
         label_name: str,
     ) -> None:
-        """Applies the given label to the PR."""
+        """Applies the given label to the PR and removes other mutually exclusive status labels."""
+        STATUS_LABELS = {
+            TARGET_LABEL,
+            BLOCKED_LABEL,
+            STALE_LABEL,
+            UNDER_REVIEW_LABEL,
+            STALE_REVIEW_LABEL,
+        }
+
         try:
             if not self.dry_run:
+                current_labels = {label.name for label in pull.labels}
+                for label in current_labels:
+                    if label in STATUS_LABELS and label != label_name:
+                        logger.info(
+                            "    Removing mutually exclusive label '%s' from PR #%s",
+                            label,
+                            pull.number,
+                        )
+                        pull.remove_from_labels(label)
+
                 pull.add_to_labels(label_name)
                 logger.info(
                     "    Success: PR #%s. Applied '%s'.",
@@ -371,6 +389,14 @@ class TriageLabeler:
                     label_name,
                 )
             else:
+                current_labels = {label.name for label in pull.labels}
+                for label in current_labels:
+                    if label in STATUS_LABELS and label != label_name:
+                        logger.info(
+                            "    [DRY RUN] Would remove mutually exclusive label '%s' from PR #%s",
+                            label,
+                            pull.number,
+                        )
                 logger.info(
                     "    [DRY RUN] Success: PR #%s. Would apply '%s'.",
                     pull.number,

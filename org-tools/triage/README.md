@@ -35,6 +35,18 @@ The tool consists of a CLI entry point ([triage_cli.py](scripts/triage_cli.py)) 
 
 When evaluating a PR (either in bulk or single-PR mode), the tool applies the following rules:
 
+### Status Label Mutual Exclusivity
+
+All `status:*` labels are mutually exclusive. When the tool applies a new status label, it will automatically remove any other existing status labels from the PR.
+
+Status labels include:
+
+- `status:needs-triage`
+- `status:blocked`
+- `status:stale`
+- `status:under-review`
+- `status:stale-review`
+
 ### Initial Triage (`status:needs-triage`)
 
 | PR Condition                        |           Action            |

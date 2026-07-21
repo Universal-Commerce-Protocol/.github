@@ -171,6 +171,7 @@ class TestTriageLabelerLabelApplication(unittest.TestCase):
         self.mock_repo.full_name = "mock-org/mock-repo"
         self.mock_issue = Mock(spec=github.PullRequest.PullRequest)
         self.mock_issue.number = 1
+        self.mock_issue.labels = []
 
     def test_apply_label_adds_label_when_dry_run_is_false(self):
         """Test that the triage label is added to the PR when dry_run is False."""
@@ -198,6 +199,50 @@ class TestTriageLabelerLabelApplication(unittest.TestCase):
             "mock-org/mock-repo",
             self.mock_issue.add_to_labels.side_effect,
         )
+
+    def test_apply_label_removes_other_status_labels_when_dry_run_is_false(self):
+        """Test that other mutually exclusive status labels are removed when dry_run is False."""
+        labeler = TriageLabeler(self.mock_client, self.mock_repo, dry_run=False)
+
+        mock_label_blocked = Mock()
+        mock_label_blocked.name = "status:blocked"
+        mock_label_other = Mock()
+        mock_label_other.name = "some-other-label"
+
+        self.mock_issue.labels = [mock_label_blocked, mock_label_other]
+
+        labeler._apply_label(self.mock_issue, "status:stale")
+
+        # Verify it tried to remove "status:blocked"
+        self.mock_issue.remove_from_labels.assert_called_once_with("status:blocked")
+        # Verify it added "status:stale"
+        self.mock_issue.add_to_labels.assert_called_once_with("status:stale")
+
+    def test_apply_label_does_not_remove_other_status_labels_when_dry_run_is_true(self):
+        """Test that status labels are NOT removed when dry_run is True."""
+        labeler = TriageLabeler(self.mock_client, self.mock_repo, dry_run=True)
+
+        mock_label_blocked = Mock()
+        mock_label_blocked.name = "status:blocked"
+        self.mock_issue.labels = [mock_label_blocked]
+
+        labeler._apply_label(self.mock_issue, "status:stale")
+
+        self.mock_issue.remove_from_labels.assert_not_called()
+        self.mock_issue.add_to_labels.assert_not_called()
+
+    def test_apply_label_ignores_non_status_labels(self):
+        """Test that non-status labels are not touched during label application."""
+        labeler = TriageLabeler(self.mock_client, self.mock_repo, dry_run=False)
+
+        mock_label_other = Mock()
+        mock_label_other.name = "some-other-label"
+        self.mock_issue.labels = [mock_label_other]
+
+        labeler._apply_label(self.mock_issue, "status:stale")
+
+        self.mock_issue.remove_from_labels.assert_not_called()
+        self.mock_issue.add_to_labels.assert_called_once_with("status:stale")
 
 
 class TestTriageLabelerBulkExecution(unittest.TestCase):

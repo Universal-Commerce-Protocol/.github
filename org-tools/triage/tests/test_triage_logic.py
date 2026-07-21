@@ -280,7 +280,7 @@ class TestTriageLabelerBulkExecution(unittest.TestCase):
 
         self.labeler.triage_all_outstanding()
 
-        self.assertEqual(self.mock_client.search_issues.call_count, 2)
+        self.assertEqual(self.mock_client.search_issues.call_count, 3)
         calls = self.mock_client.search_issues.call_args_list
 
         query1 = calls[0][0][0]
@@ -296,6 +296,13 @@ class TestTriageLabelerBulkExecution(unittest.TestCase):
         self.assertIn("-is:draft", query2)
         self.assertIn('label:"status:blocked"', query2)
         self.assertIn("repo:mock-org/mock-repo", query2)
+
+        query3 = calls[2][0][0]
+        self.assertIn("is:pr", query3)
+        self.assertIn("is:open", query3)
+        self.assertIn("-is:draft", query3)
+        self.assertIn('label:"status:under-review"', query3)
+        self.assertIn("repo:mock-org/mock-repo", query3)
 
     def test_bulk_triage_raises_runtime_error_on_search_failure(self):
         """Test that a failure during the Search API call raises a RuntimeError."""
@@ -448,6 +455,146 @@ class TestTriageLabelerBlockedStaleRules(unittest.TestCase):
         mock_label.name = "status:blocked"
         pr.labels = [mock_label]
         self.assertFalse(self.labeler._is_eligible_for_blocked_stale(pr))
+
+
+class TestTriageLabelerStaleReviewRules(unittest.TestCase):
+    """Tests for stale-review eligibility rules in TriageLabeler."""
+
+    def setUp(self):
+        self.mock_client = Mock()
+        self.mock_repo = Mock()
+        self.mock_repo.full_name = "mock-org/mock-repo"
+        self.labeler = TriageLabeler(self.mock_client, self.mock_repo, dry_run=False)
+
+    def test_non_under_review_pr_should_not_be_stale_review(self):
+        """PR without status:under-review label should not be eligible."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+        pr.labels = []
+        self.assertFalse(self.labeler._is_eligible_for_stale_review(pr))
+
+    def test_under_review_pr_with_recent_label_and_no_activity_should_not_be_stale(
+        self,
+    ):
+        """PR labeled under-review recently with no activity should not be eligible."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:under-review"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled 10 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:under-review"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=10)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock no activity
+        pr.get_issue_comments.return_value = []
+        pr.get_review_comments.return_value = []
+        pr.get_reviews.return_value = []
+
+        self.assertFalse(self.labeler._is_eligible_for_stale_review(pr))
+
+    def test_under_review_pr_labeled_long_ago_with_no_activity_should_be_stale(self):
+        """PR labeled under-review > 21 days ago with no activity should be eligible."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:under-review"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled 22 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:under-review"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=22)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock no activity
+        pr.get_issue_comments.return_value = []
+        pr.get_review_comments.return_value = []
+        pr.get_reviews.return_value = []
+
+        self.assertTrue(self.labeler._is_eligible_for_stale_review(pr))
+
+    def test_under_review_pr_with_recent_activity_should_not_be_stale(self):
+        """PR with activity in the last 21 days should not be eligible, even if labeled long ago."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:under-review"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled 25 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:under-review"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=25)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock recent comment (10 days ago)
+        comment = Mock()
+        comment.created_at = datetime.now(timezone.utc) - timedelta(days=10)
+        pr.get_issue_comments.return_value = [comment]
+        pr.get_review_comments.return_value = []
+        pr.get_reviews.return_value = []
+
+        self.assertFalse(self.labeler._is_eligible_for_stale_review(pr))
+
+    def test_under_review_pr_with_old_activity_should_be_stale(self):
+        """PR with activity > 21 days ago should be eligible if labeled long ago."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:under-review"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled 30 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:under-review"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=30)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock old comment (25 days ago)
+        comment = Mock()
+        comment.created_at = datetime.now(timezone.utc) - timedelta(days=25)
+        pr.get_issue_comments.return_value = [comment]
+        pr.get_review_comments.return_value = []
+        pr.get_reviews.return_value = []
+
+        self.assertTrue(self.labeler._is_eligible_for_stale_review(pr))
+
+    def test_already_stale_review_pr_should_not_be_stale_again(self):
+        """PR that is already marked stale-review should be skipped."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_ur = Mock()
+        mock_ur.name = "status:under-review"
+        mock_sr = Mock()
+        mock_sr.name = "status:stale-review"
+        pr.labels = [mock_ur, mock_sr]
+
+        self.assertFalse(self.labeler._is_eligible_for_stale_review(pr))
 
 
 if __name__ == "__main__":

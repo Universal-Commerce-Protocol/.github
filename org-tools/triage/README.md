@@ -51,6 +51,15 @@ When a PR has the `status:blocked` label, the tool checks how long it has been b
 | Open, has `status:blocked`, lacks `status:stale`, and blocked for **> 21 days** | Apply `status:stale` |
 | Otherwise                                                                       |         Skip         |
 
+### Stale Reviews (`status:stale-review`)
+
+When a PR has the `status:under-review` label, the tool checks if there has been any activity (comments or reviews) recently:
+
+| PR Condition                                                                                    |           Action            |
+| :---------------------------------------------------------------------------------------------- | :-------------------------: |
+| Open, has `status:under-review`, lacks `status:stale-review`, and no activity for **> 21 days** | Apply `status:stale-review` |
+| Otherwise                                                                                       |            Skip             |
+
 > [!IMPORTANT]
 > Since the triage tool does not automatically skip PRs with active reviewers or reviews, applying any label (such as `status:under-review`) is the primary way to signal that a PR is currently active and should not be marked as needing triage.
 

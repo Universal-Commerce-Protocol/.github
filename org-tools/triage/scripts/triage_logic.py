@@ -78,6 +78,7 @@ class TriageLabeler:
         self.dry_run = dry_run
         self._org = None
         self._is_org_checked = False
+        self._member_cache = {}
 
     def triage_all_outstanding(self) -> None:
         """Triages the repository using the Search API.
@@ -469,7 +470,8 @@ class TriageLabeler:
             for commit in commits:
                 commit_author = commit.author
                 if commit_author and commit_author.login == author.login:
-                    commit_time = commit.commit.author.date
+                    # Use committer date to capture rebases/amends
+                    commit_time = commit.commit.committer.date
                     if commit_time.tzinfo is None:
                         commit_time = commit_time.replace(tzinfo=timezone.utc)
                     if commit_time > label_applied_time:
@@ -622,10 +624,14 @@ class TriageLabeler:
 
     def _is_member(self, user: github.NamedUser.NamedUser) -> bool:
         """Checks if a user is a member of the organization (or collaborator if personal repo)."""
+        if user.login in self._member_cache:
+            return self._member_cache[user.login]
+
+        is_member = False
         org = self._get_org()
         if org:
             try:
-                return org.has_in_members(user)
+                is_member = org.has_in_members(user)
             except Exception as e:
                 log_error(
                     "Error checking org membership for %s in %s: %s",
@@ -633,10 +639,9 @@ class TriageLabeler:
                     org.login,
                     e,
                 )
-                return False
         else:
             try:
-                return self.repo.has_in_collaborators(user)
+                is_member = self.repo.has_in_collaborators(user)
             except Exception as e:
                 log_error(
                     "Error checking collaborator status for %s in %s: %s",
@@ -644,7 +649,9 @@ class TriageLabeler:
                     self.repo.full_name,
                     e,
                 )
-                return False
+
+        self._member_cache[user.login] = is_member
+        return is_member
 
     def _apply_label(
         self,

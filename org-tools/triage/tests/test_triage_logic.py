@@ -861,7 +861,7 @@ class TestTriageLabelerStaleRecoveryRules(unittest.TestCase):
         commit = Mock()
         commit.sha = "1234567890"
         commit.author.login = "pr-author"
-        commit.commit.author.date = datetime.now(timezone.utc) - timedelta(days=2)
+        commit.commit.committer.date = datetime.now(timezone.utc) - timedelta(days=2)
         pr.get_commits.return_value = [commit]
 
         pr.get_issue_comments.return_value = []

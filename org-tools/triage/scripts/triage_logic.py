@@ -198,57 +198,46 @@ class TriageLabeler:
         self, pull: github.PullRequest.PullRequest
     ) -> bool:
         """Checks if a PR is eligible for being marked stale due to being blocked."""
-        if pull.state != "open":
-            return False
-        if pull.draft:
-            return False
-
-        labels = {label.name for label in pull.labels}
-        if BLOCKED_LABEL not in labels:
-            return False
-
-        if STALE_LABEL in labels:
-            logger.info(
-                "Skipping: PR #%s already has '%s' label.", pull.number, STALE_LABEL
-            )
-            return False
-
-        duration = self._get_label_applied_duration(pull, BLOCKED_LABEL)
-        logger.info(
-            "  PR #%s has been blocked for %.2f days (threshold: %s days).",
-            pull.number,
-            duration,
-            BLOCKED_STALE_THRESHOLD_DAYS,
+        return self._is_eligible_for_stale_by_label(
+            pull, BLOCKED_LABEL, STALE_LABEL, BLOCKED_STALE_THRESHOLD_DAYS
         )
-
-        return duration > BLOCKED_STALE_THRESHOLD_DAYS
 
     def _is_eligible_for_stale_review(
         self, pull: github.PullRequest.PullRequest
     ) -> bool:
         """Checks if a PR is eligible for being marked stale-review."""
+        return self._is_eligible_for_stale_by_label(
+            pull, UNDER_REVIEW_LABEL, STALE_REVIEW_LABEL, STALE_REVIEW_THRESHOLD_DAYS
+        )
+
+    def _is_eligible_for_stale_by_label(
+        self,
+        pull: github.PullRequest.PullRequest,
+        target_label: str,
+        stale_label: str,
+        threshold_days: int,
+    ) -> bool:
+        """Helper to check if a PR is stale based on a label and inactivity."""
         if pull.state != "open":
             return False
         if pull.draft:
             return False
 
         labels = {label.name for label in pull.labels}
-        if UNDER_REVIEW_LABEL not in labels:
+        if target_label not in labels:
             return False
 
-        if STALE_REVIEW_LABEL in labels:
+        if stale_label in labels:
             logger.info(
-                "Skipping: PR #%s already has '%s' label.",
-                pull.number,
-                STALE_REVIEW_LABEL,
+                "Skipping: PR #%s already has '%s' label.", pull.number, stale_label
             )
             return False
 
-        label_applied_time = self._get_label_applied_time(pull, UNDER_REVIEW_LABEL)
+        label_applied_time = self._get_label_applied_time(pull, target_label)
         if not label_applied_time:
             logger.warning(
                 "Could not find when '%s' was applied to PR #%s",
-                UNDER_REVIEW_LABEL,
+                target_label,
                 pull.number,
             )
             return False
@@ -261,13 +250,14 @@ class TriageLabeler:
         duration_days = duration.total_seconds() / (24 * 3600)
 
         logger.info(
-            "  PR #%s has been under review with no activity for %.2f days (threshold: %s days).",
+            "  PR #%s has been %s with no activity for %.2f days (threshold: %s days).",
             pull.number,
+            target_label.split(":")[-1],
             duration_days,
-            STALE_REVIEW_THRESHOLD_DAYS,
+            threshold_days,
         )
 
-        return duration_days > STALE_REVIEW_THRESHOLD_DAYS
+        return duration_days > threshold_days
 
     def _get_label_applied_time(
         self, pull: github.PullRequest.PullRequest, label_name: str
@@ -298,17 +288,6 @@ class TriageLabeler:
                 e,
             )
         return None
-
-    def _get_label_applied_duration(
-        self, pull: github.PullRequest.PullRequest, label_name: str
-    ) -> float:
-        """Returns the number of days a label has been continuously applied to a PR."""
-        applied_time = self._get_label_applied_time(pull, label_name)
-        if applied_time:
-            now = datetime.now(timezone.utc)
-            duration = now - applied_time
-            return duration.total_seconds() / (24 * 3600)
-        return 0.0
 
     def _get_latest_activity_time_after(
         self, pull: github.PullRequest.PullRequest, threshold_time: datetime

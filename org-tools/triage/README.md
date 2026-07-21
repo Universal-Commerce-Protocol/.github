@@ -44,12 +44,12 @@ When evaluating a PR (either in bulk or single-PR mode), the tool applies the fo
 
 ### Blocked PRs (`status:stale`)
 
-When a PR has the `status:blocked` label, the tool checks how long it has been blocked:
+When a PR has the `status:blocked` label, the tool checks if there has been any activity (comments or reviews) recently:
 
-| PR Condition                                                                    |        Action        |
-| :------------------------------------------------------------------------------ | :------------------: |
-| Open, has `status:blocked`, lacks `status:stale`, and blocked for **> 21 days** | Apply `status:stale` |
-| Otherwise                                                                       |         Skip         |
+| PR Condition                                                                        |        Action        |
+| :---------------------------------------------------------------------------------- | :------------------: |
+| Open, has `status:blocked`, lacks `status:stale`, and no activity for **> 21 days** | Apply `status:stale` |
+| Otherwise                                                                           |         Skip         |
 
 ### Stale Reviews (`status:stale-review`)
 

@@ -397,6 +397,11 @@ class TestTriageLabelerBlockedStaleRules(unittest.TestCase):
         event.created_at = datetime.now(timezone.utc) - timedelta(days=10)
         pr.get_issue_events.return_value = [event]
 
+        # Mock no activity
+        pr.get_issue_comments.return_value = []
+        pr.get_review_comments.return_value = []
+        pr.get_reviews.return_value = []
+
         self.assertFalse(self.labeler._is_eligible_for_blocked_stale(pr))
 
     def test_blocked_pr_more_than_21_days_should_be_stale(self):
@@ -416,6 +421,65 @@ class TestTriageLabelerBlockedStaleRules(unittest.TestCase):
         event.label.name = "status:blocked"
         event.created_at = datetime.now(timezone.utc) - timedelta(days=22)
         pr.get_issue_events.return_value = [event]
+
+        # Mock no activity
+        pr.get_issue_comments.return_value = []
+        pr.get_review_comments.return_value = []
+        pr.get_reviews.return_value = []
+
+        self.assertTrue(self.labeler._is_eligible_for_blocked_stale(pr))
+
+    def test_blocked_pr_with_recent_activity_should_not_be_stale(self):
+        """PR with activity in the last 21 days should not be eligible, even if labeled long ago."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:blocked"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled 25 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:blocked"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=25)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock recent comment (10 days ago)
+        comment = Mock()
+        comment.created_at = datetime.now(timezone.utc) - timedelta(days=10)
+        pr.get_issue_comments.return_value = [comment]
+        pr.get_review_comments.return_value = []
+        pr.get_reviews.return_value = []
+
+        self.assertFalse(self.labeler._is_eligible_for_blocked_stale(pr))
+
+    def test_blocked_pr_with_old_activity_should_be_stale(self):
+        """PR with activity > 21 days ago should be eligible if labeled long ago."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:blocked"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled 30 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:blocked"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=30)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock old comment (25 days ago)
+        comment = Mock()
+        comment.created_at = datetime.now(timezone.utc) - timedelta(days=25)
+        pr.get_issue_comments.return_value = [comment]
+        pr.get_review_comments.return_value = []
+        pr.get_reviews.return_value = []
 
         self.assertTrue(self.labeler._is_eligible_for_blocked_stale(pr))
 

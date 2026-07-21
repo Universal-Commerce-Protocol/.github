@@ -83,7 +83,7 @@ When a PR has the `status:under-review` label, the tool checks if there has been
 
 ### Stale Review Recovery
 
-If a PR has the `status:stale-review` label and new **reviewer activity** (reviews or comments by anyone other than the PR author) is detected, the tool will apply `status:under-review` (which automatically removes `status:stale-review` due to mutual exclusivity):
+If a PR has the `status:stale-review` label and new **reviewer activity** (reviews or comments by a member of the GitHub organization, excluding the PR author) is detected, the tool will apply `status:under-review` (which automatically removes `status:stale-review` due to mutual exclusivity):
 
 | PR Condition                                               |           Action            |
 | :--------------------------------------------------------- | :-------------------------: |

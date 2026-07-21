@@ -948,6 +948,17 @@ class TestTriageLabelerStaleReviewRecoveryRules(unittest.TestCase):
         self.mock_client = Mock()
         self.mock_repo = Mock()
         self.mock_repo.full_name = "mock-org/mock-repo"
+
+        # Mock repo owner as Organization
+        self.mock_repo.owner.type = "Organization"
+        self.mock_repo.owner.login = "mock-org"
+
+        # Mock organization membership
+        self.mock_org = Mock()
+        self.mock_client.get_organization.return_value = self.mock_org
+        # Default: anyone is a member in tests unless overridden
+        self.mock_org.has_in_members.return_value = True
+
         self.labeler = TriageLabeler(self.mock_client, self.mock_repo, dry_run=False)
 
     def test_non_stale_review_pr_should_not_be_recovered(self):
@@ -1127,6 +1138,89 @@ class TestTriageLabelerStaleReviewRecoveryRules(unittest.TestCase):
         pr.remove_from_labels.assert_called_once_with("status:stale-review")
         # Should add status:under-review
         pr.add_to_labels.assert_called_once_with("status:under-review")
+
+    def test_stale_review_pr_with_non_member_comment_should_not_be_recovered(self):
+        """PR with status:stale-review and comment by non-member should not be recovered."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:stale-review"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled stale-review 5 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:stale-review"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=5)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock author
+        mock_author = Mock()
+        mock_author.login = "pr-author"
+        pr.user = mock_author
+
+        # Mock reviewer who is NOT an org member
+        non_member = Mock()
+        non_member.login = "non-member"
+        self.mock_org.has_in_members.return_value = False
+
+        # Mock comment by non-member (2 days ago)
+        comment = Mock()
+        comment.user = non_member
+        comment.created_at = datetime.now(timezone.utc) - timedelta(days=2)
+        pr.get_issue_comments.return_value = [comment]
+        pr.get_review_comments.return_value = []
+        pr.get_reviews.return_value = []
+
+        self.assertFalse(self.labeler._is_eligible_for_stale_review_recovery(pr))
+
+    def test_stale_review_pr_personal_repo_with_collaborator_comment_should_be_recovered(
+        self,
+    ):
+        """Test recovery on personal repo when comment is by collaborator."""
+        # Re-initialize labeler with personal repo
+        personal_repo = Mock()
+        personal_repo.full_name = "user/repo"
+        personal_repo.owner.type = "User"
+        personal_repo.owner.login = "user"
+        personal_repo.has_in_collaborators.return_value = True
+
+        labeler = TriageLabeler(self.mock_client, personal_repo, dry_run=False)
+
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:stale-review"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled stale-review 5 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:stale-review"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=5)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock author
+        mock_author = Mock()
+        mock_author.login = "pr-author"
+        pr.user = mock_author
+
+        # Mock collaborator comment (2 days ago)
+        comment = Mock()
+        comment.user.login = "collaborator-1"
+        comment.created_at = datetime.now(timezone.utc) - timedelta(days=2)
+        pr.get_issue_comments.return_value = [comment]
+        pr.get_review_comments.return_value = []
+        pr.get_reviews.return_value = []
+
+        self.assertTrue(labeler._is_eligible_for_stale_review_recovery(pr))
+        personal_repo.has_in_collaborators.assert_called_once()
 
 
 if __name__ == "__main__":

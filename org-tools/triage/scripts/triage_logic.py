@@ -76,6 +76,8 @@ class TriageLabeler:
         self.client = client
         self.repo = repo
         self.dry_run = dry_run
+        self._org = None
+        self._is_org_checked = False
 
     def triage_all_outstanding(self) -> None:
         """Triages the repository using the Search API.
@@ -515,11 +517,15 @@ class TriageLabeler:
         if not author:
             return False
 
-        # 1. Check comments by non-author
+        # 1. Check comments by non-author org members
         try:
             comments = pull.get_issue_comments()
             for comment in comments:
-                if comment.user and comment.user.login != author.login:
+                if (
+                    comment.user
+                    and comment.user.login != author.login
+                    and self._is_member(comment.user)
+                ):
                     comment_time = comment.created_at
                     if comment_time.tzinfo is None:
                         comment_time = comment_time.replace(tzinfo=timezone.utc)
@@ -542,7 +548,11 @@ class TriageLabeler:
         try:
             review_comments = pull.get_review_comments(since=label_applied_time)
             for comment in review_comments:
-                if comment.user and comment.user.login != author.login:
+                if (
+                    comment.user
+                    and comment.user.login != author.login
+                    and self._is_member(comment.user)
+                ):
                     comment_time = comment.created_at
                     if comment_time.tzinfo is None:
                         comment_time = comment_time.replace(tzinfo=timezone.utc)
@@ -562,11 +572,15 @@ class TriageLabeler:
                 e,
             )
 
-        # 2. Check reviews by non-author
+        # 2. Check reviews by non-author org members
         try:
             reviews = pull.get_reviews()
             for review in reviews:
-                if review.user and review.user.login != author.login:
+                if (
+                    review.user
+                    and review.user.login != author.login
+                    and self._is_member(review.user)
+                ):
                     review_time = review.submitted_at
                     if review_time:
                         if review_time.tzinfo is None:
@@ -589,6 +603,46 @@ class TriageLabeler:
             )
 
         return False
+
+    def _get_org(self) -> github.Organization.Organization | None:
+        if not self._is_org_checked:
+            if self.repo.owner.type == "Organization":
+                try:
+                    self._org = self.client.get_organization(self.repo.owner.login)
+                except Exception as e:
+                    log_error(
+                        "Error fetching organization %s: %s",
+                        self.repo.owner.login,
+                        e,
+                    )
+            self._is_org_checked = True
+        return self._org
+
+    def _is_member(self, user: github.NamedUser.NamedUser) -> bool:
+        """Checks if a user is a member of the organization (or collaborator if personal repo)."""
+        org = self._get_org()
+        if org:
+            try:
+                return org.has_in_members(user)
+            except Exception as e:
+                log_error(
+                    "Error checking org membership for %s in %s: %s",
+                    user.login,
+                    org.login,
+                    e,
+                )
+                return False
+        else:
+            try:
+                return self.repo.has_in_collaborators(user)
+            except Exception as e:
+                log_error(
+                    "Error checking collaborator status for %s in %s: %s",
+                    user.login,
+                    self.repo.full_name,
+                    e,
+                )
+                return False
 
     def _apply_label(
         self,

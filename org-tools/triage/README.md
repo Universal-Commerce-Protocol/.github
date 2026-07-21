@@ -1,6 +1,6 @@
 # Central PR Triage Tool
 
-This tool automatically applies the `status:needs-triage` label to eligible Pull Requests (PRs) across multiple repositories in your organization. It is designed to run centrally as a cron job.
+This tool automatically applies the `status:needs-triage` label to eligible Pull Requests (PRs) and marks blocked PRs as `status:stale` if they have been blocked for more than 21 days. It is designed to run centrally as a cron job.
 
 ---
 
@@ -15,11 +15,13 @@ The tool consists of a CLI entry point ([triage_cli.py](scripts/triage_cli.py)) 
     - **Single PR Mode**: If `--pr` is specified, the tool fetches the specific PR from the target `--repos` (which must contain exactly one repository) and triages it.
     - **Bulk Mode**: If `--pr` is not specified, the tool enters bulk triage mode.
 3.  **Upfront Access Pre-Check (Bulk Mode)**: Iterates through the list of `--repos` and verifies API access for each. If any repository is inaccessible (e.g., 404 or 403), the run is aborted immediately.
-4.  **Candidate PR Query (Bulk Mode)**: Queries the GitHub Search API for open, non-draft PRs in the target repositories that do not have `status:needs-triage` or skip labels (`status:backlog`/`status:stale`/`status:under-review`).
+4.  **Candidate PR Query (Bulk Mode)**: Queries the GitHub Search API for:
+    - Open, non-draft PRs in the target repositories with no labels.
+    - Open, non-draft PRs with `status:blocked` label.
 5.  **Core Triage Loop**: For each candidate PR, the tool:
     - Fetches its live state from the GitHub API.
     - Evaluates the PR against the **Core Triage Rules**.
-    - Applies the `status:needs-triage` label if eligible (or logs the would-be action if running in dry-run mode).
+    - Applies `status:needs-triage` or `status:stale` labels if eligible (or logs the would-be action if running in dry-run mode).
 
 ### Key Features
 
@@ -31,18 +33,26 @@ The tool consists of a CLI entry point ([triage_cli.py](scripts/triage_cli.py)) 
 
 ## Core Triage Rules
 
-When evaluating a PR (either in bulk or single-PR mode), the tool fetches the live state of the PR from GitHub and applies the following rules:
+When evaluating a PR (either in bulk or single-PR mode), the tool applies the following rules:
 
-| PR State   | Has Target Label (`status:needs-triage`) | Has Skip Label (`status:backlog`/`status:stale`/`status:under-review`) |  Action   | Log Message / Reason                                              |
-| :--------- | :--------------------------------------: | :--------------------------------------------------------------------: | :-------: | :---------------------------------------------------------------- |
-| **Closed** |                   Any                    |                                  Any                                   | **Skip**  | `Skipping: PR #<num> is closed (not open).`                       |
-| **Draft**  |                   Any                    |                                  Any                                   | **Skip**  | `Skipping: PR #<num> is a draft.`                                 |
-| **Open**   |                   Yes                    |                                  Any                                   | **Skip**  | `Skipping: PR #<num> already has 'status:needs-triage' label.`    |
-| **Open**   |                    No                    |                                  Yes                                   | **Skip**  | `Skipping: PR #<num> has skip label '<label>'.`                   |
-| **Open**   |                    No                    |                                   No                                   | **Label** | `Success: PR #<num> needs triage. Applied 'status:needs-triage'.` |
+### Initial Triage (`status:needs-triage`)
+
+| PR Condition                        |           Action            |
+| :---------------------------------- | :-------------------------: |
+| Open, not draft, and **no labels**  | Apply `status:needs-triage` |
+| Closed, draft, or has **any label** |            Skip             |
+
+### Blocked PRs (`status:stale`)
+
+When a PR has the `status:blocked` label, the tool checks how long it has been blocked:
+
+| PR Condition                                                                    |        Action        |
+| :------------------------------------------------------------------------------ | :------------------: |
+| Open, has `status:blocked`, lacks `status:stale`, and blocked for **> 21 days** | Apply `status:stale` |
+| Otherwise                                                                       |         Skip         |
 
 > [!IMPORTANT]
-> Since the triage tool does not automatically skip PRs with active reviewers or reviews, the `status:under-review` skip label is the primary way to signal that a PR is currently being reviewed and should not be marked as needing triage.
+> Since the triage tool does not automatically skip PRs with active reviewers or reviews, applying any label (such as `status:under-review`) is the primary way to signal that a PR is currently active and should not be marked as needing triage.
 
 ---
 
@@ -60,18 +70,21 @@ Verifying access to all repositories...
 Access verification successful. Starting triage...
 
 Processing Repository: my-org/repo-a
-  Search Query: is:pr is:open -is:draft -label:status:needs-triage -label:status:stale -label:status:backlog -label:status:under-review repo:my-org/repo-a
-  Found 2 PRs needing triage (from search index).
-  Processing PR #145: refactor: update dependencies
-    [DRY RUN] Success: PR #145 needs triage. Would apply 'status:needs-triage'.
-  Processing PR #142: docs: fix typo in README
-    Skipping: PR #142 has skip label 'status:backlog'.
+  Search Query (Needs Triage): is:pr is:open -is:draft no:label repo:my-org/repo-a
+  Search Query (Blocked): is:pr is:open -is:draft label:"status:blocked" repo:my-org/repo-a
+  Found 2 PRs needing initial triage.
+  Found 0 blocked PRs to check.
+  Total unique PRs to process: 2
+  Processing PR #145
+    [DRY RUN] Success: PR #145. Would apply 'status:needs-triage'.
+  Processing PR #142
+    Skipping: PR #142 has other labels: {'status:backlog'}
 
 === PR Triage Completed Successfully ===
 ```
 
 > [!NOTE]
-> Due to the eventual consistency of the GitHub Search index, PRs that were recently labeled with a skip label (e.g., `status:under-review`) might still temporarily appear in the search results. The tool's core triage loop performs an in-memory check using the live PR state to safely skip these cases.
+> Due to the eventual consistency of the GitHub Search index, PRs that were recently labeled might still temporarily appear in the search results for unlabeled PRs. The tool's core triage loop performs an in-memory check using the live PR state to safely skip these cases.
 
 ### Scenario 2: Pre-Check Verification Failure (Aborted Run)
 
@@ -94,12 +107,15 @@ Verifying access to all repositories...
 Access verification successful. Starting triage...
 
 Processing Repository: my-org/repo-a
-  Search Query: is:pr is:open -is:draft -label:status:needs-triage -label:status:stale -label:status:backlog repo:my-org/repo-a
-  Found 2 PRs needing triage (from search index).
-  Processing PR #145: refactor: update dependencies
-    [DRY RUN] Success: PR #145 needs triage. Would apply 'status:needs-triage'.
-  Processing PR #142: docs: fix typo in README
-    Error fetching or parsing PR #142 in my-org/repo-a: GithubException (status 500, ...)
+  Search Query (Needs Triage): is:pr is:open -is:draft no:label repo:my-org/repo-a
+  Search Query (Blocked): is:pr is:open -is:draft label:"status:blocked" repo:my-org/repo-a
+  Found 2 PRs needing initial triage.
+  Found 0 blocked PRs to check.
+  Total unique PRs to process: 2
+  Processing PR #145
+    [DRY RUN] Success: PR #145. Would apply 'status:needs-triage'.
+  Processing PR #142
+    Error processing PR #142 in my-org/repo-a: GithubException (status 500, ...)
 
 === PR Triage Completed Successfully ===
 ```

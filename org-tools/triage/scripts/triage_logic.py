@@ -21,6 +21,7 @@ and labeling of Pull Requests in a repository.
 import logging
 import os
 import sys
+from datetime import datetime, timezone
 import github
 
 
@@ -28,6 +29,9 @@ import github
 logger = logging.getLogger("triage")
 
 TARGET_LABEL = "status:needs-triage"
+BLOCKED_LABEL = "status:blocked"
+STALE_LABEL = "status:stale"
+BLOCKED_STALE_THRESHOLD_DAYS = 21
 
 
 def log_error(message: str, *args) -> None:
@@ -73,30 +77,53 @@ class TriageLabeler:
     def triage_all_outstanding(self) -> None:
         """Triages the repository using the Search API.
 
-        Finds open, non-draft PRs lacking target/skip labels, and applies the
-        label.
+        Finds open, non-draft PRs needing triage or blocked for too long,
+        and applies appropriate labels.
 
         Raises:
             RuntimeError: If the Search API fails.
         """
         logger.info("\nProcessing Repository: %s", self.repo.full_name)
 
-        # Construct query to find PRs with no labels.
-        query = f"is:pr is:open -is:draft no:label repo:{self.repo.full_name}"
-        logger.info("  Search Query: %s", query)
+        query_needs_triage = (
+            f"is:pr is:open -is:draft no:label repo:{self.repo.full_name}"
+        )
+        query_blocked = f'is:pr is:open -is:draft label:"{BLOCKED_LABEL}" repo:{self.repo.full_name}'
+
+        logger.info("  Search Query (Needs Triage): %s", query_needs_triage)
+        logger.info("  Search Query (Blocked): %s", query_blocked)
+
+        pr_numbers = set()
 
         try:
-            prs = self.client.search_issues(query, sort="created", order="desc")
-            count = prs.totalCount
-            logger.info("  Found %s PRs needing triage (from search index).", count)
+            prs_needs_triage = self.client.search_issues(query_needs_triage)
+            logger.info(
+                "  Found %s PRs needing initial triage.", prs_needs_triage.totalCount
+            )
+            for pr in prs_needs_triage:
+                pr_numbers.add(pr.number)
         except Exception as e:
-            raise RuntimeError(f"Failed to search PRs for {self.repo.full_name}: {e}")
+            raise RuntimeError(
+                f"Failed to search PRs needing triage for {self.repo.full_name}: {e}"
+            )
 
-        for pr in prs:
-            logger.info("  Processing PR #%s: %s", pr.number, pr.title)
+        try:
+            prs_blocked = self.client.search_issues(query_blocked)
+            logger.info("  Found %s blocked PRs to check.", prs_blocked.totalCount)
+            for pr in prs_blocked:
+                pr_numbers.add(pr.number)
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to search blocked PRs for {self.repo.full_name}: {e}"
+            )
+
+        logger.info("  Total unique PRs to process: %s", len(pr_numbers))
+
+        for pr_num in sorted(pr_numbers, reverse=True):
+            logger.info("  Processing PR #%s", pr_num)
             try:
                 # Fetch fresh PullRequest object to perform in-memory checks
-                pull = self.repo.get_pull(pr.number)
+                pull = self.repo.get_pull(pr_num)
                 self._triage_pull(pull)
             except Exception as e:
                 # We log the error and continue to process other PRs. This prevents a single
@@ -104,7 +131,7 @@ class TriageLabeler:
                 # from blocking the entire run.
                 log_error(
                     "Error processing PR #%s in %s: %s",
-                    pr.number,
+                    pr_num,
                     self.repo.full_name,
                     e,
                 )
@@ -130,9 +157,80 @@ class TriageLabeler:
         self._triage_pull(pull)
 
     def _triage_pull(self, pull: github.PullRequest.PullRequest) -> None:
-        """Evaluates rules and applies the label to a single PR if eligible."""
+        """Evaluates rules and applies labels to a single PR."""
+        self._triage_needs_triage(pull)
+        self._triage_blocked_stale(pull)
+
+    def _triage_needs_triage(self, pull: github.PullRequest.PullRequest) -> None:
+        """Checks and applies 'status:needs-triage' if eligible."""
         if self._is_eligible_for_triage(pull):
-            self._apply_label(pull)
+            self._apply_label(pull, TARGET_LABEL)
+
+    def _triage_blocked_stale(self, pull: github.PullRequest.PullRequest) -> None:
+        """Checks and applies 'status:stale' if PR is blocked for > 21 days."""
+        if self._is_eligible_for_blocked_stale(pull):
+            self._apply_label(pull, STALE_LABEL)
+
+    def _is_eligible_for_blocked_stale(
+        self, pull: github.PullRequest.PullRequest
+    ) -> bool:
+        """Checks if a PR is eligible for being marked stale due to being blocked."""
+        if pull.state != "open":
+            return False
+        if pull.draft:
+            return False
+
+        labels = {label.name for label in pull.labels}
+        if BLOCKED_LABEL not in labels:
+            return False
+
+        if STALE_LABEL in labels:
+            logger.info(
+                "Skipping: PR #%s already has '%s' label.", pull.number, STALE_LABEL
+            )
+            return False
+
+        duration = self._get_label_applied_duration(pull, BLOCKED_LABEL)
+        logger.info(
+            "  PR #%s has been blocked for %.2f days (threshold: %s days).",
+            pull.number,
+            duration,
+            BLOCKED_STALE_THRESHOLD_DAYS,
+        )
+
+        return duration > BLOCKED_STALE_THRESHOLD_DAYS
+
+    def _get_label_applied_duration(
+        self, pull: github.PullRequest.PullRequest, label_name: str
+    ) -> float:
+        """Returns the number of days a label has been continuously applied to a PR."""
+        try:
+            events = pull.get_issue_events()
+            latest_labeled_time = None
+            for event in events:
+                if (
+                    event.event == "labeled"
+                    and event.label
+                    and event.label.name == label_name
+                ):
+                    latest_labeled_time = event.created_at
+
+            if latest_labeled_time:
+                if latest_labeled_time.tzinfo is None:
+                    latest_labeled_time = latest_labeled_time.replace(
+                        tzinfo=timezone.utc
+                    )
+                now = datetime.now(timezone.utc)
+                duration = now - latest_labeled_time
+                return duration.total_seconds() / (24 * 3600)
+        except Exception as e:
+            log_error(
+                "Error getting label duration for PR #%s in %s: %s",
+                pull.number,
+                self.repo.full_name,
+                e,
+            )
+        return 0.0
 
     def _is_eligible_for_triage(self, pull: github.PullRequest.PullRequest) -> bool:
         """Performs in-memory checks to determine if a PR is eligible for triage.
@@ -163,25 +261,27 @@ class TriageLabeler:
     def _apply_label(
         self,
         pull: github.PullRequest.PullRequest,
+        label_name: str,
     ) -> None:
-        """Applies the 'status:needs-triage' label to the given PR."""
+        """Applies the given label to the PR."""
         try:
             if not self.dry_run:
-                pull.add_to_labels(TARGET_LABEL)
+                pull.add_to_labels(label_name)
                 logger.info(
-                    "    Success: PR #%s needs triage. Applied '%s'.",
+                    "    Success: PR #%s. Applied '%s'.",
                     pull.number,
-                    TARGET_LABEL,
+                    label_name,
                 )
             else:
                 logger.info(
-                    "    [DRY RUN] Success: PR #%s needs triage. Would apply '%s'.",
+                    "    [DRY RUN] Success: PR #%s. Would apply '%s'.",
                     pull.number,
-                    TARGET_LABEL,
+                    label_name,
                 )
         except Exception as e:
             log_error(
-                "Error applying label to PR #%s in %s: %s",
+                "Error applying label %s to PR #%s in %s: %s",
+                label_name,
                 pull.number,
                 self.repo.full_name,
                 e,

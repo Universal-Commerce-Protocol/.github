@@ -17,6 +17,7 @@
 import os
 import sys
 import unittest
+from datetime import datetime, timezone, timedelta
 from unittest.mock import MagicMock, Mock, call, patch
 from github import GithubException
 import github
@@ -174,13 +175,13 @@ class TestTriageLabelerLabelApplication(unittest.TestCase):
     def test_apply_label_adds_label_when_dry_run_is_false(self):
         """Test that the triage label is added to the PR when dry_run is False."""
         labeler = TriageLabeler(self.mock_client, self.mock_repo, dry_run=False)
-        labeler._apply_label(self.mock_issue)
+        labeler._apply_label(self.mock_issue, "status:needs-triage")
         self.mock_issue.add_to_labels.assert_called_once_with("status:needs-triage")
 
     def test_apply_label_does_not_add_label_when_dry_run_is_true(self):
         """Test that the triage label is not added to the PR when dry_run is True."""
         labeler = TriageLabeler(self.mock_client, self.mock_repo, dry_run=True)
-        labeler._apply_label(self.mock_issue)
+        labeler._apply_label(self.mock_issue, "status:needs-triage")
         self.mock_issue.add_to_labels.assert_not_called()
 
     @patch("triage_logic.log_error")
@@ -188,10 +189,11 @@ class TestTriageLabelerLabelApplication(unittest.TestCase):
         """Test that any exception during label application is caught and logged as an error."""
         labeler = TriageLabeler(self.mock_client, self.mock_repo, dry_run=False)
         self.mock_issue.add_to_labels.side_effect = Exception("API Error")
-        labeler._apply_label(self.mock_issue)
+        labeler._apply_label(self.mock_issue, "status:needs-triage")
         self.mock_issue.add_to_labels.assert_called_once()
         mock_log_error.assert_called_once_with(
-            "Error applying label to PR #%s in %s: %s",
+            "Error applying label %s to PR #%s in %s: %s",
+            "status:needs-triage",
             1,
             "mock-org/mock-repo",
             self.mock_issue.add_to_labels.side_effect,
@@ -273,20 +275,27 @@ class TestTriageLabelerBulkExecution(unittest.TestCase):
         mock_triage_pull.assert_called_once_with(mock_pull1)
 
     def test_bulk_triage_verifies_search_query_structure(self):
-        """Test that the constructed search query contains all required filters."""
+        """Test that the constructed search queries contain all required filters."""
         self.mock_client.search_issues.return_value = MagicMock(totalCount=0)
 
         self.labeler.triage_all_outstanding()
 
-        self.mock_client.search_issues.assert_called_once()
-        called_args, _ = self.mock_client.search_issues.call_args
-        query = called_args[0]
+        self.assertEqual(self.mock_client.search_issues.call_count, 2)
+        calls = self.mock_client.search_issues.call_args_list
 
-        self.assertIn("is:pr", query)
-        self.assertIn("is:open", query)
-        self.assertIn("-is:draft", query)
-        self.assertIn("no:label", query)
-        self.assertIn("repo:mock-org/mock-repo", query)
+        query1 = calls[0][0][0]
+        self.assertIn("is:pr", query1)
+        self.assertIn("is:open", query1)
+        self.assertIn("-is:draft", query1)
+        self.assertIn("no:label", query1)
+        self.assertIn("repo:mock-org/mock-repo", query1)
+
+        query2 = calls[1][0][0]
+        self.assertIn("is:pr", query2)
+        self.assertIn("is:open", query2)
+        self.assertIn("-is:draft", query2)
+        self.assertIn('label:"status:blocked"', query2)
+        self.assertIn("repo:mock-org/mock-repo", query2)
 
     def test_bulk_triage_raises_runtime_error_on_search_failure(self):
         """Test that a failure during the Search API call raises a RuntimeError."""
@@ -294,7 +303,10 @@ class TestTriageLabelerBulkExecution(unittest.TestCase):
 
         with self.assertRaises(RuntimeError) as ctx:
             self.labeler.triage_all_outstanding()
-        self.assertIn("Failed to search PRs for mock-org/mock-repo", str(ctx.exception))
+        self.assertIn(
+            "Failed to search PRs needing triage for mock-org/mock-repo",
+            str(ctx.exception),
+        )
 
 
 class TestTriageLabelerSingleExecution(unittest.TestCase):
@@ -340,6 +352,102 @@ class TestTriageLabelerSingleExecution(unittest.TestCase):
         self.assertIn(
             "Failed to fetch PR #123 in mock-org/mock-repo", str(ctx.exception)
         )
+
+
+class TestTriageLabelerBlockedStaleRules(unittest.TestCase):
+    """Tests for blocked-stale eligibility rules in TriageLabeler."""
+
+    def setUp(self):
+        self.mock_client = Mock()
+        self.mock_repo = Mock()
+        self.mock_repo.full_name = "mock-org/mock-repo"
+        self.labeler = TriageLabeler(self.mock_client, self.mock_repo, dry_run=False)
+
+    def test_non_blocked_pr_should_not_be_stale(self):
+        """PR without status:blocked label should not be eligible."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+        pr.labels = []
+        self.assertFalse(self.labeler._is_eligible_for_blocked_stale(pr))
+
+    def test_blocked_pr_less_than_21_days_should_not_be_stale(self):
+        """PR blocked for less than 21 days should not be eligible."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:blocked"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled 10 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:blocked"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=10)
+        pr.get_issue_events.return_value = [event]
+
+        self.assertFalse(self.labeler._is_eligible_for_blocked_stale(pr))
+
+    def test_blocked_pr_more_than_21_days_should_be_stale(self):
+        """PR blocked for more than 21 days should be eligible."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:blocked"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled 22 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:blocked"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=22)
+        pr.get_issue_events.return_value = [event]
+
+        self.assertTrue(self.labeler._is_eligible_for_blocked_stale(pr))
+
+    def test_already_stale_blocked_pr_should_not_be_stale_again(self):
+        """PR that is already marked stale should not be eligible."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_blocked = Mock()
+        mock_blocked.name = "status:blocked"
+        mock_stale = Mock()
+        mock_stale.name = "status:stale"
+        pr.labels = [mock_blocked, mock_stale]
+
+        self.assertFalse(self.labeler._is_eligible_for_blocked_stale(pr))
+
+    def test_closed_blocked_pr_should_not_be_stale(self):
+        """Closed PR should not be eligible."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "closed"
+        pr.draft = False
+        mock_label = Mock()
+        mock_label.name = "status:blocked"
+        pr.labels = [mock_label]
+        self.assertFalse(self.labeler._is_eligible_for_blocked_stale(pr))
+
+    def test_draft_blocked_pr_should_not_be_stale(self):
+        """Draft PR should not be eligible."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = True
+        mock_label = Mock()
+        mock_label.name = "status:blocked"
+        pr.labels = [mock_label]
+        self.assertFalse(self.labeler._is_eligible_for_blocked_stale(pr))
 
 
 if __name__ == "__main__":

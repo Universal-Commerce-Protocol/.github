@@ -438,8 +438,8 @@ class TestTriageLabelerBlockedStaleRules(unittest.TestCase):
         pr.labels = []
         self.assertFalse(self.labeler._is_eligible_for_blocked_stale(pr))
 
-    def test_blocked_pr_less_than_21_days_should_not_be_stale(self):
-        """PR blocked for less than 21 days should not be eligible."""
+    def test_blocked_pr_less_than_30_days_should_not_be_stale(self):
+        """PR blocked for less than 30 days should not be eligible."""
         pr = Mock(spec=github.PullRequest.PullRequest)
         pr.number = 1
         pr.state = "open"
@@ -449,11 +449,11 @@ class TestTriageLabelerBlockedStaleRules(unittest.TestCase):
         mock_label.name = "status:blocked"
         pr.labels = [mock_label]
 
-        # Mock event: labeled 10 days ago
+        # Mock event: labeled 29 days ago
         event = Mock()
         event.event = "labeled"
         event.label.name = "status:blocked"
-        event.created_at = datetime.now(timezone.utc) - timedelta(days=10)
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=29)
         pr.get_issue_events.return_value = [event]
 
         # Mock no activity
@@ -463,8 +463,8 @@ class TestTriageLabelerBlockedStaleRules(unittest.TestCase):
 
         self.assertFalse(self.labeler._is_eligible_for_blocked_stale(pr))
 
-    def test_blocked_pr_more_than_21_days_should_be_stale(self):
-        """PR blocked for more than 21 days should be eligible."""
+    def test_blocked_pr_more_than_30_days_should_be_stale(self):
+        """PR blocked for more than 30 days should be eligible."""
         pr = Mock(spec=github.PullRequest.PullRequest)
         pr.number = 1
         pr.state = "open"
@@ -474,11 +474,11 @@ class TestTriageLabelerBlockedStaleRules(unittest.TestCase):
         mock_label.name = "status:blocked"
         pr.labels = [mock_label]
 
-        # Mock event: labeled 22 days ago
+        # Mock event: labeled 31 days ago
         event = Mock()
         event.event = "labeled"
         event.label.name = "status:blocked"
-        event.created_at = datetime.now(timezone.utc) - timedelta(days=22)
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=31)
         pr.get_issue_events.return_value = [event]
 
         # Mock no activity
@@ -489,7 +489,7 @@ class TestTriageLabelerBlockedStaleRules(unittest.TestCase):
         self.assertTrue(self.labeler._is_eligible_for_blocked_stale(pr))
 
     def test_blocked_pr_with_recent_activity_should_not_be_stale(self):
-        """PR with activity in the last 21 days should not be eligible, even if labeled long ago."""
+        """PR with activity in the last 30 days should not be eligible, even if labeled long ago."""
         pr = Mock(spec=github.PullRequest.PullRequest)
         pr.number = 1
         pr.state = "open"
@@ -499,11 +499,11 @@ class TestTriageLabelerBlockedStaleRules(unittest.TestCase):
         mock_label.name = "status:blocked"
         pr.labels = [mock_label]
 
-        # Mock event: labeled 25 days ago
+        # Mock event: labeled 35 days ago
         event = Mock()
         event.event = "labeled"
         event.label.name = "status:blocked"
-        event.created_at = datetime.now(timezone.utc) - timedelta(days=25)
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=35)
         pr.get_issue_events.return_value = [event]
 
         # Mock recent comment (10 days ago)
@@ -516,7 +516,7 @@ class TestTriageLabelerBlockedStaleRules(unittest.TestCase):
         self.assertFalse(self.labeler._is_eligible_for_blocked_stale(pr))
 
     def test_blocked_pr_with_old_activity_should_be_stale(self):
-        """PR with activity > 21 days ago should be eligible if labeled long ago."""
+        """PR with activity > 30 days ago should be eligible if labeled long ago."""
         pr = Mock(spec=github.PullRequest.PullRequest)
         pr.number = 1
         pr.state = "open"
@@ -526,16 +526,16 @@ class TestTriageLabelerBlockedStaleRules(unittest.TestCase):
         mock_label.name = "status:blocked"
         pr.labels = [mock_label]
 
-        # Mock event: labeled 30 days ago
+        # Mock event: labeled 40 days ago
         event = Mock()
         event.event = "labeled"
         event.label.name = "status:blocked"
-        event.created_at = datetime.now(timezone.utc) - timedelta(days=30)
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=40)
         pr.get_issue_events.return_value = [event]
 
-        # Mock old comment (25 days ago)
+        # Mock old comment (35 days ago)
         comment = Mock()
-        comment.created_at = datetime.now(timezone.utc) - timedelta(days=25)
+        comment.created_at = datetime.now(timezone.utc) - timedelta(days=35)
         pr.get_issue_comments.return_value = [comment]
         pr.get_review_comments.return_value = []
         pr.get_reviews.return_value = []

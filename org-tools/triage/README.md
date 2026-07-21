@@ -1,6 +1,6 @@
 # Central PR Triage Tool
 
-This tool automatically applies the `status:needs-triage` label to eligible Pull Requests (PRs) and marks blocked PRs as `status:stale` if they have been blocked for more than 21 days. It is designed to run centrally as a cron job.
+This tool automatically applies the `status:needs-triage` label to eligible Pull Requests (PRs) and marks blocked PRs as `status:stale` if they have been blocked for more than 30 days. It is designed to run centrally as a cron job.
 
 ---
 
@@ -60,7 +60,7 @@ When a PR has the `status:blocked` label, the tool checks if there has been any 
 
 | PR Condition                                                                        |        Action        |
 | :---------------------------------------------------------------------------------- | :------------------: |
-| Open, has `status:blocked`, lacks `status:stale`, and no activity for **> 21 days** | Apply `status:stale` |
+| Open, has `status:blocked`, lacks `status:stale`, and no activity for **> 30 days** | Apply `status:stale` |
 | Otherwise                                                                           |         Skip         |
 
 ### Stale Blocked Recovery

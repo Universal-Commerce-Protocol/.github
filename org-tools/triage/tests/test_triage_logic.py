@@ -325,7 +325,7 @@ class TestTriageLabelerBulkExecution(unittest.TestCase):
 
         self.labeler.triage_all_outstanding()
 
-        self.assertEqual(self.mock_client.search_issues.call_count, 3)
+        self.assertEqual(self.mock_client.search_issues.call_count, 4)
         calls = self.mock_client.search_issues.call_args_list
 
         query1 = calls[0][0][0]
@@ -348,6 +348,13 @@ class TestTriageLabelerBulkExecution(unittest.TestCase):
         self.assertIn("-is:draft", query3)
         self.assertIn('label:"status:under-review"', query3)
         self.assertIn("repo:mock-org/mock-repo", query3)
+
+        query4 = calls[3][0][0]
+        self.assertIn("is:pr", query4)
+        self.assertIn("is:open", query4)
+        self.assertIn("-is:draft", query4)
+        self.assertIn('label:"status:stale"', query4)
+        self.assertIn("repo:mock-org/mock-repo", query4)
 
     def test_bulk_triage_raises_runtime_error_on_search_failure(self):
         """Test that a failure during the Search API call raises a RuntimeError."""
@@ -704,6 +711,189 @@ class TestTriageLabelerStaleReviewRules(unittest.TestCase):
         pr.labels = [mock_ur, mock_sr]
 
         self.assertFalse(self.labeler._is_eligible_for_stale_review(pr))
+
+
+class TestTriageLabelerStaleRecoveryRules(unittest.TestCase):
+    """Tests for stale recovery eligibility rules in TriageLabeler."""
+
+    def setUp(self):
+        self.mock_client = Mock()
+        self.mock_repo = Mock()
+        self.mock_repo.full_name = "mock-org/mock-repo"
+        self.labeler = TriageLabeler(self.mock_client, self.mock_repo, dry_run=False)
+
+    def test_non_stale_pr_should_not_be_recovered(self):
+        """PR without status:stale label should not be eligible for recovery."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+        pr.labels = []
+        self.assertFalse(self.labeler._is_eligible_for_stale_recovery(pr))
+
+    def test_stale_pr_with_no_activity_should_not_be_recovered(self):
+        """PR with status:stale and no new activity should not be recovered."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:stale"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled stale 5 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:stale"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=5)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock author
+        mock_author = Mock()
+        mock_author.login = "pr-author"
+        pr.user = mock_author
+
+        # Mock no activity
+        pr.get_issue_comments.return_value = []
+        pr.get_review_comments.return_value = []
+        pr.get_commits.return_value = []
+
+        self.assertFalse(self.labeler._is_eligible_for_stale_recovery(pr))
+
+    def test_stale_pr_with_author_comment_should_be_recovered(self):
+        """PR with status:stale and a new comment by author should be recovered."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:stale"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled stale 5 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:stale"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=5)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock author
+        mock_author = Mock()
+        mock_author.login = "pr-author"
+        pr.user = mock_author
+
+        # Mock author comment (2 days ago)
+        comment = Mock()
+        comment.user.login = "pr-author"
+        comment.created_at = datetime.now(timezone.utc) - timedelta(days=2)
+        pr.get_issue_comments.return_value = [comment]
+        pr.get_review_comments.return_value = []
+        pr.get_commits.return_value = []
+
+        self.assertTrue(self.labeler._is_eligible_for_stale_recovery(pr))
+
+    def test_stale_pr_with_non_author_comment_should_not_be_recovered(self):
+        """PR with status:stale and a new comment by someone else should not be recovered."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:stale"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled stale 5 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:stale"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=5)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock author
+        mock_author = Mock()
+        mock_author.login = "pr-author"
+        pr.user = mock_author
+
+        # Mock non-author comment (2 days ago)
+        comment = Mock()
+        comment.user.login = "someone-else"
+        comment.created_at = datetime.now(timezone.utc) - timedelta(days=2)
+        pr.get_issue_comments.return_value = [comment]
+        pr.get_review_comments.return_value = []
+        pr.get_commits.return_value = []
+
+        self.assertFalse(self.labeler._is_eligible_for_stale_recovery(pr))
+
+    def test_stale_pr_with_author_commit_should_be_recovered(self):
+        """PR with status:stale and a new commit by author should be recovered."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:stale"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled stale 5 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:stale"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=5)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock author
+        mock_author = Mock()
+        mock_author.login = "pr-author"
+        pr.user = mock_author
+
+        # Mock author commit (2 days ago)
+        commit = Mock()
+        commit.sha = "1234567890"
+        commit.author.login = "pr-author"
+        commit.commit.author.date = datetime.now(timezone.utc) - timedelta(days=2)
+        pr.get_commits.return_value = [commit]
+
+        pr.get_issue_comments.return_value = []
+        pr.get_review_comments.return_value = []
+
+        self.assertTrue(self.labeler._is_eligible_for_stale_recovery(pr))
+
+    def test_stale_pr_with_old_author_activity_should_not_be_recovered(self):
+        """PR with status:stale and activity by author BEFORE stale label should not be recovered."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:stale"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled stale 5 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:stale"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=5)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock author
+        mock_author = Mock()
+        mock_author.login = "pr-author"
+        pr.user = mock_author
+
+        # Mock old author comment (10 days ago)
+        comment = Mock()
+        comment.user.login = "pr-author"
+        comment.created_at = datetime.now(timezone.utc) - timedelta(days=10)
+        pr.get_issue_comments.return_value = [comment]
+        pr.get_review_comments.return_value = []
+        pr.get_commits.return_value = []
+
+        self.assertFalse(self.labeler._is_eligible_for_stale_recovery(pr))
 
 
 if __name__ == "__main__":

@@ -63,6 +63,15 @@ When a PR has the `status:blocked` label, the tool checks if there has been any 
 | Open, has `status:blocked`, lacks `status:stale`, and no activity for **> 21 days** | Apply `status:stale` |
 | Otherwise                                                                           |         Skip         |
 
+### Stale Blocked Recovery
+
+If a PR has the `status:stale` label and new **author activity** (commits or comments) is detected, the tool will restore `status:blocked` (which automatically removes `status:stale` due to mutual exclusivity):
+
+| PR Condition                                      |         Action         |
+| :------------------------------------------------ | :--------------------: |
+| Open, has `status:stale`, and new author activity | Apply `status:blocked` |
+| Otherwise                                         |          Skip          |
+
 ### Stale Reviews (`status:stale-review`)
 
 When a PR has the `status:under-review` label, the tool checks if there has been any activity (comments or reviews) recently:

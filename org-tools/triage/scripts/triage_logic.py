@@ -93,10 +93,14 @@ class TriageLabeler:
         )
         query_blocked = f'is:pr is:open -is:draft label:"{BLOCKED_LABEL}" repo:{self.repo.full_name}'
         query_under_review = f'is:pr is:open -is:draft label:"{UNDER_REVIEW_LABEL}" repo:{self.repo.full_name}'
+        query_stale = (
+            f'is:pr is:open -is:draft label:"{STALE_LABEL}" repo:{self.repo.full_name}'
+        )
 
         logger.info("  Search Query (Needs Triage): %s", query_needs_triage)
         logger.info("  Search Query (Blocked): %s", query_blocked)
         logger.info("  Search Query (Under Review): %s", query_under_review)
+        logger.info("  Search Query (Stale): %s", query_stale)
 
         pr_numbers = set()
 
@@ -132,6 +136,16 @@ class TriageLabeler:
         except Exception as e:
             raise RuntimeError(
                 f"Failed to search PRs under review for {self.repo.full_name}: {e}"
+            )
+
+        try:
+            prs_stale = self.client.search_issues(query_stale)
+            logger.info("  Found %s stale PRs to check.", prs_stale.totalCount)
+            for pr in prs_stale:
+                pr_numbers.add(pr.number)
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to search stale PRs for {self.repo.full_name}: {e}"
             )
 
         logger.info("  Total unique PRs to process: %s", len(pr_numbers))
@@ -178,6 +192,7 @@ class TriageLabeler:
         self._triage_needs_triage(pull)
         self._triage_blocked_stale(pull)
         self._triage_stale_review(pull)
+        self._triage_stale_recovery(pull)
 
     def _triage_needs_triage(self, pull: github.PullRequest.PullRequest) -> None:
         """Checks and applies 'status:needs-triage' if eligible."""
@@ -355,6 +370,107 @@ class TriageLabeler:
             return False
 
         return True
+
+    def _triage_stale_recovery(self, pull: github.PullRequest.PullRequest) -> None:
+        """Checks if a 'status:stale' PR has new author activity and restores 'status:blocked'."""
+        if self._is_eligible_for_stale_recovery(pull):
+            self._apply_label(pull, BLOCKED_LABEL)
+
+    def _is_eligible_for_stale_recovery(
+        self, pull: github.PullRequest.PullRequest
+    ) -> bool:
+        """Checks if a 'status:stale' PR has new author activity."""
+        if pull.state != "open":
+            return False
+        if pull.draft:
+            return False
+
+        labels = {label.name for label in pull.labels}
+        if STALE_LABEL not in labels:
+            return False
+
+        label_applied_time = self._get_label_applied_time(pull, STALE_LABEL)
+        if not label_applied_time:
+            return False
+
+        author = pull.user
+        if not author:
+            return False
+
+        # 1. Check comments by author
+        try:
+            comments = pull.get_issue_comments()
+            for comment in comments:
+                if comment.user and comment.user.login == author.login:
+                    comment_time = comment.created_at
+                    if comment_time.tzinfo is None:
+                        comment_time = comment_time.replace(tzinfo=timezone.utc)
+                    if comment_time > label_applied_time:
+                        logger.info(
+                            "  PR #%s has author comment activity (by %s) at %s (stale applied: %s).",
+                            pull.number,
+                            author.login,
+                            comment_time,
+                            label_applied_time,
+                        )
+                        return True
+        except Exception as e:
+            log_error(
+                "Error checking issue comments for stale recovery on PR #%s: %s",
+                pull.number,
+                e,
+            )
+
+        try:
+            review_comments = pull.get_review_comments(since=label_applied_time)
+            for comment in review_comments:
+                if comment.user and comment.user.login == author.login:
+                    comment_time = comment.created_at
+                    if comment_time.tzinfo is None:
+                        comment_time = comment_time.replace(tzinfo=timezone.utc)
+                    if comment_time > label_applied_time:
+                        logger.info(
+                            "  PR #%s has author review comment activity (by %s) at %s (stale applied: %s).",
+                            pull.number,
+                            author.login,
+                            comment_time,
+                            label_applied_time,
+                        )
+                        return True
+        except Exception as e:
+            log_error(
+                "Error checking review comments for stale recovery on PR #%s: %s",
+                pull.number,
+                e,
+            )
+
+        # 2. Check commits by author
+        try:
+            commits = pull.get_commits()
+            for commit in commits:
+                commit_author = commit.author
+                if commit_author and commit_author.login == author.login:
+                    commit_time = commit.commit.author.date
+                    if commit_time.tzinfo is None:
+                        commit_time = commit_time.replace(tzinfo=timezone.utc)
+                    if commit_time > label_applied_time:
+                        logger.info(
+                            "  PR #%s has author commit activity (by %s, sha: %s) at %s (stale applied: %s).",
+                            pull.number,
+                            author.login,
+                            commit.sha[:7],
+                            commit_time,
+                            label_applied_time,
+                        )
+                        return True
+        except Exception as e:
+            log_error(
+                "Error checking commits for stale recovery on PR #%s: %s",
+                pull.number,
+                e,
+            )
+
+        return False
 
     def _apply_label(
         self,

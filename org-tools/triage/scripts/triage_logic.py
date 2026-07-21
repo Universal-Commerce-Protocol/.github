@@ -372,9 +372,9 @@ class TriageLabeler:
         return True
 
     def _triage_stale_recovery(self, pull: github.PullRequest.PullRequest) -> None:
-        """Checks if a 'status:stale' PR has new author activity and restores 'status:blocked'."""
+        """Checks if a 'status:stale' PR has new author activity and restores 'status:under-review'."""
         if self._is_eligible_for_stale_recovery(pull):
-            self._apply_label(pull, BLOCKED_LABEL)
+            self._apply_label(pull, UNDER_REVIEW_LABEL)
 
     def _is_eligible_for_stale_recovery(
         self, pull: github.PullRequest.PullRequest

@@ -895,6 +895,44 @@ class TestTriageLabelerStaleRecoveryRules(unittest.TestCase):
 
         self.assertFalse(self.labeler._is_eligible_for_stale_recovery(pr))
 
+    def test_triage_stale_recovery_applies_under_review(self):
+        """Test that _triage_stale_recovery applies status:under-review when eligible."""
+        pr = Mock(spec=github.PullRequest.PullRequest)
+        pr.number = 1
+        pr.state = "open"
+        pr.draft = False
+
+        mock_label = Mock()
+        mock_label.name = "status:stale"
+        pr.labels = [mock_label]
+
+        # Mock event: labeled stale 5 days ago
+        event = Mock()
+        event.event = "labeled"
+        event.label.name = "status:stale"
+        event.created_at = datetime.now(timezone.utc) - timedelta(days=5)
+        pr.get_issue_events.return_value = [event]
+
+        # Mock author
+        mock_author = Mock()
+        mock_author.login = "pr-author"
+        pr.user = mock_author
+
+        # Mock author comment (2 days ago)
+        comment = Mock()
+        comment.user.login = "pr-author"
+        comment.created_at = datetime.now(timezone.utc) - timedelta(days=2)
+        pr.get_issue_comments.return_value = [comment]
+        pr.get_review_comments.return_value = []
+        pr.get_commits.return_value = []
+
+        self.labeler._triage_stale_recovery(pr)
+
+        # Should remove status:stale (via mutual exclusivity inside _apply_label)
+        pr.remove_from_labels.assert_called_once_with("status:stale")
+        # Should add status:under-review
+        pr.add_to_labels.assert_called_once_with("status:under-review")
+
 
 if __name__ == "__main__":
     unittest.main()

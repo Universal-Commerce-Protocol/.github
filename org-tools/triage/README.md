@@ -65,12 +65,12 @@ When a PR has the `status:blocked` label, the tool checks if there has been any 
 
 ### Stale Blocked Recovery
 
-If a PR has the `status:stale` label and new **author activity** (commits or comments) is detected, the tool will restore `status:blocked` (which automatically removes `status:stale` due to mutual exclusivity):
+If a PR has the `status:stale` label and new **author activity** (commits or comments) is detected, the tool will apply `status:under-review` (which automatically removes `status:stale` due to mutual exclusivity):
 
-| PR Condition                                      |         Action         |
-| :------------------------------------------------ | :--------------------: |
-| Open, has `status:stale`, and new author activity | Apply `status:blocked` |
-| Otherwise                                         |          Skip          |
+| PR Condition                                      |           Action            |
+| :------------------------------------------------ | :-------------------------: |
+| Open, has `status:stale`, and new author activity | Apply `status:under-review` |
+| Otherwise                                         |            Skip             |
 
 ### Stale Reviews (`status:stale-review`)
 

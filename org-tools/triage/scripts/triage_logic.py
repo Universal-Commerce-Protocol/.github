@@ -28,7 +28,7 @@ import github
 # Configure logging
 logger = logging.getLogger("triage")
 
-TARGET_LABEL = "status:needs-triage"
+NEEDS_TRIAGE_LABEL = "status:needs-triage"
 BLOCKED_LABEL = "status:blocked"
 STALE_LABEL = "status:stale"
 UNDER_REVIEW_LABEL = "status:under-review"
@@ -214,7 +214,7 @@ class TriageLabeler:
     def _triage_needs_triage(self, pull: github.PullRequest.PullRequest) -> None:
         """Checks and applies 'status:needs-triage' if eligible."""
         if self._is_eligible_for_triage(pull):
-            self._apply_label(pull, TARGET_LABEL)
+            self._apply_label(pull, NEEDS_TRIAGE_LABEL)
 
     def _triage_blocked_stale(self, pull: github.PullRequest.PullRequest) -> None:
         """Checks and applies 'status:stale' if PR is blocked for > 21 days."""
@@ -376,9 +376,11 @@ class TriageLabeler:
             return False
 
         labels = {label.name for label in pull.labels}
-        if TARGET_LABEL in labels:
+        if NEEDS_TRIAGE_LABEL in labels:
             logger.info(
-                "Skipping: PR #%s already has '%s' label.", pull.number, TARGET_LABEL
+                "Skipping: PR #%s already has '%s' label.",
+                pull.number,
+                NEEDS_TRIAGE_LABEL,
             )
             return False
 
@@ -651,7 +653,7 @@ class TriageLabeler:
     ) -> None:
         """Applies the given label to the PR and removes other mutually exclusive status labels."""
         STATUS_LABELS = {
-            TARGET_LABEL,
+            NEEDS_TRIAGE_LABEL,
             BLOCKED_LABEL,
             STALE_LABEL,
             UNDER_REVIEW_LABEL,

@@ -49,10 +49,20 @@ Status labels include:
 
 ### Initial Triage (`status:needs-triage`)
 
-| PR Condition                        |           Action            |
-| :---------------------------------- | :-------------------------: |
-| Open, not draft, and **no labels**  | Apply `status:needs-triage` |
-| Closed, draft, or has **any label** |            Skip             |
+| PR Condition                                                  |           Action            |
+| :------------------------------------------------------------ | :-------------------------: |
+| Open, not draft, **no labels**, and **no reviewers assigned** | Apply `status:needs-triage` |
+| Open, not draft, **no labels**, and **1+ reviewers assigned** | Apply `status:under-review` |
+| Otherwise                                                     |            Skip             |
+
+### Needs Triage Transition
+
+If a PR already has `status:needs-triage` but has reviewers assigned (users or teams), it will transition to under-review (which automatically removes `status:needs-triage` due to mutual exclusivity):
+
+| PR Condition                                                   |           Action            |
+| :------------------------------------------------------------- | :-------------------------: |
+| Open, has `status:needs-triage`, and **1+ reviewers assigned** | Apply `status:under-review` |
+| Otherwise                                                      |            Skip             |
 
 ### Blocked PRs (`status:stale`)
 

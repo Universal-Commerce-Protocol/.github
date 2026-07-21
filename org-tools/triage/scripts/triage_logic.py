@@ -212,9 +212,33 @@ class TriageLabeler:
         self._triage_stale_review_recovery(pull)
 
     def _triage_needs_triage(self, pull: github.PullRequest.PullRequest) -> None:
-        """Checks and applies 'status:needs-triage' if eligible."""
+        """Checks and applies 'status:needs-triage' if eligible, or transitions to 'status:under-review'."""
+        labels = {label.name for label in pull.labels}
+        has_needs_triage = TARGET_LABEL in labels
+        has_reviewers = (
+            len(pull.requested_reviewers) > 0 or len(pull.requested_teams) > 0
+        )
+
+        if has_needs_triage and has_reviewers:
+            logger.info(
+                "  PR #%s has '%s' and reviewers assigned. Transitioning to '%s'.",
+                pull.number,
+                TARGET_LABEL,
+                UNDER_REVIEW_LABEL,
+            )
+            self._apply_label(pull, UNDER_REVIEW_LABEL)
+            return
+
         if self._is_eligible_for_triage(pull):
-            self._apply_label(pull, TARGET_LABEL)
+            if has_reviewers:
+                logger.info(
+                    "  PR #%s is eligible for triage but has reviewers assigned. Applying '%s'.",
+                    pull.number,
+                    UNDER_REVIEW_LABEL,
+                )
+                self._apply_label(pull, UNDER_REVIEW_LABEL)
+            else:
+                self._apply_label(pull, TARGET_LABEL)
 
     def _triage_blocked_stale(self, pull: github.PullRequest.PullRequest) -> None:
         """Checks and applies 'status:stale' if PR is blocked for > 21 days."""

@@ -57,7 +57,7 @@ to use GitHub Discussions.
 ### Significant Changes
 
 Any significant change to the protocol requires a formal
-[Enhancement Proposal](../../issues/new?template=enhancement-proposal.md)
+[Enhancement Proposal](https://github.com/Universal-Commerce-Protocol/.github/issues/new?template=enhancement-proposal.yml)
 and will require Tech Council (TC) approval. Because a change to the protocol
 requires the entire adopting ecosystem to implement the change, we consider
 significant changes to include:
@@ -70,14 +70,14 @@ significant changes to include:
 - Backwards Incompatibility: Any "breaking" change that requires a major version
   increment.
 
-An [Enhancement Proposal](../../issues/new?template=enhancement-proposal.md)
+An [Enhancement Proposal](https://github.com/Universal-Commerce-Protocol/.github/issues/new?template=enhancement-proposal.yml)
 is a living artifact that tracks a proposal through its lifecycle:
 
 - **Proposal:** Anyone can submit; idea is proposed and debated.
 - **Provisional:** TC majority vote to accept; enters working draft iteration.
 - **Implemented:** TC majority vote to finalize; code complete and merged.
 
-Every [Enhancement Proposal](../../issues/new?template=enhancement-proposal.md)
+Every [Enhancement Proposal](https://github.com/Universal-Commerce-Protocol/.github/issues/new?template=enhancement-proposal.yml)
 must follow a standard template requiring sections for a Summary, Motivation,
 Detailed Design, Risks, a Test Plan, and Graduation Criteria. This creates a
 permanent, public design record for the project's evolution.

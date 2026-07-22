@@ -218,7 +218,7 @@ class TriageLabeler:
             self._apply_label(pull, NEEDS_TRIAGE_LABEL)
 
     def _triage_blocked_stale(self, pull: github.PullRequest.PullRequest) -> None:
-        """Checks and applies 'status:stale' if PR is blocked for > 21 days."""
+        """Checks and applies 'status:stale' if PR is blocked for > 30 days."""
         if self._is_eligible_for_blocked_stale(pull):
             self._apply_label(pull, STALE_LABEL)
 

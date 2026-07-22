@@ -18,10 +18,13 @@ The tool consists of a CLI entry point ([triage_cli.py](scripts/triage_cli.py)) 
 4.  **Candidate PR Query (Bulk Mode)**: Queries the GitHub Search API for:
     - Open, non-draft PRs in the target repositories with no labels.
     - Open, non-draft PRs with `status:blocked` label.
+    - Open, non-draft PRs with `status:under-review` label.
+    - Open, non-draft PRs with `status:stale` label.
+    - Open, non-draft PRs with `status:stale-review` label.
 5.  **Core Triage Loop**: For each candidate PR, the tool:
     - Fetches its live state from the GitHub API.
     - Evaluates the PR against the **Core Triage Rules**.
-    - Applies `status:needs-triage` or `status:stale` labels if eligible (or logs the would-be action if running in dry-run mode).
+    - Applies or removes status labels (e.g., `status:needs-triage`, `status:stale`, `status:stale-review`, `status:under-review`) if eligible based on the triage and recovery rules (or logs the would-be action if running in dry-run mode).
 
 ### Key Features
 

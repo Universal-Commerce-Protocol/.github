@@ -25,26 +25,19 @@ Optionally include any supporting RFC's or documents.
 
 Explain why the Universal Commerce Protocol is the right fit for this DWG.
 
-## Describe Key Deliverables from DWG
+## In scope v/s Out of scope?
 
-Outline the key deliverables that will signal success for the DWG.
+Define what is in-scope and what is explicitly marked as out of scope for
+this DWG.
 
-## Platforms
+## Key Deliverables
 
-List the initial set of platforms supporting the creation of this DWG.
+Outline the key deliverables that will signal completion for this DWG.
 
-- [Platform Name 1]
-- [Platform Name 2]
+## Deliver By
 
-## Businesses
+By what date will the DWG intend to finish its work and close.
 
-List the initial set of businesses supporting the creation of this DWG.
+## DTC Sponsors
 
-- [Business Name 1]
-- [Business Name 2]
-
-## Commitment
-
-By submitting this charter, the named platforms and businesses formally
-commit to a collaboration focused on developing the primitives proposed by this
-DWG.
+Name the DTC (e.g., Shopping TC) and DTC members sponsoring this DWG.

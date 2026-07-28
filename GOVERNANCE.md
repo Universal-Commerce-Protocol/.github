@@ -53,6 +53,20 @@
   to form a DWG (e.g., "Travel WG"). Once chartered, the DWG has autonomy to
   define capabilities for their domain and submit for DTC approvals.
 
+## Process for nominating new Domain Working Group (DWG)
+
+- Any DTC member can submit a DWG charter nomination (using the
+  [DWG charter template](DOMAIN_WORKING_GROUP_CHARTER.md)) as a new issue
+  in the [UCP Issues
+  tracker](https://github.com/Universal-Commerce-Protocol/ucp/issues).
+- GC reviews the DWG charter and approves or rejects the DWG nomination.
+- GC assigns chairs/co-chairs for the DWG, who are accountable for the
+  DWG creation and delivery of the outcomes.
+- DWG chairs/co-chairs may invite additional industry participants to
+  contribute to the DWG via the DWG charter issue.
+- GC reviews and approves the final composition of DWG, including the
+  external industry participants (if any).
+
 ## Domain Tech Councils (Domain TC)
 
 - Members are responsible for building and maintaining core specification for the
@@ -106,17 +120,16 @@
 - Decisions are made with a majority vote.
 - May participate in any DTC.
 
-## Nominating new Domain Tech Councils (DTC) or Domain Working Groups (DWG)
+## Process for nominating new Domain Tech Councils (DTC)
 
-- Submit a DTC or DWG charter nomination (using the
-  [DTC charter template](DOMAIN_TECH_COUNCIL_CHARTER.md) or
-  [DWG charter template](DOMAIN_WORKING_GROUP_CHARTER.md)) as a new issue
+- Submit a DTC charter nomination (using the
+  [DTC charter template](DOMAIN_TECH_COUNCIL_CHARTER.md)) as a new issue
   in the [UCP Issues
   tracker](https://github.com/Universal-Commerce-Protocol/ucp/issues).
-- GC reviews the charter and approves/rejects the nomination.
-- GC opens up nomination for inducting members, using the process
+- GC reviews DTC charter and approves/rejects DTC nomination.
+- GC opens up nomination for inducting DTC members, using the process
   specified in [TC_ELECTIONS.md](TC_ELECTIONS.md).
-- GC elects and announces the new members, finalizes the
+- GC elects and announces the new DTC members, finalizes the DTC
   composition and updates the governance documentation.
 
 ## Communication

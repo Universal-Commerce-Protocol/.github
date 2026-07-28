@@ -18,26 +18,31 @@
 
 ## Problem Statement
 
-Describe the specific problem this DWG proposal aims to solve for the domain.
-Optionally include any supporting RFC's or documents.
+- Describe the specific problem this DWG proposal aims to solve for the
+  domain. Optionally include any supporting RFCs or documents.
 
-## UCP Strategic Fit
+## Strategic Fit
 
-Explain why the Universal Commerce Protocol is the right fit for this DWG.
+- Explain why this problem needs a UCP DWG.
 
-## In scope v/s Out of scope?
+## Scope
 
-Define what is in-scope and what is explicitly marked as out of scope for
-this DWG.
+### In-Scope
+
+- List what aspects of the problem are in scope.
+
+### Out-of-Scope
+
+- List what aspects are explicitly **not** part of the scope.
 
 ## Key Deliverables
 
-Outline the key deliverables that will signal completion for this DWG.
+- Outline the key deliverables that will signal completion.
 
 ## Deliver By
 
-By what date will the DWG intend to finish its work and close.
+- Target date by which the DWG intends to finish its work and close.
 
 ## DTC Sponsors
 
-Name the DTC (e.g., Shopping TC) and DTC members sponsoring this DWG.
+- Name the DTC (e.g., Shopping DTC) and DTC members sponsoring this DWG.

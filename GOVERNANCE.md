@@ -60,8 +60,9 @@
   in the [UCP Issues
   tracker](https://github.com/Universal-Commerce-Protocol/ucp/issues).
 - GC reviews the DWG charter and approves or rejects the DWG nomination.
-- GC assigns chairs/co-chairs for the DWG, who are accountable for the
+- GC approves chairs/co-chairs for the DWG, who are accountable for the
   DWG creation and delivery of the outcomes.
+- GC may assign additional co-chairs for the DWG as part of its approval.
 - DWG chairs/co-chairs may invite additional industry participants to
   contribute to the DWG via the DWG charter issue.
 - GC reviews and approves the final composition of DWG, including the

@@ -45,4 +45,4 @@
 
 ## DTC Sponsors
 
-- Name the DTC (e.g., Shopping DTC) and DTC members sponsoring this DWG.
+- DTC name (e.g., Shopping DTC) and proposed Chairs/Co-Chairs.

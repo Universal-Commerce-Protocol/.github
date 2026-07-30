@@ -22,7 +22,7 @@ The Shopping Tech Council is responsible for the technical direction and overall
 design of the protocol for Shopping Domain.
 
 <!-- cSpell:ignore Amit Handa Anurag Sinha Daniel Wyckoff Drew Olson -->
-<!-- cSpell:ignore Greg Smith Ilya Grigorik Imran Hoosain James Andersen -->
+<!-- cSpell:ignore Ilya Grigorik Imran Hoosain James Andersen Jordan Williams -->
 <!-- cSpell:ignore Jing Li Lee Richmond Maxime Najim Uddhav Kambli -->
 <!-- cSpell:ignore Patrick Jordan Prasad Wangikar Scot DeDeo Twum Djin -->
 <!-- cSpell:ignore Victoria Duggan -->
@@ -33,11 +33,11 @@ design of the protocol for Shopping Domain.
 | Anurag Sinha    | Google     |
 | Daniel Wyckoff  | Shopify    |
 | Drew Olson      | Google     |
-| Greg Smith      | Amazon     |
 | Ilya Grigorik   | Shopify    |
 | Imran Hoosain   | Etsy       |
 | James Andersen  | Meta       |
 | Jing Li         | Google     |
+| Jordan Williams | Amazon     |
 | Lee Richmond    | Shopify    |
 | Maxime Najim    | Target     |
 | Patrick Jordan  | Microsoft  |

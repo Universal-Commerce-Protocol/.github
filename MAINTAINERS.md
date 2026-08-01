@@ -22,17 +22,18 @@ The Shopping Tech Council is responsible for the technical direction and overall
 design of the protocol for Shopping Domain.
 
 <!-- cSpell:ignore Amit Handa Anurag Sinha Daniel Wyckoff Drew Olson -->
-<!-- cSpell:ignore Ilya Grigorik Imran Hoosain James Andersen Jordan Williams -->
-<!-- cSpell:ignore Jing Li Lee Richmond Maxime Najim Uddhav Kambli -->
+<!-- cSpell:ignore Greg Smith Ilya Grigorik Imran Hoosain James Andersen -->
+<!-- cSpell:ignore Jing Li Jordan Williams Lee Richmond Maxime Najim -->
 <!-- cSpell:ignore Patrick Jordan Prasad Wangikar Scot DeDeo Twum Djin -->
-<!-- cSpell:ignore Victoria Duggan -->
+<!-- cSpell:ignore Uddhav Kambli Victoria Duggan -->
 
 | Name            | Company    |
 | :-------------- | :--------- |
-| Amit Handa      | Google     |
+| Amit Handa\*    | Google     |
 | Anurag Sinha    | Google     |
 | Daniel Wyckoff  | Shopify    |
 | Drew Olson      | Google     |
+| Greg Smith      | Google     |
 | Ilya Grigorik   | Shopify    |
 | Imran Hoosain   | Etsy       |
 | James Andersen  | Meta       |
@@ -45,6 +46,8 @@ design of the protocol for Shopping Domain.
 | Scot DeDeo      | Salesforce |
 | Uddhav Kambli   | Wayfair    |
 | Victoria Duggan | Shopify    |
+
+_\* Standing Governing Council (GC) member participating per [GOVERNANCE.md](GOVERNANCE.md#governing-council-gc) rules._
 
 ## Food Tech Council
 

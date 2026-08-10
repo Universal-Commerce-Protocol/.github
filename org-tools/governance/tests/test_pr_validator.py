@@ -712,6 +712,107 @@ class TestPullRequestValidator(unittest.TestCase):
         self.assertFalse(status.is_satisfied)
         self.assertEqual(status.approvers, ["maint1"])
 
+    def test_commented_reviewer_counts_towards_assigned_count(self):
+        """Test that a reviewer who added comments is counted in assigned_count."""
+        # Setup hierarchy and config requiring 2 approvals from maintainers
+        hierarchy = {
+            "maintainers": Team(name="maintainers", level=2),
+        }
+        rules = [
+            GovernanceRule(
+                name="Test Rule",
+                patterns=["*"],
+                requires_all=[
+                    RuleRequirement(min_approvals=2, min_team=hierarchy["maintainers"])
+                ],
+            )
+        ]
+        config = GovernanceConfig(
+            teams=hierarchy,
+            rules=rules,
+            fallback=[],
+            proxy_reviewers=set(),
+        )
+        memberships = TeamMemberships.create(
+            members_by_team={
+                "maintainers": {"maint1", "maint2", "maint3"},
+            },
+            teams=hierarchy,
+        )
+        validator = PullRequestValidator(config, memberships)
+
+        # maint1 approved, maint2 commented (no longer in review_requests on GitHub)
+        pr = PullRequest(
+            number=1,
+            author="author1",
+            is_draft=False,
+            changed_files=["file.txt"],
+            reviews=[
+                Review(user="maint1", state=ReviewState.APPROVED),
+                Review(user="maint2", state=ReviewState.COMMENTED),
+            ],
+            assigned_user_names=[],
+        )
+
+        res = validator.validate(pr)
+        self.assertFalse(res.is_mergeable)
+        self.assertEqual(res.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
+
+        self.assertEqual(len(res.requirement_statuses), 1)
+        status = res.requirement_statuses[0]
+        self.assertEqual(status.approved_count, 1)
+        self.assertEqual(status.assigned_count, 1)  # maint2 who commented is counted
+        self.assertFalse(status.is_satisfied)
+        self.assertEqual(status.approvers, ["maint1"])
+
+    def test_author_comments_not_counted_in_assigned(self):
+        """Test that PR author comments do not count towards assigned_count."""
+        hierarchy = {
+            "maintainers": Team(name="maintainers", level=2),
+        }
+        rules = [
+            GovernanceRule(
+                name="Test Rule",
+                patterns=["*"],
+                requires_all=[
+                    RuleRequirement(min_approvals=2, min_team=hierarchy["maintainers"])
+                ],
+            )
+        ]
+        config = GovernanceConfig(
+            teams=hierarchy,
+            rules=rules,
+            fallback=[],
+            proxy_reviewers=set(),
+        )
+        # Author is also a maintainer
+        memberships = TeamMemberships.create(
+            members_by_team={
+                "maintainers": {"author1", "maint1", "maint2"},
+            },
+            teams=hierarchy,
+        )
+        validator = PullRequestValidator(config, memberships)
+
+        pr = PullRequest(
+            number=1,
+            author="author1",
+            is_draft=False,
+            changed_files=["file.txt"],
+            reviews=[
+                Review(user="author1", state=ReviewState.COMMENTED),
+                Review(user="maint1", state=ReviewState.APPROVED),
+            ],
+            assigned_user_names=[],
+        )
+
+        res = validator.validate(pr)
+        self.assertFalse(res.is_mergeable)
+        status = res.requirement_statuses[0]
+        self.assertEqual(status.approved_count, 1)
+        self.assertEqual(status.assigned_count, 0)  # Author comments do not count
+        self.assertEqual(status.approvers, ["maint1"])
+
 
 class TestFetchTeamMemberships(unittest.TestCase):
     """Tests for GitHubClient.fetch_team_memberships method."""

@@ -291,7 +291,13 @@ class PullRequestValidator:
             else:
                 assigned.add(user)
 
+        # Count reviewers who have submitted reviews (including comments) as actively reviewing
+        for review in pr.reviews:
+            if review.user != pr.author:
+                assigned.add(review.user.lower())
+
         assigned.difference_update(approvers)
+        assigned.discard(pr.author)
         return approvers, assigned
 
     def _evaluate_file_statuses(

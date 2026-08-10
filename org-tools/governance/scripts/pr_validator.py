@@ -174,12 +174,12 @@ class PullRequestValidator:
 
         # 7. Approvals & Assignments Evaluation (Global)
         requirement_statuses = self._evaluate_requirements(
-            merged_requirements, approver_usernames, assigned_usernames
+            merged_requirements, approver_usernames, assigned_usernames, author=pr.author
         )
 
         # 8. File-by-File Evaluation
         file_statuses = self._evaluate_file_statuses(
-            requirements_by_file, approver_usernames, assigned_usernames
+            requirements_by_file, approver_usernames, assigned_usernames, author=pr.author
         )
 
         # 9. Changes Requested Check
@@ -223,6 +223,7 @@ class PullRequestValidator:
         req: RuleRequirement,
         approver_usernames: set[str],
         requested_users_set: set[str],
+        author: str | None = None,
     ) -> RequirementStatus:
         """Calculate and return status for a requirement under the Venn Diagram model."""
         approver_users = [User.create(u, self.memberships) for u in approver_usernames]
@@ -231,11 +232,44 @@ class PullRequestValidator:
         approvers = [u.username for u in approver_users if req.is_satisfied_by(u)]
         assigned_count = sum(1 for u in assigned_users if req.is_satisfied_by(u))
         approved_count = len(approvers)
+
+        # Dynamic Governance Council requirement evaluation based on PR author
+        is_gc_req = (req.team and req.team.name == "governance-council") or (
+            req.min_team and req.min_team.name == "governance-council"
+        )
+
+        effective_req = req
+        required_approver = None
+
+        if is_gc_req and author:
+            author_user = User.create(author, self.memberships)
+            is_author_gc = "governance-council" in author_user.teams
+
+            if is_author_gc:
+                if author == "amithanda":
+                    min_approvals = 1
+                else:
+                    min_approvals = 2
+                    required_approver = "amithanda"
+            else:
+                min_approvals = 2
+
+            if min_approvals != req.min_approvals:
+                effective_req = RuleRequirement(
+                    min_approvals=min_approvals,
+                    team=req.team,
+                    min_team=req.min_team,
+                )
+
+        is_satisfied = approved_count >= effective_req.min_approvals
+        if required_approver and required_approver not in approvers:
+            is_satisfied = False
+
         return RequirementStatus(
-            requirement=req,
+            requirement=effective_req,
             approved_count=approved_count,
             assigned_count=assigned_count,
-            is_satisfied=approved_count >= req.min_approvals,
+            is_satisfied=is_satisfied,
             approvers=sorted(approvers),
         )
 
@@ -244,12 +278,13 @@ class PullRequestValidator:
         requirements: list[RuleRequirement],
         approver_usernames: set[str],
         assigned_usernames: set[str],
+        author: str | None = None,
     ) -> list[RequirementStatus]:
         """Evaluate each requirement's approvals and assignments count under the Venn Diagram model."""
         requirement_statuses = []
         for req in requirements:
             status = self._evaluate_requirement(
-                req, approver_usernames, assigned_usernames
+                req, approver_usernames, assigned_usernames, author=author
             )
             requirement_statuses.append(status)
 
@@ -305,12 +340,13 @@ class PullRequestValidator:
         requirements_by_file: dict[str, list[RuleRequirement]],
         approver_usernames: set[str],
         assigned_usernames: set[str],
+        author: str | None = None,
     ) -> list[FileValidationStatus]:
         """Evaluates and generates validation statuses for each changed file in the PR."""
         file_statuses = []
         for file, file_requirements in requirements_by_file.items():
             file_req_statuses = self._evaluate_requirements(
-                file_requirements, approver_usernames, assigned_usernames
+                file_requirements, approver_usernames, assigned_usernames, author=author
             )
             file_satisfied = all(status.is_satisfied for status in file_req_statuses)
 

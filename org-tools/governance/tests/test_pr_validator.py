@@ -120,6 +120,8 @@ class TestPullRequestValidator(unittest.TestCase):
                 "governance-council": {
                     "gov-member1",
                     "gov-member2",
+                    "gov-member3",
+                    "amithanda",
                     "proxy1",
                 },
             },
@@ -259,8 +261,23 @@ class TestPullRequestValidator(unittest.TestCase):
         self.assertFalse(res.is_mergeable)
         self.assertEqual(res.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
 
-        # gov-member1 is in governance-council, should pass
+        # gov-member1 and gov-member2 (2 GC members) for non-GC author1 should pass
         pr_ok = PullRequest(
+            number=1,
+            author="author1",
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[
+                Review(user="gov-member1", state=ReviewState.APPROVED),
+                Review(user="gov-member2", state=ReviewState.APPROVED),
+            ],
+        )
+        res_ok = self.validator.validate(pr_ok)
+        self.assertTrue(res_ok.is_mergeable)
+
+    def test_gc_author_non_gc_author_requires_two_approvals(self):
+        """Non-GC author requires 2 GC approvers."""
+        pr_1_app = PullRequest(
             number=1,
             author="author1",
             is_draft=False,
@@ -269,8 +286,77 @@ class TestPullRequestValidator(unittest.TestCase):
                 Review(user="gov-member1", state=ReviewState.APPROVED),
             ],
         )
-        res_ok = self.validator.validate(pr_ok)
-        self.assertTrue(res_ok.is_mergeable)
+        res_1 = self.validator.validate(pr_1_app)
+        self.assertFalse(res_1.is_mergeable)
+        self.assertEqual(res_1.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
+
+        pr_2_app = PullRequest(
+            number=1,
+            author="author1",
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[
+                Review(user="gov-member1", state=ReviewState.APPROVED),
+                Review(user="gov-member2", state=ReviewState.APPROVED),
+            ],
+        )
+        res_2 = self.validator.validate(pr_2_app)
+        self.assertTrue(res_2.is_mergeable)
+
+    def test_gc_author_amithanda_requires_one_approval(self):
+        """GC author amithanda requires 1 GC approver."""
+        pr_0_app = PullRequest(
+            number=1,
+            author="amithanda",
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[],
+        )
+        res_0 = self.validator.validate(pr_0_app)
+        self.assertFalse(res_0.is_mergeable)
+
+        pr_1_app = PullRequest(
+            number=1,
+            author="amithanda",
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[
+                Review(user="gov-member1", state=ReviewState.APPROVED),
+            ],
+        )
+        res_1 = self.validator.validate(pr_1_app)
+        self.assertTrue(res_1.is_mergeable)
+
+    def test_gc_author_other_gc_member_requires_two_approvals_including_amit(self):
+        """GC author who is not amithanda requires 2 GC approvers, one of which must be amithanda."""
+        # 2 GC approvals without amithanda (non-proxy reviewers) -> fails
+        pr_no_amit = PullRequest(
+            number=1,
+            author="gov-member1",
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[
+                Review(user="gov-member2", state=ReviewState.APPROVED),
+                Review(user="gov-member3", state=ReviewState.APPROVED),
+            ],
+        )
+        res_no_amit = self.validator.validate(pr_no_amit)
+        self.assertFalse(res_no_amit.is_mergeable)
+        self.assertEqual(res_no_amit.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
+
+        # 2 GC approvals with amithanda -> passes
+        pr_with_amit = PullRequest(
+            number=1,
+            author="gov-member1",
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[
+                Review(user="amithanda", state=ReviewState.APPROVED),
+                Review(user="gov-member2", state=ReviewState.APPROVED),
+            ],
+        )
+        res_with_amit = self.validator.validate(pr_with_amit)
+        self.assertTrue(res_with_amit.is_mergeable)
 
     def test_changes_requested_blocks(self):
         """Test that changes requested block validation."""

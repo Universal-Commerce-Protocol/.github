@@ -77,6 +77,38 @@ design of the protocol for Food Ordering Domain.
 | Open             | to be elected |
 | Open             | to be elected |
 
+## Lodging Tech Council
+
+The Lodging Tech Council is responsible for the technical direction and overall
+design of the protocol for Lodging Domain.
+
+<!-- cSpell:ignore Akhil Kavuri Alice Laic Amit Handa Chenlu Zhang -->
+<!-- cSpell:ignore Colm Gallagher Devesh Arora Jing Li Lee Graham -->
+<!-- cSpell:ignore Niranjan Manjunath Ryan Adler-Levine Sean Carapella -->
+<!-- cSpell:ignore Shukri Sharif Wishy Arora -->
+
+| Name               | Company       |
+| :----------------- | :------------ |
+| Akhil Kavuri       | Expedia       |
+| Alice Laic         | Booking.com   |
+| Amit Handa\*       | Google        |
+| Chenlu Zhang       | Trip.com      |
+| Colm Gallagher     | Google        |
+| Devesh Arora       | Marriott      |
+| Jing Li            | Google        |
+| Lee Graham         | Hilton        |
+| Niranjan Manjunath | Google        |
+| Ryan Adler-Levine  | Google        |
+| Sean P. Carapella  | Amadeus       |
+| Shukri Sharif      | Google        |
+| Wishy Arora        | Google        |
+| Open               | to be elected |
+| Open               | to be elected |
+| Open               | to be elected |
+| Open               | to be elected |
+
+_\* Standing Governing Council (GC) member participating per [GOVERNANCE.md](GOVERNANCE.md#governing-council-gc) rules._
+
 ## Governance Council
 
 The Governance Council is responsible for the overall adoption and health of

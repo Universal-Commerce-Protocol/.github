@@ -97,6 +97,15 @@
   (total 10 votes).
 - Includes 6 members from any organization, each with 1 vote (total 6 votes).
 
+### Lodging Tech Council (Lodging TC)
+
+- Responsible for building and maintaining core specification for the
+  Lodging domain.
+- Includes 16 members, with 12 permanent members from founding organizations,
+  6 from Google, 1 from Amadeus, Booking.com, Expedia, Hilton, Marriott,
+  Trip.com each with 1 vote (total 12 votes).
+- Includes 4 members from any organization, each with 1 vote (total 4 votes).
+
 ## Governing Council (GC)
 
 - Responsible for governance, overall health and adoption of the protocol.

@@ -33,7 +33,7 @@ TC.
 
 ## Election Criteria
 
-The primary criteria for nomination are based on the following factors:
+The primary criteria for selection is a combination across following factors:
 
 - The organization is aligned and committed to UCP principles of building an open
   ecosystem and vendor-agnostic architecture.
@@ -41,6 +41,9 @@ The primary criteria for nomination are based on the following factors:
   protocol by endorsing, implementing, and promoting the protocol.
 - The organization has made contributions towards the technical health and
   growth of the protocol by contributing via issues, PRs, etc.
+- The organization brings sizeable ecosystem representation to UCP.
+- The organization brings unique domain expertise to UCP.
+- The organization represents a domain that overlaps with core UCP development.
 
 ## Vacating an existing seat
 

@@ -33,7 +33,7 @@ TC.
 
 ## Election Criteria
 
-The primary criteria for selection is a combination across following factors:
+The primary criteria for selection is a combination of the following factors:
 
 - The organization is aligned and committed to UCP principles of building an open
   ecosystem and vendor-agnostic architecture.
@@ -41,9 +41,11 @@ The primary criteria for selection is a combination across following factors:
   protocol by endorsing, implementing, and promoting the protocol.
 - The organization has made contributions towards the technical health and
   growth of the protocol by contributing via issues, PRs, etc.
-- The organization brings sizeable ecosystem representation to UCP.
-- The organization brings unique domain expertise to UCP.
-- The organization represents a domain that overlaps with core UCP development.
+- The organization represents a large or established ecosystem in the domain.
+- The organization brings distinct domain expertise that complements the
+  existing Tech Council.
+- The organization represents a domain aligned with current or future focus
+  areas of UCP.
 
 ## Vacating an existing seat
 

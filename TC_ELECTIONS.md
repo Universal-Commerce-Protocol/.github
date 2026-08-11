@@ -41,7 +41,7 @@ The primary criteria for selection is a combination of the following factors:
   protocol by endorsing, implementing, and promoting the protocol.
 - The organization has made contributions towards the technical health and
   growth of the protocol by contributing via issues, PRs, etc.
-- The organization represents a large or established ecosystem in the domain.
+- The organization represents a large established ecosystem in the domain.
 - The organization brings distinct domain expertise that complements the
   existing Tech Council.
 - The organization represents a domain aligned with current or future focus

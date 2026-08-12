@@ -121,7 +121,6 @@ class TestPullRequestValidator(unittest.TestCase):
                     "gov-member1",
                     "gov-member2",
                     "gov-member3",
-                    "amithanda",
                     "proxy1",
                 },
             },

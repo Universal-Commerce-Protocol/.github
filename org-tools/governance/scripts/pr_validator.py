@@ -252,15 +252,12 @@ class PullRequestValidator:
 
             if is_author_gc:
                 min_approvals = 1
-            else:
-                min_approvals = 2
-
-            if min_approvals != req.min_approvals:
-                effective_req = RuleRequirement(
-                    min_approvals=min_approvals,
-                    team=req.team,
-                    min_team=req.min_team,
-                )
+                if min_approvals != req.min_approvals:
+                    effective_req = RuleRequirement(
+                        min_approvals=min_approvals,
+                        team=req.team,
+                        min_team=req.min_team,
+                    )
 
         is_satisfied = approved_count >= effective_req.min_approvals
 

@@ -80,7 +80,7 @@ class TestPullRequestValidator(unittest.TestCase):
                 patterns=["LICENSE", ".github/CODEOWNERS"],
                 requires_all=[
                     RuleRequirement(
-                        min_approvals=1, team=self.hierarchy["governance-council"]
+                        min_approvals=2, team=self.hierarchy["governance-council"]
                     )
                 ],
             ),
@@ -354,6 +354,39 @@ class TestPullRequestValidator(unittest.TestCase):
         )
         res_with_amit = self.validator.validate(pr_with_amit)
         self.assertTrue(res_with_amit.is_mergeable)
+
+    def test_gc_requirement_non_gc_author_respects_yaml_1(self):
+        """Test that if YAML requires 1 approval, non-GC author only needs 1 (no override to 2)."""
+        rules = [
+            GovernanceRule(
+                name="Gov 1",
+                patterns=["LICENSE"],
+                requires_all=[
+                    RuleRequirement(
+                        min_approvals=1, team=self.hierarchy["governance-council"]
+                    )
+                ],
+            )
+        ]
+        config = GovernanceConfig(
+            teams=self.hierarchy,
+            rules=rules,
+            fallback=self.fallback,
+            proxy_reviewers=self.proxy_reviewers,
+        )
+        validator = PullRequestValidator(config, self.memberships)
+
+        pr = PullRequest(
+            number=1,
+            author="author1",  # Not GC
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[
+                Review(user="gov-member1", state=ReviewState.APPROVED),
+            ],
+        )
+        res = validator.validate(pr)
+        self.assertTrue(res.is_mergeable)
 
     def test_changes_requested_blocks(self):
         """Test that changes requested block validation."""

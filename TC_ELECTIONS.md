@@ -29,11 +29,13 @@ Governance Process.
 The election date is finalized by the Governing Council and the [nomination
 form] is shared on the [UCP announcement board].
 Organizations must submit the form by the deadline to be considered for the
-TC.
+TC. As specified in [GOVERNANCE.md](GOVERNANCE.md), TC members must sign the
+[CLA](https://cla.developers.google.com/clas) required for UCP development
+before the first meeting of the respective TC.
 
 ## Election Criteria
 
-The primary criteria for nomination are based on the following factors:
+The primary criteria for selection is a combination of the following factors:
 
 - The organization is aligned and committed to UCP principles of building an open
   ecosystem and vendor-agnostic architecture.
@@ -41,6 +43,11 @@ The primary criteria for nomination are based on the following factors:
   protocol by endorsing, implementing, and promoting the protocol.
 - The organization has made contributions towards the technical health and
   growth of the protocol by contributing via issues, PRs, etc.
+- The organization represents a large established ecosystem in the domain.
+- The organization brings distinct domain expertise that complements the
+  existing Tech Council.
+- The organization represents a domain aligned with current or future focus
+  areas of UCP.
 
 ## Vacating an existing seat
 

@@ -174,12 +174,18 @@ class PullRequestValidator:
 
         # 7. Approvals & Assignments Evaluation (Global)
         requirement_statuses = self._evaluate_requirements(
-            merged_requirements, approver_usernames, assigned_usernames, author=pr.author
+            merged_requirements,
+            approver_usernames,
+            assigned_usernames,
+            author=pr.author,
         )
 
         # 8. File-by-File Evaluation
         file_statuses = self._evaluate_file_statuses(
-            requirements_by_file, approver_usernames, assigned_usernames, author=pr.author
+            requirements_by_file,
+            approver_usernames,
+            assigned_usernames,
+            author=pr.author,
         )
 
         # 9. Changes Requested Check
@@ -239,18 +245,13 @@ class PullRequestValidator:
         )
 
         effective_req = req
-        required_approver = None
 
         if is_gc_req and author:
             author_user = User.create(author, self.memberships)
             is_author_gc = "governance-council" in author_user.teams
 
             if is_author_gc:
-                if author == "amithanda":
-                    min_approvals = 1
-                else:
-                    min_approvals = 2
-                    required_approver = "amithanda"
+                min_approvals = 1
             else:
                 min_approvals = 2
 
@@ -262,8 +263,6 @@ class PullRequestValidator:
                 )
 
         is_satisfied = approved_count >= effective_req.min_approvals
-        if required_approver and required_approver not in approvers:
-            is_satisfied = False
 
         return RequirementStatus(
             requirement=effective_req,

@@ -327,9 +327,9 @@ class TestPullRequestValidator(unittest.TestCase):
         res_1 = self.validator.validate(pr_1_app)
         self.assertTrue(res_1.is_mergeable)
 
-    def test_gc_author_other_gc_member_requires_two_approvals_including_amit(self):
-        """GC author who is not amithanda requires 2 GC approvers, one of which must be amithanda."""
-        # 2 GC approvals without amithanda (non-proxy reviewers) -> fails
+    def test_gc_author_other_gc_member_requires_one_approval(self):
+        """GC author who is not amithanda requires 1 GC approver (not necessarily amithanda)."""
+        # 1 GC approval without amithanda -> passes
         pr_no_amit = PullRequest(
             number=1,
             author="gov-member1",
@@ -337,14 +337,12 @@ class TestPullRequestValidator(unittest.TestCase):
             changed_files=["LICENSE"],
             reviews=[
                 Review(user="gov-member2", state=ReviewState.APPROVED),
-                Review(user="gov-member3", state=ReviewState.APPROVED),
             ],
         )
         res_no_amit = self.validator.validate(pr_no_amit)
-        self.assertFalse(res_no_amit.is_mergeable)
-        self.assertEqual(res_no_amit.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
+        self.assertTrue(res_no_amit.is_mergeable)
 
-        # 2 GC approvals with amithanda -> passes
+        # 1 GC approval with amithanda -> passes
         pr_with_amit = PullRequest(
             number=1,
             author="gov-member1",
@@ -352,7 +350,6 @@ class TestPullRequestValidator(unittest.TestCase):
             changed_files=["LICENSE"],
             reviews=[
                 Review(user="amithanda", state=ReviewState.APPROVED),
-                Review(user="gov-member2", state=ReviewState.APPROVED),
             ],
         )
         res_with_amit = self.validator.validate(pr_with_amit)

@@ -245,6 +245,7 @@ class PullRequestValidator:
         )
 
         effective_req = req
+        require_total_approvals = None
 
         if is_gc_req and author:
             author_user = User.create(author, self.memberships)
@@ -258,8 +259,14 @@ class PullRequestValidator:
                         team=req.team,
                         min_team=req.min_team,
                     )
+                    require_total_approvals = req.min_approvals
 
         is_satisfied = approved_count >= effective_req.min_approvals
+        if (
+            require_total_approvals is not None
+            and len(approver_usernames) < require_total_approvals
+        ):
+            is_satisfied = False
 
         return RequirementStatus(
             requirement=effective_req,

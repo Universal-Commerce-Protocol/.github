@@ -147,15 +147,21 @@ class ValidationLogger:
             return f"{req_line}\n{met_line}"
 
         missing = req.min_approvals - status.approved_count
-        if status.assigned_count >= missing:
-            hint = f"Waiting for approval from {team_desc}."
+        if missing <= 0:
+            pending_line = (
+                f"{indent}  * **Pending:** Governance Council requirement met ({status.approved_count}/{req.min_approvals}), "
+                f"waiting for additional peer review to satisfy total required approvals."
+            )
         else:
-            needed = missing - status.assigned_count
-            hint = f"Waiting for {needed} more reviewer(s) to be assigned from {team_desc}."
-        pending_line = (
-            f"{indent}  * **Pending:** Needs {missing} approval{'s' if missing > 1 else ''} "
-            f"from {team_desc} ({status.assigned_count} eligible "
-            f"reviewer{'s' if status.assigned_count != 1 else ''} assigned). {hint}"
-        )
+            if status.assigned_count >= missing:
+                hint = f"Waiting for approval from {team_desc}."
+            else:
+                needed = missing - status.assigned_count
+                hint = f"Waiting for {needed} more reviewer(s) to be assigned from {team_desc}."
+            pending_line = (
+                f"{indent}  * **Pending:** Needs {missing} approval{'s' if missing > 1 else ''} "
+                f"from {team_desc} ({status.assigned_count} eligible "
+                f"reviewer{'s' if status.assigned_count != 1 else ''} assigned). {hint}"
+            )
 
         return f"{req_line}\n{met_line}\n{pending_line}"

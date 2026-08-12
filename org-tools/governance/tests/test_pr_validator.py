@@ -303,7 +303,7 @@ class TestPullRequestValidator(unittest.TestCase):
         self.assertTrue(res_2.is_mergeable)
 
     def test_gc_author_requires_one_approval(self):
-        """GC author requires 1 GC approver."""
+        """GC author requires 1 GC approver and 2 total approvers when rule requires 2."""
         # gov-member1 (GC) author, 0 approvals -> fails
         pr_0_app = PullRequest(
             number=1,
@@ -316,7 +316,7 @@ class TestPullRequestValidator(unittest.TestCase):
         self.assertFalse(res_0.is_mergeable)
         self.assertEqual(res_0.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
 
-        # gov-member1 (GC) author, 1 GC approval -> passes
+        # gov-member1 (GC) author, 1 GC approval alone -> fails (needs 2 total approvals)
         pr_1_app = PullRequest(
             number=1,
             author="gov-member1",
@@ -327,7 +327,38 @@ class TestPullRequestValidator(unittest.TestCase):
             ],
         )
         res_1 = self.validator.validate(pr_1_app)
-        self.assertTrue(res_1.is_mergeable)
+        self.assertFalse(res_1.is_mergeable)
+        self.assertEqual(res_1.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
+
+        # gov-member1 (GC) author, 1 GC approval + 1 peer/maintainer approval -> passes
+        pr_1_gc_1_peer = PullRequest(
+            number=1,
+            author="gov-member1",
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[
+                Review(user="gov-member2", state=ReviewState.APPROVED),
+                Review(user="maint1", state=ReviewState.APPROVED),
+            ],
+        )
+        res_gc_peer = self.validator.validate(pr_1_gc_1_peer)
+        self.assertTrue(res_gc_peer.is_mergeable)
+        self.assertEqual(res_gc_peer.mergeable_reason, MergeableReason.RULES_SATISFIED)
+
+        # gov-member1 (GC) author, 2 GC approvals -> passes
+        pr_2_gc = PullRequest(
+            number=1,
+            author="gov-member1",
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[
+                Review(user="gov-member2", state=ReviewState.APPROVED),
+                Review(user="gov-member3", state=ReviewState.APPROVED),
+            ],
+        )
+        res_2_gc = self.validator.validate(pr_2_gc)
+        self.assertTrue(res_2_gc.is_mergeable)
+        self.assertEqual(res_2_gc.mergeable_reason, MergeableReason.RULES_SATISFIED)
 
     def test_gc_requirement_non_gc_author_respects_yaml_1(self):
         """Test that if YAML requires 1 approval, non-GC author only needs 1 (no override to 2)."""

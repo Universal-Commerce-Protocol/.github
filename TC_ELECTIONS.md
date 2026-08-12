@@ -29,7 +29,9 @@ Governance Process.
 The election date is finalized by the Governing Council and the [nomination
 form] is shared on the [UCP announcement board].
 Organizations must submit the form by the deadline to be considered for the
-TC.
+TC. As specified in [GOVERNANCE.md](GOVERNANCE.md), TC members must sign the
+[CLA](https://cla.developers.google.com/clas) required for UCP development
+before the first meeting of the respective TC.
 
 ## Election Criteria
 

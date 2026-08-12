@@ -79,6 +79,8 @@
 - Members are elected by the GC every 6 months, based on their technical
   contributions towards the protocol. Members can be re-elected any number of
   times. See [TC_ELECTIONS.md](TC_ELECTIONS.md) for more details.
+- Members must sign the required [CLA](https://cla.developers.google.com/clas)
+  for UCP development before taking a seat or participating in TC meetings.
 
 ### Shopping Tech Council (Shopping TC)
 

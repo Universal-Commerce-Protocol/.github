@@ -150,7 +150,7 @@ class ValidationLogger:
         if missing <= 0:
             pending_line = (
                 f"{indent}  * **Pending:** Governance Council requirement met ({status.approved_count}/{req.min_approvals}), "
-                f"waiting for additional peer review to satisfy total required approvals."
+                f"waiting for additional review from any member to satisfy total required approvals."
             )
         else:
             if status.assigned_count >= missing:

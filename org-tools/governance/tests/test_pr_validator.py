@@ -80,7 +80,7 @@ class TestPullRequestValidator(unittest.TestCase):
                 patterns=["LICENSE", ".github/CODEOWNERS"],
                 requires_all=[
                     RuleRequirement(
-                        min_approvals=1, team=self.hierarchy["governance-council"]
+                        min_approvals=2, team=self.hierarchy["governance-council"]
                     )
                 ],
             ),
@@ -120,6 +120,7 @@ class TestPullRequestValidator(unittest.TestCase):
                 "governance-council": {
                     "gov-member1",
                     "gov-member2",
+                    "gov-member3",
                     "proxy1",
                 },
             },
@@ -259,8 +260,23 @@ class TestPullRequestValidator(unittest.TestCase):
         self.assertFalse(res.is_mergeable)
         self.assertEqual(res.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
 
-        # gov-member1 is in governance-council, should pass
+        # gov-member1 and gov-member2 (2 GC members) for non-GC author1 should pass
         pr_ok = PullRequest(
+            number=1,
+            author="author1",
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[
+                Review(user="gov-member1", state=ReviewState.APPROVED),
+                Review(user="gov-member2", state=ReviewState.APPROVED),
+            ],
+        )
+        res_ok = self.validator.validate(pr_ok)
+        self.assertTrue(res_ok.is_mergeable)
+
+    def test_gc_author_non_gc_author_requires_two_approvals(self):
+        """Non-GC author requires 2 GC approvers."""
+        pr_1_app = PullRequest(
             number=1,
             author="author1",
             is_draft=False,
@@ -269,8 +285,113 @@ class TestPullRequestValidator(unittest.TestCase):
                 Review(user="gov-member1", state=ReviewState.APPROVED),
             ],
         )
-        res_ok = self.validator.validate(pr_ok)
-        self.assertTrue(res_ok.is_mergeable)
+        res_1 = self.validator.validate(pr_1_app)
+        self.assertFalse(res_1.is_mergeable)
+        self.assertEqual(res_1.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
+
+        pr_2_app = PullRequest(
+            number=1,
+            author="author1",
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[
+                Review(user="gov-member1", state=ReviewState.APPROVED),
+                Review(user="gov-member2", state=ReviewState.APPROVED),
+            ],
+        )
+        res_2 = self.validator.validate(pr_2_app)
+        self.assertTrue(res_2.is_mergeable)
+
+    def test_gc_author_requires_one_approval(self):
+        """GC author requires 1 GC approver and 2 total approvers when rule requires 2."""
+        # gov-member1 (GC) author, 0 approvals -> fails
+        pr_0_app = PullRequest(
+            number=1,
+            author="gov-member1",
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[],
+        )
+        res_0 = self.validator.validate(pr_0_app)
+        self.assertFalse(res_0.is_mergeable)
+        self.assertEqual(res_0.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
+
+        # gov-member1 (GC) author, 1 GC approval alone -> fails (needs 2 total approvals)
+        pr_1_app = PullRequest(
+            number=1,
+            author="gov-member1",
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[
+                Review(user="gov-member2", state=ReviewState.APPROVED),
+            ],
+        )
+        res_1 = self.validator.validate(pr_1_app)
+        self.assertFalse(res_1.is_mergeable)
+        self.assertEqual(res_1.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
+
+        # gov-member1 (GC) author, 1 GC approval + 1 peer/maintainer approval -> passes
+        pr_1_gc_1_peer = PullRequest(
+            number=1,
+            author="gov-member1",
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[
+                Review(user="gov-member2", state=ReviewState.APPROVED),
+                Review(user="maint1", state=ReviewState.APPROVED),
+            ],
+        )
+        res_gc_peer = self.validator.validate(pr_1_gc_1_peer)
+        self.assertTrue(res_gc_peer.is_mergeable)
+        self.assertEqual(res_gc_peer.mergeable_reason, MergeableReason.RULES_SATISFIED)
+
+        # gov-member1 (GC) author, 2 GC approvals -> passes
+        pr_2_gc = PullRequest(
+            number=1,
+            author="gov-member1",
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[
+                Review(user="gov-member2", state=ReviewState.APPROVED),
+                Review(user="gov-member3", state=ReviewState.APPROVED),
+            ],
+        )
+        res_2_gc = self.validator.validate(pr_2_gc)
+        self.assertTrue(res_2_gc.is_mergeable)
+        self.assertEqual(res_2_gc.mergeable_reason, MergeableReason.RULES_SATISFIED)
+
+    def test_gc_requirement_non_gc_author_respects_yaml_1(self):
+        """Test that if YAML requires 1 approval, non-GC author only needs 1 (no override to 2)."""
+        rules = [
+            GovernanceRule(
+                name="Gov 1",
+                patterns=["LICENSE"],
+                requires_all=[
+                    RuleRequirement(
+                        min_approvals=1, team=self.hierarchy["governance-council"]
+                    )
+                ],
+            )
+        ]
+        config = GovernanceConfig(
+            teams=self.hierarchy,
+            rules=rules,
+            fallback=self.fallback,
+            proxy_reviewers=self.proxy_reviewers,
+        )
+        validator = PullRequestValidator(config, self.memberships)
+
+        pr = PullRequest(
+            number=1,
+            author="author1",  # Not GC
+            is_draft=False,
+            changed_files=["LICENSE"],
+            reviews=[
+                Review(user="gov-member1", state=ReviewState.APPROVED),
+            ],
+        )
+        res = validator.validate(pr)
+        self.assertTrue(res.is_mergeable)
 
     def test_changes_requested_blocks(self):
         """Test that changes requested block validation."""

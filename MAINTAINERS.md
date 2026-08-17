@@ -83,9 +83,9 @@ The Lodging Tech Council is responsible for the technical direction and overall
 design of the protocol for Lodging Domain.
 
 <!-- cSpell:ignore Akhil Kavuri Alice Laic Amit Handa Chenlu Zhang -->
-<!-- cSpell:ignore Colm Gallagher Devesh Arora Jing Li Lee Graham -->
-<!-- cSpell:ignore Niranjan Manjunath Ryan Adler-Levine Sean Carapella -->
-<!-- cSpell:ignore Shukri Sharif Wishy Arora -->
+<!-- cSpell:ignore Colm Gallagher Devesh Arora Igor Levit Jing Li -->
+<!-- cSpell:ignore Lee Graham Niranjan Manjunath Ryan Adler-Levine Sean Carapella -->
+<!-- cSpell:ignore Wishy Arora -->
 
 | Name               | Company       |
 | :----------------- | :------------ |
@@ -95,12 +95,12 @@ design of the protocol for Lodging Domain.
 | Chenlu Zhang       | Trip.com      |
 | Colm Gallagher     | Google        |
 | Devesh Arora       | Marriott      |
+| Igor Levit         | Google        |
 | Jing Li            | Google        |
 | Lee Graham         | Hilton        |
 | Niranjan Manjunath | Google        |
 | Ryan Adler-Levine  | Google        |
 | Sean P. Carapella  | Amadeus       |
-| Shukri Sharif      | Google        |
 | Wishy Arora        | Google        |
 | Open               | to be elected |
 | Open               | to be elected |

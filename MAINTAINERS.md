@@ -55,27 +55,30 @@ The Food Tech Council is responsible for the technical direction and overall
 design of the protocol for Food Ordering Domain.
 
 <!-- cSpell:ignore Amit Handa Andrew Mackowski Jing Li Johnny Li Jon Hines -->
-<!-- cSpell:ignore Luke Wulf Malvi Hemani Nimish Sheth Teresa Qin -->
-<!-- cSpell:ignore Travis McPhail -->
+<!-- cSpell:ignore Luke Wulf Malvi Hemani Nimish Sheth Niranjan Manjunath -->
+<!-- cSpell:ignore Teresa Qin Travis McPhail -->
 
-| Name             | Company       |
-| :--------------- | :------------ |
-| Amit Handa       | Google        |
-| Andrew Mackowski | Google        |
-| Jing Li          | Google        |
-| Johnny Li        | Square        |
-| Jon Hines        | Toast         |
-| Luke Wulf        | DoorDash      |
-| Malvi Hemani     | Google        |
-| Nimish Sheth     | Uber Eats     |
-| Teresa Qin       | Google        |
-| Travis McPhail   | Google        |
-| Open             | to be elected |
-| Open             | to be elected |
-| Open             | to be elected |
-| Open             | to be elected |
-| Open             | to be elected |
-| Open             | to be elected |
+| Name               | Company       |
+| :----------------- | :------------ |
+| Amit Handa\*       | Google        |
+| Andrew Mackowski   | Google        |
+| Jing Li            | Google        |
+| Johnny Li          | Square        |
+| Jon Hines          | Toast         |
+| Luke Wulf          | DoorDash      |
+| Malvi Hemani       | Google        |
+| Nimish Sheth       | Uber Eats     |
+| Niranjan Manjunath | Google        |
+| Teresa Qin         | Google        |
+| Travis McPhail     | Google        |
+| Open               | to be elected |
+| Open               | to be elected |
+| Open               | to be elected |
+| Open               | to be elected |
+| Open               | to be elected |
+| Open               | to be elected |
+
+_\* Standing Governing Council (GC) member participating per [GOVERNANCE.md](GOVERNANCE.md#governing-council-gc) rules._
 
 ## Lodging Tech Council
 

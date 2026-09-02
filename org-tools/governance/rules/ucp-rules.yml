@@ -64,6 +64,7 @@ rules:
       - "package.json"
       - "package-lock.json"
       - "docs/**"
+      - "README.md"
     excludes:
       - "docs/specification/**" # Covered by Documentation Specification
       - ".github/CODEOWNERS"

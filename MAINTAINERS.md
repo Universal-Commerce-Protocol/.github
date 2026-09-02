@@ -112,6 +112,38 @@ design of the protocol for Lodging Domain.
 
 _\* Standing Governing Council (GC) member participating per [GOVERNANCE.md](GOVERNANCE.md#governing-council-gc) rules._
 
+## Payments Tech Council
+
+The Payments Tech Council is responsible for the technical direction and overall
+design of the protocol for Payments Domain.
+
+<!-- cSpell:ignore Archana Malhotra Daniel Wyckoff Drew Olson Ed Siok -->
+<!-- cSpell:ignore Fabrice Cheng Harsh Mehta Ilya Grigorik Jose Mendez -->
+<!-- cSpell:ignore Nick Chen Prasad Wangikar Prateek Dudeja Steven Chen -->
+<!-- cSpell:ignore Vita Valeikaite -->
+
+| Name             | Company           |
+| :--------------- | :---------------- |
+| Archana Malhotra | Google            |
+| Daniel Wyckoff   | Shopify           |
+| Drew Olson       | Google            |
+| Ed Siok          | PayPal            |
+| Fabrice Cheng    | Coinbase          |
+| Harsh Mehta      | Global Payments   |
+| Ilya Grigorik\*  | Shopify           |
+| Jose Mendez      | Adyen NV          |
+| Nick Chen        | Shopify           |
+| Prasad Wangikar  | Stripe            |
+| Prateek Dudeja   | Google            |
+| Steven Chen      | Ant International |
+| Vita Valeikaite  | Shopify           |
+| Open             | to be elected     |
+| Open             | to be elected     |
+| Open             | to be elected     |
+| Open             | to be elected     |
+
+_\* Standing Governing Council (GC) member participating per [GOVERNANCE.md](GOVERNANCE.md#governing-council-gc) rules._
+
 ## Governance Council
 
 The Governance Council is responsible for the overall adoption and health of

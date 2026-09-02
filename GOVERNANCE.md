@@ -108,6 +108,15 @@
   Trip.com each with 1 vote (total 12 votes).
 - Includes 4 members from any organization, each with 1 vote (total 4 votes).
 
+### Payments Tech Council (Payments TC)
+
+- Responsible for building and maintaining core specification for the
+  Payments domain.
+- Includes 16 members, with 12 permanent members from founding organizations,
+  3 from Google, 3 from Shopify, 1 from Adyen NV, Ant International, Coinbase,
+  Global Payments, PayPal, Stripe each with 1 vote (total 12 votes).
+- Includes 4 members from any organization, each with 1 vote (total 4 votes).
+
 ## Governing Council (GC)
 
 - Responsible for governance, overall health and adoption of the protocol.

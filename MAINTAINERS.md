@@ -132,9 +132,9 @@ design of the protocol for Payments Domain.
 | Harsh Mehta      | Global Payments   |
 | Ilya Grigorik\*  | Shopify           |
 | Jose Mendez      | Adyen NV          |
-| Nick Chen        | Shopify           |
 | Prasad Wangikar  | Stripe            |
 | Prateek Dudeja   | Google            |
+| Rose Wiegley     | Shopify           |
 | Steven Chen      | Ant International |
 | Vita Valeikaite  | Shopify           |
 | Open             | to be elected     |

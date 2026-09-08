@@ -28,6 +28,12 @@
 - name: area:payments
   color: "0052CC"
 
+- name: area:lodging
+  color: "008672"
+
+- name: area:food
+  color: "E36209"
+
 - name: gov:needs-tc-review
   color: "D93F0B"
 

@@ -29,13 +29,13 @@
   color: "0052CC"
 
 - name: area:lodging
-  color: "008672"
+  color: "1A7F37"
 
 - name: area:food
   color: "E36209"
 
 - name: area:shopping
-  color: "5319E7"
+  color: "BF3989"
 
 - name: gov:needs-tc-review
   color: "D93F0B"

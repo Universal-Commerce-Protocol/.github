@@ -34,6 +34,9 @@
 - name: area:food
   color: "E36209"
 
+- name: area:shopping
+  color: "5319E7"
+
 - name: gov:needs-tc-review
   color: "D93F0B"
 

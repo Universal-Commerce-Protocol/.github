@@ -27,19 +27,19 @@
 
 - name: area:payments
   color: "0052CC"
-  description: Issues and pull requests related to payments
+  description: Issues and pull requests related to the Payments vertical
 
 - name: area:lodging
   color: "1A7F37"
-  description: Issues and pull requests related to lodging
+  description: Issues and pull requests related to the Lodging vertical
 
 - name: area:food
   color: "E36209"
-  description: Issues and pull requests related to food ordering
+  description: Issues and pull requests related to the Food ordering vertical
 
 - name: area:shopping
   color: "BF3989"
-  description: Issues and pull requests related to shopping
+  description: Issues and pull requests related to the Shopping vertical
 
 - name: gov:needs-tc-review
   color: "D93F0B"

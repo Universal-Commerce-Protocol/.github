@@ -14,6 +14,10 @@
   color: "0075ca"
   description: Improvements or additions to documentation
 
+- name: dtc-charter
+  color: "7dd2d6"
+  description: Domain Tech Council charter nomination
+
 - name: duplicate
   color: "cfd3d7"
   description: This issue or pull request already exists
@@ -21,6 +25,10 @@
 - name: enhancement
   color: "a2eeef"
   description: New feature or request
+
+- name: enhancement-proposal
+  color: "a2eeef"
+  description: Formal enhancement proposal tracked through the TC lifecycle
 
 - name: github_actions
   color: "000000"

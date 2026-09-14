@@ -20,10 +20,12 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import glob
 import sys
 import unittest
 from unittest.mock import MagicMock, patch
 import os
+import yaml
 
 # Mock the entire 'github' module before importing our script
 mock_github = MagicMock()
@@ -319,7 +321,7 @@ class TestLabelSync(unittest.TestCase):
         )
 
     def test_live_configuration_files(self):
-        """Verify that live general-labels.yml and triage-labels.yml are syntactically valid and conflict-free"""
+        """Verify live label configs are valid, conflict-free, and cover every label the issue forms apply"""
         workspace_dir = os.path.dirname(__file__)
         general_path = os.path.join(
             workspace_dir,
@@ -359,11 +361,32 @@ class TestLabelSync(unittest.TestCase):
 
         # 3. Validate merged files
         try:
-            _ = sync_labels.merge_labels(general_labels, triage_labels)
+            merged = sync_labels.merge_labels(general_labels, triage_labels)
         except ValueError as e:
             self.fail(
                 f"Conflict detected when merging live 'general-labels.yml' and 'triage-labels.yml':\n{e}"
             )
+
+        # 4. Every label an issue form applies must be defined, or GitHub drops it silently
+        defined_names = {label["name"] for label in merged}
+        template_dir = os.path.join(
+            workspace_dir, "..", "..", ".github", "ISSUE_TEMPLATE"
+        )
+        templates = sorted(glob.glob(os.path.join(template_dir, "*.yml")))
+        self.assertTrue(templates, f"No issue templates found at: {template_dir}")
+
+        for template_path in templates:
+            template_name = os.path.basename(template_path)
+            with open(template_path, "r", encoding="utf-8") as f:
+                template = yaml.safe_load(f) or {}
+            for label_name in template.get("labels") or []:
+                with self.subTest(template=template_name, label=label_name):
+                    self.assertIn(
+                        label_name,
+                        defined_names,
+                        f"Label '{label_name}' is applied by '{template_name}' but is "
+                        f"not defined in the label-sync configuration.",
+                    )
 
     def test_verify_access_failure_exits(self):
         """Verify access aborts execution when org or repo is inaccessible"""

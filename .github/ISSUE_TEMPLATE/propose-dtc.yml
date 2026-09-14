@@ -15,7 +15,7 @@
 name: Domain Tech Council (DTC) Charter Proposal
 description: Submit a new DTC charter for the Universal Commerce Protocol.
 title: "[DTC Charter]: <Domain Name>"
-labels: ["dtc-charter", "triage"]
+labels: ["dtc-charter", "Triage"]
 body:
   - type: markdown
     attributes:

@@ -32,7 +32,7 @@ rules:
     patterns:
       - "docs/specification/**"
     requires:
-      # Grants access to maintainers (L2), tech-council (L3) and
+      # Grants access to maintainers (L2), tech councils (L3) and
       # governance-council (L4)
       - min_team: "maintainers"
         min_approvals: 2
@@ -69,7 +69,7 @@ rules:
       - "docs/specification/**" # Covered by Documentation Specification
       - ".github/CODEOWNERS"
     requires:
-      # Grants access to devops (L1), maintainers (L2), tech-council (L3),
+      # Grants access to devops (L1), maintainers (L2), tech councils (L3),
       # and governance-council (L4)
       - min_team: "devops-maintainers"
         min_approvals: 2
@@ -88,4 +88,8 @@ team_hierarchy:
   devops-maintainers: 1
   maintainers: 2
   tech-council: 3
+  shopping-tech-council: 3
+  food-tech-council: 3
+  lodging-tech-council: 3
+  payments-tech-council: 3
   governance-council: 4

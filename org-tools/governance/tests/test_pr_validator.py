@@ -1008,13 +1008,13 @@ class TestFetchTeamMemberships(unittest.TestCase):
         self.assertIn("Failed to fetch organization 'my-org'", str(ctx.exception))
 
     def test_fetch_team_fails(self):
-        """Test fetch_team_memberships raises RuntimeError when a team fetch fails."""
+        """Test fetch_team_memberships raises RuntimeError when a team fetch fails with non-404."""
         mock_github = MagicMock()
         mock_org = MagicMock()
         mock_github.get_organization.return_value = mock_org
 
         mock_org.get_team_by_slug.side_effect = MockGithubException(
-            status=404, data={"message": "Team Not Found"}
+            status=500, data={"message": "Internal Server Error"}
         )
 
         config = GovernanceConfig(
@@ -1029,6 +1029,31 @@ class TestFetchTeamMemberships(unittest.TestCase):
             github_client.fetch_team_memberships("my-org", config)
 
         self.assertIn("Could not fetch members for team 'devops'", str(ctx.exception))
+
+    def test_fetch_team_not_found_handled(self):
+        """Test fetch_team_memberships handles 404 by treating team as empty with warning."""
+        mock_github = MagicMock()
+        mock_org = MagicMock()
+        mock_github.get_organization.return_value = mock_org
+
+        mock_org.get_team_by_slug.side_effect = MockGithubException(
+            status=404, data={"message": "Team Not Found"}
+        )
+
+        config = GovernanceConfig(
+            teams={"shopping-tech-council": Team("shopping-tech-council", 3)},
+            rules=[],
+            fallback=[],
+            proxy_reviewers=set(),
+        )
+
+        github_client = GitHubClient(mock_github)
+        with patch("sys.stderr"):
+            memberships = github_client.fetch_team_memberships("my-org", config)
+        self.assertEqual(
+            memberships.members_by_team,
+            {Team("shopping-tech-council", 3): set()},
+        )
 
 
 class TestPRValidatorMain(unittest.TestCase):

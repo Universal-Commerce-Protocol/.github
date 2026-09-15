@@ -73,9 +73,16 @@ class GitHubClient:
                 members = {m.login for m in team.get_members()}
                 members_by_team[team_slug] = members
             except GithubException as e:
-                raise RuntimeError(
-                    f"Could not fetch members for team '{team_slug}': {e}"
-                ) from e
+                if e.status == 404:
+                    print(
+                        f"⚠️ WARNING: Team '{team_slug}' not found in organization '{org_name}'. Treating as empty.",
+                        file=sys.stderr,
+                    )
+                    members_by_team[team_slug] = set()
+                else:
+                    raise RuntimeError(
+                        f"Could not fetch members for team '{team_slug}': {e}"
+                    ) from e
         return TeamMemberships.create(
             members_by_team=members_by_team, teams=config.teams
         )

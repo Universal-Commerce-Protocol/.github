@@ -14,14 +14,38 @@ rules:
         min_approvals: 1
 
   # ---------------------------------------------------------
-  # Technical Council Minutes
+  # Technical Council Minutes - Domain Specific
   # ---------------------------------------------------------
-  - name: "tech_council_minutes"
+  - name: "shopping_tech_council_minutes"
     patterns:
-      - "tc/**"
+      - "tc/shopping/**"
     requires:
-      # Grants access to tech-council (L3) and governance-council (L4)
-      - min_team: "tech-council"
+      # Grants access to shopping-tech-council (L3) and governance-council (L4)
+      - min_team: "shopping-tech-council"
+        min_approvals: 1
+
+  - name: "food_tech_council_minutes"
+    patterns:
+      - "tc/food/**"
+    requires:
+      # Grants access to food-tech-council (L3) and governance-council (L4)
+      - min_team: "food-tech-council"
+        min_approvals: 1
+
+  - name: "lodging_tech_council_minutes"
+    patterns:
+      - "tc/lodging/**"
+    requires:
+      # Grants access to lodging-tech-council (L3) and governance-council (L4)
+      - min_team: "lodging-tech-council"
+        min_approvals: 1
+
+  - name: "payments_tech_council_minutes"
+    patterns:
+      - "tc/payments/**"
+    requires:
+      # Grants access to payments-tech-council (L3) and governance-council (L4)
+      - min_team: "payments-tech-council"
         min_approvals: 1
 
   # ---------------------------------------------------------
@@ -36,7 +60,7 @@ rules:
         min_approvals: 1
 
   # ---------------------------------------------------------
-  # Infrastructure, Tooling & General Files
+  # Infrastructure, Tooling, General Files & Shared Templates
   # ---------------------------------------------------------
   - name: "infra_and_tooling"
     patterns:
@@ -47,8 +71,9 @@ rules:
       - "README.md"
       - "CONTRIBUTING.md"
       - "SECURITY.md"
+      - "tc/*.md"
     requires:
-      # Grants access to devops (L1), maintainers (L2), tech-council (L3),
+      # Grants access to devops (L1), maintainers (L2), tech councils (L3),
       # and governance-council (L4)
       - min_team: "devops-maintainers"
         min_approvals: 1
@@ -67,4 +92,8 @@ team_hierarchy:
   devops-maintainers: 1
   maintainers: 2
   tech-council: 3
+  shopping-tech-council: 3
+  food-tech-council: 3
+  lodging-tech-council: 3
+  payments-tech-council: 3
   governance-council: 4

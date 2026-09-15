@@ -55,7 +55,7 @@ This section aggregates and deduplicates all requirements across all changed fil
 If your PR modifies multiple files, the validator doesn't just add up all the approvals blindly. Instead, it uses a **Venn Diagram model**:
 
 - If multiple modified files require approval from the **same team or hierarchical level**, the requirements are merged.
-- The validator keeps the **maximum** number of approvals (`min_approvals`) required by any single file for that target. E.g., if File A requires 1 approval from `tech-council` and File B requires 2 approvals from `tech-council`, the global requirement is merged to require **2 approvals** from `tech-council` (not 3).
+- The validator keeps the **maximum** number of approvals (`min_approvals`) required by any single file for that target. E.g., if File A requires 1 approval from `shopping-tech-council` and File B requires 2 approvals from `shopping-tech-council`, the global requirement is merged to require **2 approvals** from `shopping-tech-council` (not 3).
 
 ### Understanding Requirement Items
 
@@ -69,7 +69,7 @@ Each requirement in the summary is formatted with detailed progress:
 
 #### Key Fields:
 
-1.  **Requirement Line**: Describes the rule (e.g., `* **2 approvals** from team 'tech-council'` or `* **1 approval** from team 'tech-council' or higher in the UCP governance hierarchy`).
+1.  **Requirement Line**: Describes the rule (e.g., `* **2 approvals** from team 'shopping-tech-council'` or `* **1 approval** from team 'shopping-tech-council' or higher in the UCP governance hierarchy`).
 2.  **Met Line**:
     - **🟢 Yes**: The requirement is fully satisfied.
     - **🔴 No**: The requirement is not yet satisfied.
@@ -112,11 +112,11 @@ For example, if the hierarchy is defined as:
 
 1.  `devops-maintainers` (Level 1)
 2.  `maintainers` (Level 2)
-3.  `tech-council` (Level 3)
+3.  `tech-council` / Domain Tech Councils (`shopping-tech-council`, `food-tech-council`, `lodging-tech-council`, `payments-tech-council`) (Level 3)
 4.  `governance-council` (Level 4)
 
-- A requirement for **`team 'maintainers' or higher in the UCP governance hierarchy`** (Level 2+) can be satisfied by approvals from members of `maintainers`, `tech-council`, or `governance-council`.
-- A requirement for **`team 'tech-council' or higher in the UCP governance hierarchy`** (Level 3+) can be satisfied by approvals from members of `tech-council` or `governance-council`.
+- A requirement for **`team 'maintainers' or higher in the UCP governance hierarchy`** (Level 2+) can be satisfied by approvals from members of `maintainers`, any Tech Council (`tech-council`, `shopping-tech-council`, `food-tech-council`, `lodging-tech-council`, `payments-tech-council`), or `governance-council`.
+- A requirement for **`team 'shopping-tech-council' or higher in the UCP governance hierarchy`** (Level 3+) can be satisfied by approvals from members of any Tech Council or `governance-council`.
 - A requirement for an exact team (e.g., **`team 'devops-maintainers'`**) must be approved by an explicit member of that team, regardless of hierarchy.
 
 ---

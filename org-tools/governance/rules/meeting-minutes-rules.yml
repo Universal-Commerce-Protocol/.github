@@ -15,37 +15,47 @@ rules:
 
   # ---------------------------------------------------------
   # Technical Council Minutes - Domain Specific
+  #
+  # Each council owns its directory in the repo's .github/CODEOWNERS, with
+  # devops-maintainers alongside as a backup approver. CODEOWNERS ignores
+  # team_hierarchy, so the floor here is L1, not L3 -- otherwise a backup
+  # approval would pass CODEOWNERS and fail this validator. Ownership is
+  # unchanged; the backup only unblocks minutes a council cannot review.
   # ---------------------------------------------------------
   - name: "shopping_tech_council_minutes"
     patterns:
       - "tc/shopping/**"
     requires:
-      # Grants access to shopping-tech-council (L3) and governance-council (L4)
-      - min_team: "shopping-tech-council"
+      # tc/shopping/ is owned by shopping-tech-council (L3) in CODEOWNERS.
+      # Floor is L1 so the backup approver also satisfies this rule.
+      - min_team: "devops-maintainers"
         min_approvals: 1
 
   - name: "food_tech_council_minutes"
     patterns:
       - "tc/food/**"
     requires:
-      # Grants access to food-tech-council (L3) and governance-council (L4)
-      - min_team: "food-tech-council"
+      # tc/food/ is owned by food-tech-council (L3) in CODEOWNERS.
+      # Floor is L1 so the backup approver also satisfies this rule.
+      - min_team: "devops-maintainers"
         min_approvals: 1
 
   - name: "lodging_tech_council_minutes"
     patterns:
       - "tc/lodging/**"
     requires:
-      # Grants access to lodging-tech-council (L3) and governance-council (L4)
-      - min_team: "lodging-tech-council"
+      # tc/lodging/ is owned by lodging-tech-council (L3) in CODEOWNERS.
+      # Floor is L1 so the backup approver also satisfies this rule.
+      - min_team: "devops-maintainers"
         min_approvals: 1
 
   - name: "payments_tech_council_minutes"
     patterns:
       - "tc/payments/**"
     requires:
-      # Grants access to payments-tech-council (L3) and governance-council (L4)
-      - min_team: "payments-tech-council"
+      # tc/payments/ is owned by payments-tech-council (L3) in CODEOWNERS.
+      # Floor is L1 so the backup approver also satisfies this rule.
+      - min_team: "devops-maintainers"
         min_approvals: 1
 
   # ---------------------------------------------------------

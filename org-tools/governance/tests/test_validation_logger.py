@@ -157,7 +157,7 @@ class TestValidationLogger(unittest.TestCase):
     @patch("builtins.open", new_callable=unittest.mock.mock_open)
     def test_error_insufficient_approvals_summary(self, mock_open):
         """Test summary message when PR has insufficient approvals."""
-        team = Team(name="tech-council", level=3)
+        team = Team(name="shopping-tech-council", level=3)
         req = RuleRequirement(min_approvals=2, team=team)
         status = RequirementStatus(
             requirement=req,
@@ -187,17 +187,17 @@ class TestValidationLogger(unittest.TestCase):
             "\n"
             "Merged requirements across all changed files:\n"
             "\n"
-            "* **2 approvals** from team 'tech-council'\n"
+            "* **2 approvals** from team 'shopping-tech-council'\n"
             "  * **Met:** 🔴 No (1/2 approved)\n"
-            "  * **Pending:** Needs 1 approval from team 'tech-council' (0 eligible reviewers assigned). "
-            "Waiting for 1 more reviewer(s) to be assigned from team 'tech-council'.\n"
+            "  * **Pending:** Needs 1 approval from team 'shopping-tech-council' (0 eligible reviewers assigned). "
+            "Waiting for 1 more reviewer(s) to be assigned from team 'shopping-tech-council'.\n"
         ) + HELP_SUFFIX
         self.assertEqual(expected, written_content)
 
     @patch("builtins.open", new_callable=unittest.mock.mock_open)
     def test_write_summary_waiting_for_approval(self, mock_open):
         """Test write_summary outputs 'Waiting for approval' when reviewers are assigned."""
-        team = Team(name="tech-council", level=3)
+        team = Team(name="food-tech-council", level=3)
         req = RuleRequirement(min_approvals=2, team=team)
         status = RequirementStatus(
             requirement=req,
@@ -227,17 +227,17 @@ class TestValidationLogger(unittest.TestCase):
             "\n"
             "Merged requirements across all changed files:\n"
             "\n"
-            "* **2 approvals** from team 'tech-council'\n"
+            "* **2 approvals** from team 'food-tech-council'\n"
             "  * **Met:** 🔴 No (1/2 approved)\n"
-            "  * **Pending:** Needs 1 approval from team 'tech-council' (1 eligible reviewer assigned). "
-            "Waiting for approval from team 'tech-council'.\n"
+            "  * **Pending:** Needs 1 approval from team 'food-tech-council' (1 eligible reviewer assigned). "
+            "Waiting for approval from team 'food-tech-council'.\n"
         ) + HELP_SUFFIX
         self.assertEqual(expected, written_content)
 
     @patch("builtins.open", new_callable=unittest.mock.mock_open)
     def test_write_summary_assign_more_reviewers(self, mock_open):
         """Test write_summary outputs 'Assign X more reviewers' when not enough are assigned."""
-        team = Team(name="tech-council", level=3)
+        team = Team(name="lodging-tech-council", level=3)
         req = RuleRequirement(min_approvals=2, team=team)
         status = RequirementStatus(
             requirement=req,
@@ -267,17 +267,17 @@ class TestValidationLogger(unittest.TestCase):
             "\n"
             "Merged requirements across all changed files:\n"
             "\n"
-            "* **2 approvals** from team 'tech-council'\n"
+            "* **2 approvals** from team 'lodging-tech-council'\n"
             "  * **Met:** 🔴 No (0/2 approved)\n"
-            "  * **Pending:** Needs 2 approvals from team 'tech-council' (1 eligible reviewer assigned). "
-            "Waiting for 1 more reviewer(s) to be assigned from team 'tech-council'.\n"
+            "  * **Pending:** Needs 2 approvals from team 'lodging-tech-council' (1 eligible reviewer assigned). "
+            "Waiting for 1 more reviewer(s) to be assigned from team 'lodging-tech-council'.\n"
         ) + HELP_SUFFIX
         self.assertEqual(expected, written_content)
 
     @patch("builtins.open", new_callable=unittest.mock.mock_open)
     def test_write_summary_with_approvers(self, mock_open):
         """Test write_summary outputs approver details for partially filled slots."""
-        team = Team(name="tech-council", level=3)
+        team = Team(name="payments-tech-council", level=3)
         req = RuleRequirement(min_approvals=2, team=team)
         status = RequirementStatus(
             requirement=req,
@@ -308,17 +308,17 @@ class TestValidationLogger(unittest.TestCase):
             "\n"
             "Merged requirements across all changed files:\n"
             "\n"
-            "* **2 approvals** from team 'tech-council'\n"
+            "* **2 approvals** from team 'payments-tech-council'\n"
             "  * **Met:** 🔴 No (1/2 approved - approved by: alice)\n"
-            "  * **Pending:** Needs 1 approval from team 'tech-council' (1 eligible reviewer assigned). "
-            "Waiting for approval from team 'tech-council'.\n"
+            "  * **Pending:** Needs 1 approval from team 'payments-tech-council' (1 eligible reviewer assigned). "
+            "Waiting for approval from team 'payments-tech-council'.\n"
         ) + HELP_SUFFIX
         self.assertEqual(expected, written_content)
 
     @patch("builtins.open", new_callable=unittest.mock.mock_open)
     def test_write_summary_satisfied_requirement_omits_pending(self, mock_open):
         """Test write_summary omits the pending/unmet line entirely when requirement is satisfied."""
-        team = Team(name="tech-council", level=3)
+        team = Team(name="shopping-tech-council", level=3)
         req = RuleRequirement(min_approvals=2, team=team)
         status = RequirementStatus(
             requirement=req,
@@ -349,7 +349,7 @@ class TestValidationLogger(unittest.TestCase):
             "\n"
             "Merged requirements across all changed files:\n"
             "\n"
-            "* **2 approvals** from team 'tech-council'\n"
+            "* **2 approvals** from team 'shopping-tech-council'\n"
             "  * **Met:** 🟢 Yes (2/2 approved - approved by: alice, bob)\n"
         )
         self.assertEqual(expected, written_content)
@@ -357,7 +357,7 @@ class TestValidationLogger(unittest.TestCase):
     @patch("builtins.open", new_callable=unittest.mock.mock_open)
     def test_write_summary_with_file_statuses(self, mock_open):
         """Test write_summary fully formats the file-by-file breakdown section."""
-        team = Team(name="tech-council", level=3)
+        team = Team(name="shopping-tech-council", level=3)
         req = RuleRequirement(min_approvals=2, team=team)
 
         status_satisfied = RequirementStatus(
@@ -410,10 +410,10 @@ class TestValidationLogger(unittest.TestCase):
             "\n"
             "Merged requirements across all changed files:\n"
             "\n"
-            "* **2 approvals** from team 'tech-council'\n"
+            "* **2 approvals** from team 'shopping-tech-council'\n"
             "  * **Met:** 🔴 No (0/2 approved)\n"
-            "  * **Pending:** Needs 2 approvals from team 'tech-council' (1 eligible reviewer assigned). "
-            "Waiting for 1 more reviewer(s) to be assigned from team 'tech-council'.\n"
+            "  * **Pending:** Needs 2 approvals from team 'shopping-tech-council' (1 eligible reviewer assigned). "
+            "Waiting for 1 more reviewer(s) to be assigned from team 'shopping-tech-council'.\n"
             "\n"
             "\n"
             "---\n"
@@ -423,23 +423,23 @@ class TestValidationLogger(unittest.TestCase):
             "* **File:** `src/main.py`\n"
             "  * **Status:** 🟢 SATISFIED\n"
             "  * **Requirements:**\n"
-            "    * **2 approvals** from team 'tech-council'\n"
+            "    * **2 approvals** from team 'shopping-tech-council'\n"
             "      * **Met:** 🟢 Yes (2/2 approved - approved by: alice, bob)\n"
             "\n"
             "* **File:** `src/auth.py`\n"
             "  * **Status:** 🔴 UNSATISFIED\n"
             "  * **Requirements:**\n"
-            "    * **2 approvals** from team 'tech-council'\n"
+            "    * **2 approvals** from team 'shopping-tech-council'\n"
             "      * **Met:** 🔴 No (0/2 approved)\n"
-            "      * **Pending:** Needs 2 approvals from team 'tech-council' (1 eligible reviewer assigned). "
-            "Waiting for 1 more reviewer(s) to be assigned from team 'tech-council'.\n"
+            "      * **Pending:** Needs 2 approvals from team 'shopping-tech-council' (1 eligible reviewer assigned). "
+            "Waiting for 1 more reviewer(s) to be assigned from team 'shopping-tech-council'.\n"
         ) + HELP_SUFFIX
         self.assertEqual(expected, written_content)
 
     @patch("builtins.open", new_callable=unittest.mock.mock_open)
     def test_write_summary_with_hierarchical_clearance(self, mock_open):
         """Test write_summary outputs correct terminology for hierarchical clearance rules."""
-        min_team = Team(name="tech-council", level=3)
+        min_team = Team(name="shopping-tech-council", level=3)
         req = RuleRequirement(min_approvals=1, min_team=min_team)
         status = RequirementStatus(
             requirement=req,
@@ -469,11 +469,11 @@ class TestValidationLogger(unittest.TestCase):
             "\n"
             "Merged requirements across all changed files:\n"
             "\n"
-            "* **1 approval** from team 'tech-council' or higher in the UCP governance hierarchy\n"
+            "* **1 approval** from team 'shopping-tech-council' or higher in the UCP governance hierarchy\n"
             "  * **Met:** 🔴 No (0/1 approved)\n"
-            "  * **Pending:** Needs 1 approval from team 'tech-council' or higher in the UCP governance hierarchy "
+            "  * **Pending:** Needs 1 approval from team 'shopping-tech-council' or higher in the UCP governance hierarchy "
             "(0 eligible reviewers assigned). Waiting for 1 more reviewer(s) to be assigned from team "
-            "'tech-council' or higher in the UCP governance hierarchy.\n"
+            "'shopping-tech-council' or higher in the UCP governance hierarchy.\n"
         ) + HELP_SUFFIX
         self.assertEqual(expected, written_content)
 

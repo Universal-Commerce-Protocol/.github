@@ -112,10 +112,10 @@ For example, if the hierarchy is defined as:
 
 1.  `devops-maintainers` (Level 1)
 2.  `maintainers` (Level 2)
-3.  `tech-council` / Domain Tech Councils (`shopping-tech-council`, `food-tech-council`, `lodging-tech-council`, `payments-tech-council`) (Level 3)
+3.  Domain Tech Councils (`shopping-tech-council`, `food-tech-council`, `lodging-tech-council`, `payments-tech-council`) (Level 3)
 4.  `governance-council` (Level 4)
 
-- A requirement for **`team 'maintainers' or higher in the UCP governance hierarchy`** (Level 2+) can be satisfied by approvals from members of `maintainers`, any Tech Council (`tech-council`, `shopping-tech-council`, `food-tech-council`, `lodging-tech-council`, `payments-tech-council`), or `governance-council`.
+- A requirement for **`team 'maintainers' or higher in the UCP governance hierarchy`** (Level 2+) can be satisfied by approvals from members of `maintainers`, any Tech Council (`shopping-tech-council`, `food-tech-council`, `lodging-tech-council`, `payments-tech-council`), or `governance-council`.
 - A requirement for **`team 'shopping-tech-council' or higher in the UCP governance hierarchy`** (Level 3+) can be satisfied by approvals from members of any Tech Council or `governance-council`.
 - A requirement for an exact team (e.g., **`team 'devops-maintainers'`**) must be approved by an explicit member of that team, regardless of hierarchy.
 

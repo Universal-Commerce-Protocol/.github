@@ -69,7 +69,10 @@ class TestPullRequestValidator(unittest.TestCase):
         self.hierarchy = {
             "devops": Team(name="devops", level=1),
             "maintainers": Team(name="maintainers", level=2),
-            "tech-council": Team(name="tech-council", level=3),
+            "shopping-tech-council": Team(name="shopping-tech-council", level=3),
+            "lodging-tech-council": Team(name="lodging-tech-council", level=3),
+            "food-tech-council": Team(name="food-tech-council", level=3),
+            "payments-tech-council": Team(name="payments-tech-council", level=3),
             "governance-council": Team(name="governance-council", level=4),
         }
 
@@ -89,7 +92,48 @@ class TestPullRequestValidator(unittest.TestCase):
                 patterns=["source/**"],
                 requires_all=[
                     RuleRequirement(
-                        min_approvals=1, min_team=self.hierarchy["tech-council"]
+                        min_approvals=1,
+                        min_team=self.hierarchy["governance-council"],
+                    )
+                ],
+            ),
+            GovernanceRule(
+                name="Shopping Tech Council",
+                patterns=["tc/shopping/**"],
+                requires_all=[
+                    RuleRequirement(
+                        min_approvals=1,
+                        min_team=self.hierarchy["shopping-tech-council"],
+                    )
+                ],
+            ),
+            GovernanceRule(
+                name="Lodging Tech Council",
+                patterns=["tc/lodging/**"],
+                requires_all=[
+                    RuleRequirement(
+                        min_approvals=1,
+                        min_team=self.hierarchy["lodging-tech-council"],
+                    )
+                ],
+            ),
+            GovernanceRule(
+                name="Food Tech Council",
+                patterns=["tc/food/**"],
+                requires_all=[
+                    RuleRequirement(
+                        min_approvals=1,
+                        min_team=self.hierarchy["food-tech-council"],
+                    )
+                ],
+            ),
+            GovernanceRule(
+                name="Payments Tech Council",
+                patterns=["tc/payments/**"],
+                requires_all=[
+                    RuleRequirement(
+                        min_approvals=1,
+                        min_team=self.hierarchy["payments-tech-council"],
                     )
                 ],
             ),
@@ -116,7 +160,10 @@ class TestPullRequestValidator(unittest.TestCase):
             members_by_team={
                 "devops": {"dev1", "dev2"},
                 "maintainers": {"maint1", "maint2", "tc-member1"},
-                "tech-council": {"tc-member1", "tc-member2"},
+                "shopping-tech-council": {"tc-member1", "tc-member2"},
+                "lodging-tech-council": {"lodging-tc-member1", "lodging-tc-member2"},
+                "food-tech-council": {"food-tc-member1", "food-tc-member2"},
+                "payments-tech-council": {"tc-member1", "payments-tc-member2"},
                 "governance-council": {
                     "gov-member1",
                     "gov-member2",
@@ -159,7 +206,7 @@ class TestPullRequestValidator(unittest.TestCase):
             number=1,
             author="author1",
             is_draft=False,
-            changed_files=["source/main.py"],
+            changed_files=["tc/shopping/main.py"],
             reviews=[
                 Review(user="tc-member1", state=ReviewState.CHANGES_REQUESTED),
                 Review(user="proxy1", state=ReviewState.APPROVED),
@@ -175,7 +222,7 @@ class TestPullRequestValidator(unittest.TestCase):
             number=1,
             author="author1",
             is_draft=False,
-            changed_files=["source/main.py"],
+            changed_files=["tc/shopping/main.py"],
             reviews=[
                 Review(user="tc-member1", state=ReviewState.APPROVED),
             ],
@@ -190,7 +237,7 @@ class TestPullRequestValidator(unittest.TestCase):
             number=1,
             author="author1",
             is_draft=False,
-            changed_files=["source/main.py"],
+            changed_files=["tc/shopping/main.py"],
             reviews=[
                 Review(user="dev1", state=ReviewState.APPROVED),
             ],
@@ -399,10 +446,10 @@ class TestPullRequestValidator(unittest.TestCase):
             number=1,
             author="author1",
             is_draft=False,
-            changed_files=["source/main.py"],
+            changed_files=["tc/lodging/main.py"],
             reviews=[
-                Review(user="tc-member1", state=ReviewState.APPROVED),
-                Review(user="tc-member2", state=ReviewState.CHANGES_REQUESTED),
+                Review(user="lodging-tc-member1", state=ReviewState.APPROVED),
+                Review(user="lodging-tc-member2", state=ReviewState.CHANGES_REQUESTED),
             ],
         )
         res = self.validator.validate(pr)
@@ -417,9 +464,9 @@ class TestPullRequestValidator(unittest.TestCase):
             number=1,
             author="author1",
             is_draft=False,
-            changed_files=["source/main.py"],
+            changed_files=["tc/lodging/main.py"],
             reviews=[
-                Review(user="tc-member1", state=ReviewState.APPROVED),
+                Review(user="lodging-tc-member1", state=ReviewState.APPROVED),
                 Review(user="dev1", state=ReviewState.CHANGES_REQUESTED),
             ],
         )
@@ -432,9 +479,9 @@ class TestPullRequestValidator(unittest.TestCase):
             number=1,
             author="author1",
             is_draft=False,
-            changed_files=["source/main.py"],
+            changed_files=["tc/food/main.py"],
             reviews=[
-                Review(user="tc-member1", state=ReviewState.APPROVED),
+                Review(user="food-tc-member1", state=ReviewState.APPROVED),
                 Review(user="proxy2", state=ReviewState.CHANGES_REQUESTED),
             ],
         )
@@ -446,14 +493,14 @@ class TestPullRequestValidator(unittest.TestCase):
 
     def test_self_approval_restrictions(self):
         """Test restrictions on self-approval."""
-        # Author tc-member1 cannot approve their own PR
+        # Author food-tc-member1 cannot approve their own PR
         pr = PullRequest(
             number=1,
-            author="tc-member1",
+            author="food-tc-member1",
             is_draft=False,
-            changed_files=["source/main.py"],
+            changed_files=["tc/food/main.py"],
             reviews=[
-                Review(user="tc-member1", state=ReviewState.APPROVED),
+                Review(user="food-tc-member1", state=ReviewState.APPROVED),
             ],
         )
         res = self.validator.validate(pr)
@@ -466,10 +513,10 @@ class TestPullRequestValidator(unittest.TestCase):
             number=1,
             author="author1",
             is_draft=False,
-            changed_files=["source/main.py"],
+            changed_files=["tc/payments/main.py"],
             reviews=[
-                Review(user="tc-member1", state=ReviewState.APPROVED),
-                Review(user="tc-member1", state=ReviewState.DISMISSED),
+                Review(user="payments-tc-member2", state=ReviewState.APPROVED),
+                Review(user="payments-tc-member2", state=ReviewState.DISMISSED),
             ],
         )
         res = self.validator.validate(pr)
@@ -481,10 +528,10 @@ class TestPullRequestValidator(unittest.TestCase):
             number=1,
             author="author1",
             is_draft=False,
-            changed_files=["source/main.py"],
+            changed_files=["tc/payments/main.py"],
             reviews=[
-                Review(user="tc-member1", state=ReviewState.APPROVED),
-                Review(user="tc-member1", state=ReviewState.COMMENTED),
+                Review(user="payments-tc-member2", state=ReviewState.APPROVED),
+                Review(user="payments-tc-member2", state=ReviewState.COMMENTED),
             ],
         )
         res = self.validator.validate(pr)
@@ -570,14 +617,14 @@ class TestPullRequestValidator(unittest.TestCase):
 
     def test_requirement_status_reporting(self):
         """Test requirement status reporting in validation result."""
-        # We check source/main.py (requires 1 from min_team tech-council)
+        # We check tc/shopping/main.py (requires 1 from min_team shopping-tech-council)
         # We request tc-member2 to review (1 eligible reviewer assigned)
         # but have 0 approvals.
         pr = PullRequest(
             number=1,
             author="author1",
             is_draft=False,
-            changed_files=["source/main.py"],
+            changed_files=["tc/shopping/main.py"],
             reviews=[],
             assigned_user_names=["tc-member2"],
             assigned_team_names=[],
@@ -588,7 +635,9 @@ class TestPullRequestValidator(unittest.TestCase):
         self.assertEqual(len(res.requirement_statuses), 1)
 
         status = res.requirement_statuses[0]
-        self.assertEqual(status.requirement.min_team, self.hierarchy["tech-council"])
+        self.assertEqual(
+            status.requirement.min_team, self.hierarchy["shopping-tech-council"]
+        )
         self.assertEqual(status.requirement.min_approvals, 1)
         self.assertEqual(status.approved_count, 0)
         self.assertEqual(status.assigned_count, 1)
@@ -596,18 +645,18 @@ class TestPullRequestValidator(unittest.TestCase):
 
     def test_assigned_team_expansion_reporting(self):
         """Test that assigned teams are expanded to their eligible members in status reporting."""
-        # We check source/main.py (requires 1 from min_team tech-council)
-        # We assign the tech-council team to review.
-        # Members of tech-council are tc-member1 and tc-member2.
+        # We check tc/shopping/main.py (requires 1 from min_team shopping-tech-council)
+        # We assign the shopping-tech-council team to review.
+        # Members of shopping-tech-council are tc-member1 and tc-member2.
         # Both are eligible reviewers.
         pr = PullRequest(
             number=1,
             author="author1",
             is_draft=False,
-            changed_files=["source/main.py"],
+            changed_files=["tc/shopping/main.py"],
             reviews=[],
             assigned_user_names=[],
-            assigned_team_names=["tech-council"],
+            assigned_team_names=["shopping-tech-council"],
         )
         res = self.validator.validate(pr)
         self.assertFalse(res.is_mergeable)
@@ -615,10 +664,12 @@ class TestPullRequestValidator(unittest.TestCase):
         self.assertEqual(len(res.requirement_statuses), 1)
 
         status = res.requirement_statuses[0]
-        self.assertEqual(status.requirement.min_team, self.hierarchy["tech-council"])
+        self.assertEqual(
+            status.requirement.min_team, self.hierarchy["shopping-tech-council"]
+        )
         self.assertEqual(status.requirement.min_approvals, 1)
         self.assertEqual(status.approved_count, 0)
-        # assigned_count should be 2 because tech-council has 2 members (tc-member1, tc-member2)
+        # assigned_count should be 2 because shopping-tech-council has 2 members (tc-member1, tc-member2)
         # and both satisfy the min_team hierarchy requirement.
         self.assertEqual(status.assigned_count, 2)
         self.assertFalse(status.is_satisfied)
@@ -693,16 +744,16 @@ class TestPullRequestValidator(unittest.TestCase):
 
     def test_rule_excludes(self):
         """Test rule pattern exclusion matching."""
-        # Rule A matches source/** but excludes source/special/**
+        # Rule A matches tc/shopping/** but excludes tc/shopping/special/**
         rule = GovernanceRule(
             name="Source Rule",
-            patterns=["source/**"],
+            patterns=["tc/shopping/**"],
             requires_all=[
                 RuleRequirement(
-                    min_approvals=1, min_team=self.hierarchy["tech-council"]
+                    min_approvals=1, min_team=self.hierarchy["shopping-tech-council"]
                 )
             ],
-            excluded_patterns=["source/special/**"],
+            excluded_patterns=["tc/shopping/special/**"],
         )
         config = GovernanceConfig(
             teams=self.hierarchy,
@@ -712,18 +763,18 @@ class TestPullRequestValidator(unittest.TestCase):
         )
         validator = PullRequestValidator(config, self.memberships)
 
-        # Case A: Matches source/main.py (not excluded)
+        # Case A: Matches tc/shopping/main.py (not excluded)
         pr_ok = PullRequest(
             number=1,
             author="author1",
             is_draft=False,
-            changed_files=["source/main.py"],
+            changed_files=["tc/shopping/main.py"],
             reviews=[Review(user="tc-member1", state=ReviewState.APPROVED)],
         )
         res_ok = validator.validate(pr_ok)
         self.assertTrue(res_ok.is_mergeable)
 
-        # Case B: Excluded source/special/helper.py (should use fallback rule)
+        # Case B: Excluded tc/shopping/special/helper.py (should use fallback rule)
         config_with_fallback = GovernanceConfig(
             teams=self.hierarchy,
             rules=[rule],
@@ -740,7 +791,7 @@ class TestPullRequestValidator(unittest.TestCase):
             number=1,
             author="author1",
             is_draft=False,
-            changed_files=["source/special/helper.py"],
+            changed_files=["tc/shopping/special/helper.py"],
             reviews=[
                 Review(user="dev1", state=ReviewState.APPROVED)
             ],  # dev1 (L1) not enough for L2 fallback
@@ -754,23 +805,48 @@ class TestPullRequestValidator(unittest.TestCase):
     def test_merge_requirements_multiple_rules(self):
         """Test that requirements from multiple rules are merged by taking the maximum approvals needed."""
         # Rule 1 (devops-rule): needs 2 devops approvals
-        # Rule 2 (central-rule): needs 1 devops approval and 1 tech-council approval
-        # Merged requirements should be: 2 devops approvals and 1 tech-council approval.
+        devops_rule = GovernanceRule(
+            name="devops-rule",
+            patterns=["scripts/**"],
+            requires_all=[
+                RuleRequirement(min_approvals=2, min_team=self.hierarchy["devops"])
+            ],
+        )
+        # Rule 2 (central-rule): needs 1 devops approval and 1 shopping-tech-council approval
+        central_rule = GovernanceRule(
+            name="central-rule",
+            patterns=["tc/shopping/test.py"],
+            requires_all=[
+                RuleRequirement(min_approvals=1, min_team=self.hierarchy["devops"]),
+                RuleRequirement(
+                    min_approvals=1, min_team=self.hierarchy["shopping-tech-council"]
+                ),
+            ],
+        )
+        config = GovernanceConfig(
+            teams=self.hierarchy,
+            rules=[devops_rule, central_rule],
+            fallback=self.fallback,
+            proxy_reviewers=self.proxy_reviewers,
+        )
+        validator = PullRequestValidator(config, self.memberships)
+
+        # Merged requirements should be: 2 devops approvals and 1 shopping-tech-council approval.
         pr = PullRequest(
             number=1,
             author="author1",
             is_draft=False,
             # Changed files matching both rules
-            changed_files=["source/ops/deploy.sh", "source/central/core.py"],
+            changed_files=["scripts/deploy.sh", "tc/shopping/test.py"],
             reviews=[
                 # 2 devops approvals
                 Review(user="dev1", state=ReviewState.APPROVED),
                 Review(user="dev2", state=ReviewState.APPROVED),
-                # 1 tech-council approval
+                # 1 shopping-tech-council approval
                 Review(user="tc-member1", state=ReviewState.APPROVED),
             ],
         )
-        res = self.validator.validate(pr)
+        res = validator.validate(pr)
         self.assertTrue(res.is_mergeable)
         self.assertEqual(res.mergeable_reason, MergeableReason.RULES_SATISFIED)
 

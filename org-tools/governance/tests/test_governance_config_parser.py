@@ -45,17 +45,35 @@ class TestGovernanceConfigParser(unittest.TestCase):
             "team_hierarchy": {
                 "devops": 1,
                 "maintainers": 2,
-                "tech-council": 3,
+                "shopping-tech-council": 3,
+                "food-tech-council": 3,
+                "lodging-tech-council": 3,
+                "payments-tech-council": 3,
             },
             "proxy_reviewers": ["proxy-user"],
             "fallback": {"requires": [{"min_team": "maintainers", "min_approvals": 1}]},
             "rules": [
                 {
-                    "name": "Core Rule",
-                    "patterns": ["source/**/*.py"],
-                    "excluded_patterns": ["source/special/**/*.py"],
-                    "requires": [{"team": "tech-council", "min_approvals": 2}],
-                }
+                    "name": "Shopping Tech Council Rule",
+                    "patterns": ["tc/shopping/**"],
+                    "excluded_patterns": ["tc/shopping/special/**/*.py"],
+                    "requires": [{"team": "shopping-tech-council", "min_approvals": 1}],
+                },
+                {
+                    "name": "Food Tech Council Rule",
+                    "patterns": ["tc/food/**"],
+                    "requires": [{"team": "food-tech-council", "min_approvals": 1}],
+                },
+                {
+                    "name": "Lodging Tech Council Rule",
+                    "patterns": ["tc/lodging/**"],
+                    "requires": [{"team": "lodging-tech-council", "min_approvals": 1}],
+                },
+                {
+                    "name": "Payments Tech Council Rule",
+                    "patterns": ["tc/payments/**"],
+                    "requires": [{"team": "payments-tech-council", "min_approvals": 1}],
+                },
             ],
         }
 
@@ -68,7 +86,10 @@ class TestGovernanceConfigParser(unittest.TestCase):
             {
                 "devops": Team("devops", 1),
                 "maintainers": Team("maintainers", 2),
-                "tech-council": Team("tech-council", 3),
+                "shopping-tech-council": Team("shopping-tech-council", 3),
+                "food-tech-council": Team("food-tech-council", 3),
+                "lodging-tech-council": Team("lodging-tech-council", 3),
+                "payments-tech-council": Team("payments-tech-council", 3),
             },
         )
 
@@ -82,14 +103,47 @@ class TestGovernanceConfigParser(unittest.TestCase):
         self.assertIsNone(config.fallback[0].team)
 
         # Assert Rules
-        self.assertEqual(len(config.rules), 1)
-        rule = config.rules[0]
-        self.assertEqual(rule.name, "Core Rule")
-        self.assertEqual(rule.patterns, ["source/**/*.py"])
-        self.assertEqual(rule.excluded_patterns, ["source/special/**/*.py"])
-        self.assertEqual(len(rule.requires_all), 1)
-        self.assertEqual(rule.requires_all[0].min_approvals, 2)
-        self.assertEqual(rule.requires_all[0].team, Team("tech-council", 3))
+        self.assertEqual(len(config.rules), 4)
+
+        rule_shopping = config.rules[0]
+        self.assertEqual(rule_shopping.name, "Shopping Tech Council Rule")
+        self.assertEqual(rule_shopping.patterns, ["tc/shopping/**"])
+        self.assertEqual(
+            rule_shopping.excluded_patterns, ["tc/shopping/special/**/*.py"]
+        )
+        self.assertEqual(len(rule_shopping.requires_all), 1)
+        self.assertEqual(rule_shopping.requires_all[0].min_approvals, 1)
+        self.assertEqual(
+            rule_shopping.requires_all[0].team, Team("shopping-tech-council", 3)
+        )
+
+        rule_food = config.rules[1]
+        self.assertEqual(rule_food.name, "Food Tech Council Rule")
+        self.assertEqual(rule_food.patterns, ["tc/food/**"])
+        self.assertEqual(rule_food.excluded_patterns, [])
+        self.assertEqual(len(rule_food.requires_all), 1)
+        self.assertEqual(rule_food.requires_all[0].min_approvals, 1)
+        self.assertEqual(rule_food.requires_all[0].team, Team("food-tech-council", 3))
+
+        rule_lodging = config.rules[2]
+        self.assertEqual(rule_lodging.name, "Lodging Tech Council Rule")
+        self.assertEqual(rule_lodging.patterns, ["tc/lodging/**"])
+        self.assertEqual(rule_lodging.excluded_patterns, [])
+        self.assertEqual(len(rule_lodging.requires_all), 1)
+        self.assertEqual(rule_lodging.requires_all[0].min_approvals, 1)
+        self.assertEqual(
+            rule_lodging.requires_all[0].team, Team("lodging-tech-council", 3)
+        )
+
+        rule_payments = config.rules[3]
+        self.assertEqual(rule_payments.name, "Payments Tech Council Rule")
+        self.assertEqual(rule_payments.patterns, ["tc/payments/**"])
+        self.assertEqual(rule_payments.excluded_patterns, [])
+        self.assertEqual(len(rule_payments.requires_all), 1)
+        self.assertEqual(rule_payments.requires_all[0].min_approvals, 1)
+        self.assertEqual(
+            rule_payments.requires_all[0].team, Team("payments-tech-council", 3)
+        )
 
     def test_parse_file_not_found(self):
         """Test parse_file raises FileNotFoundError for missing file."""
@@ -179,17 +233,35 @@ class TestGovernanceConfigParser(unittest.TestCase):
         """Test that team names in hierarchy, rules, and fallback are normalized to lowercase."""
         yaml_data = {
             "team_hierarchy": {
-                "Tech-Council": 3,
+                "Shopping-Tech-Council": 3,
+                "Food-Tech-Council": 3,
+                "Lodging-Tech-Council": 3,
+                "Payments-Tech-Council": 3,
                 "MAINTAINERS": 2,
             },
             "proxy_reviewers": ["proxy-user"],
             "fallback": {"requires": [{"min_team": "MAINTAINERS", "min_approvals": 1}]},
             "rules": [
                 {
-                    "name": "Core Rule",
-                    "patterns": ["source/**/*.py"],
-                    "requires": [{"team": "Tech-Council", "min_approvals": 2}],
-                }
+                    "name": "Shopping Tech Council Rule",
+                    "patterns": ["tc/shopping/**"],
+                    "requires": [{"team": "Shopping-Tech-Council", "min_approvals": 1}],
+                },
+                {
+                    "name": "Food Tech Council Rule",
+                    "patterns": ["tc/food/**"],
+                    "requires": [{"team": "Food-Tech-Council", "min_approvals": 1}],
+                },
+                {
+                    "name": "Lodging Tech Council Rule",
+                    "patterns": ["tc/lodging/**"],
+                    "requires": [{"team": "Lodging-Tech-Council", "min_approvals": 1}],
+                },
+                {
+                    "name": "Payments Tech Council Rule",
+                    "patterns": ["tc/payments/**"],
+                    "requires": [{"team": "Payments-Tech-Council", "min_approvals": 1}],
+                },
             ],
         }
 
@@ -200,14 +272,26 @@ class TestGovernanceConfigParser(unittest.TestCase):
         self.assertEqual(
             config.teams,
             {
-                "tech-council": Team("tech-council", 3),
+                "shopping-tech-council": Team("shopping-tech-council", 3),
+                "food-tech-council": Team("food-tech-council", 3),
+                "lodging-tech-council": Team("lodging-tech-council", 3),
+                "payments-tech-council": Team("payments-tech-council", 3),
                 "maintainers": Team("maintainers", 2),
             },
         )
 
         # Verify fallback and rules resolved team references are lowercased
         self.assertEqual(config.fallback[0].min_team.name, "maintainers")
-        self.assertEqual(config.rules[0].requires_all[0].team.name, "tech-council")
+        self.assertEqual(
+            config.rules[0].requires_all[0].team.name, "shopping-tech-council"
+        )
+        self.assertEqual(config.rules[1].requires_all[0].team.name, "food-tech-council")
+        self.assertEqual(
+            config.rules[2].requires_all[0].team.name, "lodging-tech-council"
+        )
+        self.assertEqual(
+            config.rules[3].requires_all[0].team.name, "payments-tech-council"
+        )
 
 
 class TestGovernanceConfigValidator(unittest.TestCase):

@@ -53,7 +53,7 @@ class TestPRModels(unittest.TestCase):
             changed_files=["README.md"],
             reviews=[review_input],
             assigned_user_names=["Dave", "EVE"],
-            assigned_team_names=["Tech-Council", "ADMINS"],
+            assigned_team_names=["Shopping-Tech-Council", "ADMINS"],
         )
 
         expected = PullRequest(
@@ -63,7 +63,7 @@ class TestPRModels(unittest.TestCase):
             changed_files=["README.md"],
             reviews=[Review(user="bob", state=ReviewState.APPROVED)],
             assigned_user_names=["dave", "eve"],
-            assigned_team_names=["tech-council", "admins"],
+            assigned_team_names=["shopping-tech-council", "admins"],
         )
         self.assertEqual(expected, pr)
 
@@ -71,18 +71,18 @@ class TestPRModels(unittest.TestCase):
         """Test that TeamMemberships keys and member sets are normalized to lowercase."""
         memberships = TeamMemberships.create(
             members_by_team={
-                "Tech-Council": {"Alice", "BOB"},
+                "Shopping-Tech-Council": {"Alice", "BOB"},
                 "ADMINS": {"charlie", "Dave"},
             },
             teams={
-                "tech-council": Team.create("tech-council", 3),
+                "shopping-tech-council": Team.create("shopping-tech-council", 3),
                 "admins": Team.create("admins", 2),
             },
         )
         self.assertEqual(
             memberships.members_by_team,
             {
-                Team.create("tech-council", 3): {"alice", "bob"},
+                Team.create("shopping-tech-council", 3): {"alice", "bob"},
                 Team.create("admins", 2): {"charlie", "dave"},
             },
         )
@@ -90,12 +90,12 @@ class TestPRModels(unittest.TestCase):
     def test_user_create_factory(self):
         """Test that User.create resolves teams, level, and normalizes username."""
         teams = {
-            "tech-council": Team.create("tech-council", 3),
+            "shopping-tech-council": Team.create("shopping-tech-council", 3),
             "admins": Team.create("admins", 2),
         }
         memberships = TeamMemberships.create(
             members_by_team={
-                "tech-council": {"alice", "bob"},
+                "shopping-tech-council": {"alice", "bob"},
                 "admins": {"bob", "charlie"},
             },
             teams=teams,
@@ -104,13 +104,13 @@ class TestPRModels(unittest.TestCase):
         # User in multiple teams, max level should be the highest (3)
         user_bob = User.create("BOB", memberships)
         self.assertEqual(user_bob.username, "bob")
-        self.assertEqual(user_bob.teams, {"tech-council", "admins"})
+        self.assertEqual(user_bob.teams, {"shopping-tech-council", "admins"})
         self.assertEqual(user_bob.level, 3)
 
         # User in one team
         user_alice = User.create("Alice", memberships)
         self.assertEqual(user_alice.username, "alice")
-        self.assertEqual(user_alice.teams, {"tech-council"})
+        self.assertEqual(user_alice.teams, {"shopping-tech-council"})
         self.assertEqual(user_alice.level, 3)
 
         # User in no teams

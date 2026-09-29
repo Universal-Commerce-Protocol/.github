@@ -326,7 +326,7 @@ DEFAULT_CATALOG_PATH = OUTPUT_DIR / "requirements.json"
 DEFAULT_REPORT_PATH = OUTPUT_DIR / "extraction_report.json"
 
 CATALOG_SCHEMA_VERSION = "1.0.0"
-EXTRACTOR_VERSION = "0.1.0"
+EXTRACTOR_VERSION = "0.2.0"
 
 # Published identifier of the record schema, and where it lives in-repo.
 #

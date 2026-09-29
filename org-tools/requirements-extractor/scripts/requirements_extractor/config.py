@@ -61,10 +61,10 @@ SPEC_DIRS = [Path("docs/specification/shopping/checkout")]
 # it would mint requirements from a form letter. Listed here rather than in the
 # scope filter so it stays excluded if SPEC_DIRS ever widens.
 EXCLUDED_FILES = frozenset(
-  {
-    "docs/specification/payment/template.md",
-    "docs/specification/shopping/playground.md",
-  }
+    {
+        "docs/specification/payment/template.md",
+        "docs/specification/shopping/playground.md",
+    }
 )
 
 # ---------------------------------------------------------------------------
@@ -74,7 +74,7 @@ EXCLUDED_FILES = frozenset(
 # Directory prefix -> capability. Consulted after an explicit in-document
 # declaration and before the (not yet implemented) nav and link tiers.
 CAPABILITY_BY_PREFIX = {
-  "docs/specification/shopping/checkout": "dev.ucp.shopping.checkout",
+    "docs/specification/shopping/checkout": "dev.ucp.shopping.checkout",
 }
 
 # ---------------------------------------------------------------------------
@@ -96,18 +96,18 @@ READABLE_ID_PREFIX = "REQ"
 # Short capability token for the identifier. Keyed by the reverse-DNS name so
 # widening scope does not mean parsing the identifier apart.
 CAPABILITY_SHORT_NAME = {
-  "dev.ucp.shopping.checkout": "CHECKOUT",
+    "dev.ucp.shopping.checkout": "CHECKOUT",
 }
 
 # Binding token per document. `index.md` is the capability's core document and
 # takes no token, which keeps its identifiers short and matches the way the
 # specification refers to core behavior.
 DOCUMENT_TOKEN = {
-  "index.md": None,
-  "rest.md": "REST",
-  "mcp.md": "MCP",
-  "a2a.md": "A2A",
-  "embedded.md": "EP",
+    "index.md": None,
+    "rest.md": "REST",
+    "mcp.md": "MCP",
+    "a2a.md": "A2A",
+    "embedded.md": "EP",
 }
 
 # Section tokens are cut to this length on a word boundary. Long enough to stay
@@ -141,24 +141,24 @@ INDEX_DOCUMENT = "index.md"
 # catalog. The vocabulary follows the specification's own prose, which says
 # Business rather than Merchant.
 PUBLISHED_ACTOR = {
-  "business": "BUSINESS",
-  "platform": "PLATFORM",
-  "agent": "AGENT",
-  "handler": "PAYMENT_HANDLER",
-  "buyer": "BUYER",
-  "host": "HOST",
-  "auth_server": "AUTHORIZATION_SERVER",
-  "embedded_checkout": "EMBEDDED_CHECKOUT",
-  "implementation": "IMPLEMENTATION",
-  "extension": "EXTENSION",
+    "business": "BUSINESS",
+    "platform": "PLATFORM",
+    "agent": "AGENT",
+    "handler": "PAYMENT_HANDLER",
+    "buyer": "BUYER",
+    "host": "HOST",
+    "auth_server": "AUTHORIZATION_SERVER",
+    "embedded_checkout": "EMBEDDED_CHECKOUT",
+    "implementation": "IMPLEMENTATION",
+    "extension": "EXTENSION",
 }
 
 # Matches the declaration bullet, anchored on the list marker and bold label so
 # it cannot match the "Capability Name" column header of the registry table in
 # overview/index.md.
 CAPABILITY_DECLARATION_RE = re.compile(
-  r"^\s*[*\-+]\s+\*\*Capability Name:\*\*\s*`([a-z0-9_.]+)`\s*$",
-  re.MULTILINE,
+    r"^\s*[*\-+]\s+\*\*Capability Name:\*\*\s*`([a-z0-9_.]+)`\s*$",
+    re.MULTILINE,
 )
 
 # Only the first N lines of a document are searched for the declaration. The
@@ -178,13 +178,13 @@ DEFAULT_SPEC_VERSION = "draft"
 # never truncated to "MUST" - a truncation bug here silently inverts the
 # meaning of every prohibition in the corpus.
 OBLIGATION_KEYWORDS = (
-  "MUST NOT",
-  "SHALL NOT",
-  "SHOULD NOT",
-  "MUST",
-  "SHALL",
-  "SHOULD",
-  "MAY",
+    "MUST NOT",
+    "SHALL NOT",
+    "SHOULD NOT",
+    "MUST",
+    "SHALL",
+    "SHOULD",
+    "MAY",
 )
 
 ANNOTATION_KEYWORDS = ("REQUIRED", "RECOMMENDED", "OPTIONAL")
@@ -217,16 +217,16 @@ RFC2119_BOILERPLATE_KEYWORD_THRESHOLD = 4
 # "embedder" resolves to `host`: in the embedded protocol the party doing the
 # embedding is the host, and the spec uses the two words interchangeably.
 ACTOR_LEXICON = {
-  "business": ("business", "businesses", "merchant", "merchants"),
-  "platform": ("platform", "platforms"),
-  "agent": ("agent", "agents"),
-  "handler": ("payment handler", "payment handlers", "handler", "handlers"),
-  "buyer": ("buyer", "buyers", "user", "users"),
-  "host": ("host", "hosts", "embedder", "embedders"),
-  "auth_server": ("authorization server", "auth server"),
-  "embedded_checkout": ("embedded checkout", "embedded checkouts"),
-  "implementation": ("implementation", "implementations"),
-  "extension": ("extension", "extensions"),
+    "business": ("business", "businesses", "merchant", "merchants"),
+    "platform": ("platform", "platforms"),
+    "agent": ("agent", "agents"),
+    "handler": ("payment handler", "payment handlers", "handler", "handlers"),
+    "buyer": ("buyer", "buyers", "user", "users"),
+    "host": ("host", "hosts", "embedder", "embedders"),
+    "auth_server": ("authorization server", "auth server"),
+    "embedded_checkout": ("embedded checkout", "embedded checkouts"),
+    "implementation": ("implementation", "implementations"),
+    "extension": ("extension", "extensions"),
 }
 
 # Confidence assigned by each resolution strategy.
@@ -253,9 +253,9 @@ STEM_ACTOR_MAX_OFFSET = 40
 # "**Implementation Notes:**" is a topic heading and assigns nothing, but has
 # the same shape and would otherwise attribute its items to `implementation`.
 STEM_OBLIGATION_LABEL_RE = re.compile(
-  r"\b(?:responsibility|responsibilities|requirements?|obligations?|duties|"
-  r"rules?|constraints?|expectations?)\b",
-  re.IGNORECASE,
+    r"\b(?:responsibility|responsibilities|requirements?|obligations?|duties|"
+    r"rules?|constraints?|expectations?)\b",
+    re.IGNORECASE,
 )
 
 # ---------------------------------------------------------------------------
@@ -294,7 +294,7 @@ FIELD_URL_RE = re.compile(r"^https?://")
 # ---------------------------------------------------------------------------
 
 CONDITION_TRIGGER_RE = re.compile(
-  r"\b(when|if|unless|whenever|while|in case)\b", re.IGNORECASE
+    r"\b(when|if|unless|whenever|while|in case)\b", re.IGNORECASE
 )
 
 # A leading condition ends at the comma that closes the subordinate clause:
@@ -334,7 +334,7 @@ EXTRACTOR_VERSION = "0.1.0"
 # nothing to do with.
 CATALOG_SCHEMA_URL = "https://ucp.dev/schemas/requirements-catalog-v1.json"
 CATALOG_SCHEMA_PATH = (
-  Path(__file__).resolve().parent / "schema" / "requirements-catalog-v1.json"
+    Path(__file__).resolve().parent / "schema" / "requirements-catalog-v1.json"
 )
 
 # Envelope fields excluded when comparing a regenerated document against the
@@ -352,246 +352,244 @@ NON_DETERMINISTIC_FIELDS = frozenset({"generated_at", "commit_sha"})
 
 
 def spec_version() -> str:
-  """Return the UCP release the specification tree represents.
+    """Return the UCP release the specification tree represents.
 
-  Read from ``extra.ucp_version`` in mkdocs.yml at runtime rather than being
-  hardcoded, because the value differs by branch: release branches bake in a
-  date such as ``2026-08-25`` while main carries ``draft``. Hardcoding it would
-  silently stamp the wrong release onto a catalog built from another branch.
+    Read from ``extra.ucp_version`` in mkdocs.yml at runtime rather than being
+    hardcoded, because the value differs by branch: release branches bake in a
+    date such as ``2026-08-25`` while main carries ``draft``. Hardcoding it would
+    silently stamp the wrong release onto a catalog built from another branch.
 
-  Parsed with a narrow regex instead of a YAML load so the extractor does not
-  depend on PyYAML and does not have to tolerate the custom mkdocs tags that a
-  strict loader rejects.
+    Parsed with a narrow regex instead of a YAML load so the extractor does not
+    depend on PyYAML and does not have to tolerate the custom mkdocs tags that a
+    strict loader rejects.
 
-  Returns:
-    The declared version, or DEFAULT_SPEC_VERSION if it cannot be determined.
+    Returns:
+      The declared version, or DEFAULT_SPEC_VERSION if it cannot be determined.
 
-  """
-  try:
-    text = MKDOCS_PATH.read_text(encoding="utf-8")
-  except OSError:
-    return DEFAULT_SPEC_VERSION
-  match = re.search(
-    r"^\s*ucp_version:\s*[\"']?([^\"'\s]+)[\"']?\s*$", text, re.MULTILINE
-  )
-  return match.group(1) if match else DEFAULT_SPEC_VERSION
+    """
+    try:
+        text = MKDOCS_PATH.read_text(encoding="utf-8")
+    except OSError:
+        return DEFAULT_SPEC_VERSION
+    match = re.search(
+        r"^\s*ucp_version:\s*[\"']?([^\"'\s]+)[\"']?\s*$", text, re.MULTILINE
+    )
+    return match.group(1) if match else DEFAULT_SPEC_VERSION
 
 
 def capability_slug(capability: str | None) -> str:
-  """Reduce a reverse-DNS capability to the slug used inside requirement IDs.
+    """Reduce a reverse-DNS capability to the slug used inside requirement IDs.
 
-  Strips the ``dev.ucp.`` prefix and raises the remainder to upper case, so
-  ``dev.ucp.shopping.checkout`` becomes ``SHOPPING-CHECKOUT``.
+    Strips the ``dev.ucp.`` prefix and raises the remainder to upper case, so
+    ``dev.ucp.shopping.checkout`` becomes ``SHOPPING-CHECKOUT``.
 
-  Args:
-    capability: Reverse-DNS capability identifier, or None.
+    Args:
+      capability: Reverse-DNS capability identifier, or None.
 
-  Returns:
-    An uppercase, hyphen-separated slug. Unresolved capabilities yield
-    ``UNRESOLVED`` so the resulting IDs are conspicuous rather than malformed.
+    Returns:
+      An uppercase, hyphen-separated slug. Unresolved capabilities yield
+      ``UNRESOLVED`` so the resulting IDs are conspicuous rather than malformed.
 
-  """
-  if not capability:
-    return "UNRESOLVED"
-  trimmed = capability.removeprefix("dev.ucp.")
-  return re.sub(r"[._]", "-", trimmed).upper()
+    """
+    if not capability:
+        return "UNRESOLVED"
+    trimmed = capability.removeprefix("dev.ucp.")
+    return re.sub(r"[._]", "-", trimmed).upper()
 
 
 def is_excluded(rel_path: str) -> bool:
-  """Whether a repository-relative path is excluded from extraction.
+    """Whether a repository-relative path is excluded from extraction.
 
-  Args:
-    rel_path: Repository-relative path with POSIX separators.
+    Args:
+      rel_path: Repository-relative path with POSIX separators.
 
-  Returns:
-    True if the document should not be scanned.
+    Returns:
+      True if the document should not be scanned.
 
-  """
-  return rel_path in EXCLUDED_FILES
+    """
+    return rel_path in EXCLUDED_FILES
 
 
 def declared_capability(path: Path) -> str | None:
-  """Return the capability a document declares about itself, if any.
+    """Return the capability a document declares about itself, if any.
 
-  This is Tier 1 of the resolution chain. Only the document preamble is
-  searched, since the declaration bullet is part of the header block and a
-  later match would be prose discussing some other capability.
+    This is Tier 1 of the resolution chain. Only the document preamble is
+    searched, since the declaration bullet is part of the header block and a
+    later match would be prose discussing some other capability.
 
-  Args:
-    path: Absolute path to a Markdown document.
+    Args:
+      path: Absolute path to a Markdown document.
 
-  Returns:
-    The reverse-DNS capability identifier, or None if undeclared.
+    Returns:
+      The reverse-DNS capability identifier, or None if undeclared.
 
-  """
-  try:
-    with path.open(encoding="utf-8") as handle:
-      preamble = "".join(
-        line
-        for _, line in zip(
-          range(CAPABILITY_DECLARATION_MAX_LINE), handle, strict=False
-        )
-      )
-  except OSError:
+    """
+    try:
+        with path.open(encoding="utf-8") as handle:
+            preamble = "".join(
+                line
+                for _, line in zip(
+                    range(CAPABILITY_DECLARATION_MAX_LINE), handle, strict=False
+                )
+            )
+    except OSError:
+        return None
+    match = CAPABILITY_DECLARATION_RE.search(preamble)
+    return match.group(1) if match else None
+
+
+def resolve_capability(rel_path: str, abs_path: Path | None = None) -> str | None:
+    """Resolve the capability a document's requirements belong to.
+
+    Resolution order, matching the chain described in the module docstring:
+
+      1. An explicit declaration inside the document.
+      2. The directory the document lives in.
+
+    Tiers 3 and 4 of the full design - mkdocs nav grouping, intra-document
+    parent links, and a hand-maintained override map - are not implemented,
+    because every document currently in scope resolves at tier 1 or 2. They
+    belong here, as additional branches, when scope widens beyond a single
+    capability directory.
+
+    Args:
+      rel_path: Repository-relative path with POSIX separators.
+      abs_path: Absolute path, when available, enabling the tier 1 lookup.
+
+    Returns:
+      The reverse-DNS capability identifier, or None when unresolved. Callers
+      decide whether an unresolved document is fatal; see --fail-on-unresolved.
+
+    """
+    if abs_path is not None:
+        declared = declared_capability(abs_path)
+        if declared:
+            return declared
+
+    # Longest prefix wins, so a nested capability directory is preferred over a
+    # broader one should the map ever contain both.
+    for prefix in sorted(CAPABILITY_BY_PREFIX, key=len, reverse=True):
+        if rel_path == prefix or rel_path.startswith(prefix + "/"):
+            return CAPABILITY_BY_PREFIX[prefix]
+
     return None
-  match = CAPABILITY_DECLARATION_RE.search(preamble)
-  return match.group(1) if match else None
-
-
-def resolve_capability(
-  rel_path: str, abs_path: Path | None = None
-) -> str | None:
-  """Resolve the capability a document's requirements belong to.
-
-  Resolution order, matching the chain described in the module docstring:
-
-    1. An explicit declaration inside the document.
-    2. The directory the document lives in.
-
-  Tiers 3 and 4 of the full design - mkdocs nav grouping, intra-document
-  parent links, and a hand-maintained override map - are not implemented,
-  because every document currently in scope resolves at tier 1 or 2. They
-  belong here, as additional branches, when scope widens beyond a single
-  capability directory.
-
-  Args:
-    rel_path: Repository-relative path with POSIX separators.
-    abs_path: Absolute path, when available, enabling the tier 1 lookup.
-
-  Returns:
-    The reverse-DNS capability identifier, or None when unresolved. Callers
-    decide whether an unresolved document is fatal; see --fail-on-unresolved.
-
-  """
-  if abs_path is not None:
-    declared = declared_capability(abs_path)
-    if declared:
-      return declared
-
-  # Longest prefix wins, so a nested capability directory is preferred over a
-  # broader one should the map ever contain both.
-  for prefix in sorted(CAPABILITY_BY_PREFIX, key=len, reverse=True):
-    if rel_path == prefix or rel_path.startswith(prefix + "/"):
-      return CAPABILITY_BY_PREFIX[prefix]
-
-  return None
 
 
 def heading_anchor(heading: str) -> str:
-  """Return the HTML anchor the site generates for a heading.
+    """Return the HTML anchor the site generates for a heading.
 
-  Delegates to the renderer's own slugify rather than reimplementing it.
-  A hand-rolled version has to match exactly or the published link 404s,
-  and nothing would catch the drift.
+    Delegates to the renderer's own slugify rather than reimplementing it.
+    A hand-rolled version has to match exactly or the published link 404s,
+    and nothing would catch the drift.
 
-  Args:
-    heading: Heading text as it appears in the Markdown source.
+    Args:
+      heading: Heading text as it appears in the Markdown source.
 
-  Returns:
-    The anchor, without a leading '#'.
+    Returns:
+      The anchor, without a leading '#'.
 
-  """
-  return _toc_slugify(heading, "-")
+    """
+    return _toc_slugify(heading, "-")
 
 
 def published_url(rel_path: str, section: str | None, version: str) -> str:
-  """Return the public URL for the clause's section.
+    """Return the public URL for the clause's section.
 
-  Args:
-    rel_path: Repository-relative POSIX path to the source document.
-    section: Heading breadcrumb, or None.
-    version: Spec version segment, such as "draft".
+    Args:
+      rel_path: Repository-relative POSIX path to the source document.
+      section: Heading breadcrumb, or None.
+      version: Spec version segment, such as "draft".
 
-  Returns:
-    An absolute URL, anchored on the deepest heading when one is known.
+    Returns:
+      An absolute URL, anchored on the deepest heading when one is known.
 
-  """
-  path = Path(rel_path)
-  # `docs/specification/...` renders at `/<version>/specification/...`.
-  parts = list(path.parts)
-  if parts and parts[0] == DOCS_URL_ROOT:
-    parts = parts[1:]
-  # A page renders as a directory; index.md *is* its parent directory.
-  if parts and parts[-1] == INDEX_DOCUMENT:
-    parts = parts[:-1]
-  elif parts:
-    parts[-1] = Path(parts[-1]).stem
+    """
+    path = Path(rel_path)
+    # `docs/specification/...` renders at `/<version>/specification/...`.
+    parts = list(path.parts)
+    if parts and parts[0] == DOCS_URL_ROOT:
+        parts = parts[1:]
+    # A page renders as a directory; index.md *is* its parent directory.
+    if parts and parts[-1] == INDEX_DOCUMENT:
+        parts = parts[:-1]
+    elif parts:
+        parts[-1] = Path(parts[-1]).stem
 
-  url = "/".join([SITE_BASE_URL, version, *parts]) + "/"
+    url = "/".join([SITE_BASE_URL, version, *parts]) + "/"
 
-  if section:
-    crumbs = [crumb.strip() for crumb in section.split(">") if crumb.strip()]
-    if crumbs:
-      url += "#" + heading_anchor(crumbs[-1])
-  return url
+    if section:
+        crumbs = [crumb.strip() for crumb in section.split(">") if crumb.strip()]
+        if crumbs:
+            url += "#" + heading_anchor(crumbs[-1])
+    return url
 
 
 def published_actor(actor: str | None) -> str | None:
-  """Return the uppercase published name for an internal actor key.
+    """Return the uppercase published name for an internal actor key.
 
-  Args:
-    actor: Internal lowercase key, or None when unresolved.
+    Args:
+      actor: Internal lowercase key, or None when unresolved.
 
-  Returns:
-    The published name, or None. A key with no mapping is converted to upper
-    case rather than dropped, so a lexicon addition cannot silently lose an
-    attribution.
+    Returns:
+      The published name, or None. A key with no mapping is converted to upper
+      case rather than dropped, so a lexicon addition cannot silently lose an
+      attribution.
 
-  """
-  if actor is None:
-    return None
-  return PUBLISHED_ACTOR.get(actor, actor.upper())
+    """
+    if actor is None:
+        return None
+    return PUBLISHED_ACTOR.get(actor, actor.upper())
 
 
 def section_token(section: str | None) -> str:
-  """Return the section component of a readable identifier.
+    """Return the section component of a readable identifier.
 
-  Uses the deepest heading, since that is the one that names the rule. The
-  first breadcrumb is the document title and is dropped as redundant.
+    Uses the deepest heading, since that is the one that names the rule. The
+    first breadcrumb is the document title and is dropped as redundant.
 
-  Args:
-    section: Heading breadcrumb, or None.
+    Args:
+      section: Heading breadcrumb, or None.
 
-  Returns:
-    An uppercase hyphenated token, truncated on a word boundary.
+    Returns:
+      An uppercase hyphenated token, truncated on a word boundary.
 
-  """
-  if not section:
-    return "GENERAL"
-  crumbs = [crumb.strip() for crumb in section.split(">") if crumb.strip()]
-  if len(crumbs) > 1:
-    crumbs = crumbs[1:]
-  if not crumbs:
-    return "GENERAL"
+    """
+    if not section:
+        return "GENERAL"
+    crumbs = [crumb.strip() for crumb in section.split(">") if crumb.strip()]
+    if len(crumbs) > 1:
+        crumbs = crumbs[1:]
+    if not crumbs:
+        return "GENERAL"
 
-  token = re.sub(r"[^A-Za-z0-9]+", "-", crumbs[-1].replace("`", ""))
-  token = token.strip("-").upper()
-  if not token:
-    return "GENERAL"
-  if len(token) <= MAX_SECTION_TOKEN_LENGTH:
-    return token
+    token = re.sub(r"[^A-Za-z0-9]+", "-", crumbs[-1].replace("`", ""))
+    token = token.strip("-").upper()
+    if not token:
+        return "GENERAL"
+    if len(token) <= MAX_SECTION_TOKEN_LENGTH:
+        return token
 
-  # Only walk back to a word boundary when the cut lands mid-word; trimming
-  # unconditionally drops a whole word when the limit falls on a hyphen.
-  if token[MAX_SECTION_TOKEN_LENGTH] == "-":
-    return token[:MAX_SECTION_TOKEN_LENGTH]
-  cut = token[:MAX_SECTION_TOKEN_LENGTH]
-  if "-" in cut:
-    cut = cut[: cut.rfind("-")]
-  return cut or token[:MAX_SECTION_TOKEN_LENGTH]
+    # Only walk back to a word boundary when the cut lands mid-word; trimming
+    # unconditionally drops a whole word when the limit falls on a hyphen.
+    if token[MAX_SECTION_TOKEN_LENGTH] == "-":
+        return token[:MAX_SECTION_TOKEN_LENGTH]
+    cut = token[:MAX_SECTION_TOKEN_LENGTH]
+    if "-" in cut:
+        cut = cut[: cut.rfind("-")]
+    return cut or token[:MAX_SECTION_TOKEN_LENGTH]
 
 
 def document_token(rel_path: str) -> str | None:
-  """Return the binding token for a document, or None for the core document.
+    """Return the binding token for a document, or None for the core document.
 
-  Args:
-    rel_path: Repository-relative POSIX path to the source document.
+    Args:
+      rel_path: Repository-relative POSIX path to the source document.
 
-  Returns:
-    An uppercase token such as "REST", or None when the document takes none.
+    Returns:
+      An uppercase token such as "REST", or None when the document takes none.
 
-  """
-  name = Path(rel_path).name
-  if name in DOCUMENT_TOKEN:
-    return DOCUMENT_TOKEN[name]
-  return Path(name).stem.replace("-", "").upper()
+    """
+    name = Path(rel_path).name
+    if name in DOCUMENT_TOKEN:
+        return DOCUMENT_TOKEN[name]
+    return Path(name).stem.replace("-", "").upper()

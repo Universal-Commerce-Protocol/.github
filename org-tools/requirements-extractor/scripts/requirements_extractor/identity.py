@@ -54,9 +54,9 @@ import re
 
 from requirements_extractor import config
 from requirements_extractor.models import (
-  Clause,
-  ExtractionReport,
-  Requirement,
+    Clause,
+    ExtractionReport,
+    Requirement,
 )
 
 # Separates the digest components. A control character cannot occur in the
@@ -82,227 +82,227 @@ _TRAILING_PUNCTUATION = ".,;: "
 
 
 def normalize(text: str) -> str:
-  """Reduce clause text to the canonical form used for hashing.
+    """Reduce clause text to the canonical form used for hashing.
 
-  Each step erases a difference that authors introduce without changing the
-  obligation: retargeting a link, adding emphasis, fencing an identifier in
-  backticks, swapping a hyphen for an em dash, reflowing a paragraph, or
-  changing capitalization.
+    Each step erases a difference that authors introduce without changing the
+    obligation: retargeting a link, adding emphasis, fencing an identifier in
+    backticks, swapping a hyphen for an em dash, reflowing a paragraph, or
+    changing capitalization.
 
-  Args:
-    text: Clause text as it appears in the spec.
+    Args:
+      text: Clause text as it appears in the spec.
 
-  Returns:
-    The canonical form: lower case, single-spaced, free of Markdown markup
-    and of trailing punctuation.
+    Returns:
+      The canonical form: lower case, single-spaced, free of Markdown markup
+      and of trailing punctuation.
 
-  """
-  out = _LINK_RE.sub(r"\1", text)
-  out = _BOLD_RE.sub("", out)
-  out = out.replace("`", "")
-  out = _DASH_RE.sub("-", out)
-  out = _WHITESPACE_RE.sub(" ", out)
-  return out.strip().strip(_TRAILING_PUNCTUATION).strip().lower()
+    """
+    out = _LINK_RE.sub(r"\1", text)
+    out = _BOLD_RE.sub("", out)
+    out = out.replace("`", "")
+    out = _DASH_RE.sub("-", out)
+    out = _WHITESPACE_RE.sub(" ", out)
+    return out.strip().strip(_TRAILING_PUNCTUATION).strip().lower()
 
 
 def digest_input(
-  capability: str | None, compound_parent: str | None, normalized: str
+    capability: str | None, compound_parent: str | None, normalized: str
 ) -> str:
-  """Assemble the exact string the identifier digests.
+    """Assemble the exact string the identifier digests.
 
-  Kept separate from hashing so a verifier can reproduce the hash input from
-  the published catalog fields alone.
+    Kept separate from hashing so a verifier can reproduce the hash input from
+    the published catalog fields alone.
 
-  Args:
-    capability: Reverse-DNS capability identifier.
-    compound_parent: Stem or matrix context, if the clause has one.
-    normalized: Canonical clause text from `normalize`.
+    Args:
+      capability: Reverse-DNS capability identifier.
+      compound_parent: Stem or matrix context, if the clause has one.
+      normalized: Canonical clause text from `normalize`.
 
-  Returns:
-    The exact string that is hashed.
+    Returns:
+      The exact string that is hashed.
 
-  """
-  return DIGEST_SEPARATOR.join(
-    (
-      capability or "",
-      normalize(compound_parent) if compound_parent else "",
-      normalized,
+    """
+    return DIGEST_SEPARATOR.join(
+        (
+            capability or "",
+            normalize(compound_parent) if compound_parent else "",
+            normalized,
+        )
     )
-  )
 
 
 def requirement_digest(
-  capability: str | None, compound_parent: str | None, normalized: str
+    capability: str | None, compound_parent: str | None, normalized: str
 ) -> str:
-  """Return the content digest for a requirement.
+    """Return the content digest for a requirement.
 
-  This is the stable half of a requirement's identity. It depends only on
-  what the clause says, never on where it sits, so reformatting the document
-  or moving a section leaves it untouched. The readable identifier carries
-  location; this carries content.
+    This is the stable half of a requirement's identity. It depends only on
+    what the clause says, never on where it sits, so reformatting the document
+    or moving a section leaves it untouched. The readable identifier carries
+    location; this carries content.
 
-  Args:
-    capability: Reverse-DNS capability identifier.
-    compound_parent: Stem or matrix context, if the clause has one.
-    normalized: Canonical clause text from `normalize`.
+    Args:
+      capability: Reverse-DNS capability identifier.
+      compound_parent: Stem or matrix context, if the clause has one.
+      normalized: Canonical clause text from `normalize`.
 
-  Returns:
-    The leading `config.ID_DIGEST_LENGTH` hex characters of the SHA-256 of
-    `digest_input`.
+    Returns:
+      The leading `config.ID_DIGEST_LENGTH` hex characters of the SHA-256 of
+      `digest_input`.
 
-  """
-  hash_input = digest_input(capability, compound_parent, normalized)
-  digest = hashlib.sha256(hash_input.encode("utf-8")).hexdigest()
-  return digest[: config.ID_DIGEST_LENGTH]
+    """
+    hash_input = digest_input(capability, compound_parent, normalized)
+    digest = hashlib.sha256(hash_input.encode("utf-8")).hexdigest()
+    return digest[: config.ID_DIGEST_LENGTH]
 
 
 def _order_key(clause: Clause) -> tuple[str, int, int]:
-  """Sort key deciding which of two identical requirements is first.
+    """Sort key deciding which of two identical requirements is first.
 
-  Source order, so that the ordinal appended to a duplicate is a property of
-  the documents rather than of the order the parser happened to visit them.
-  """
-  return (
-    clause.source.file,
-    clause.source.line_start,
-    clause.document_order,
-  )
+    Source order, so that the ordinal appended to a duplicate is a property of
+    the documents rather than of the order the parser happened to visit them.
+    """
+    return (
+        clause.source.file,
+        clause.source.line_start,
+        clause.document_order,
+    )
 
 
 def _record(clause: Clause, **extra: object) -> dict[str, object]:
-  """Build a report entry locating a clause in the source."""
-  entry: dict[str, object] = {
-    "file": clause.source.file,
-    "line": clause.source.line_start,
-    "section": clause.source.section,
-    "text": clause.text,
-  }
-  entry.update(extra)
-  return entry
+    """Build a report entry locating a clause in the source."""
+    entry: dict[str, object] = {
+        "file": clause.source.file,
+        "line": clause.source.line_start,
+        "section": clause.source.section,
+        "text": clause.text,
+    }
+    entry.update(extra)
+    return entry
 
 
 def readable_id(clause: Clause, ordinal: int) -> str:
-  """Return the readable identifier for a clause at a given ordinal.
+    """Return the readable identifier for a clause at a given ordinal.
 
-  Args:
-    clause: The clause being identified.
-    ordinal: 1-based position within its capability/document/section group.
+    Args:
+      clause: The clause being identified.
+      ordinal: 1-based position within its capability/document/section group.
 
-  Returns:
-    An identifier such as ``REQ-CHECKOUT-WARNING-PRESENTATION-03``.
+    Returns:
+      An identifier such as ``REQ-CHECKOUT-WARNING-PRESENTATION-03``.
 
-  """
-  capability = clause.capability or ""
-  parts = [
-    config.READABLE_ID_PREFIX,
-    config.CAPABILITY_SHORT_NAME.get(
-      capability, config.capability_slug(capability)
-    ),
-  ]
-  document = config.document_token(clause.source.file)
-  if document:
-    parts.append(document)
-  parts.append(config.section_token(clause.source.section))
-  parts.append(f"{ordinal:0{config.ORDINAL_WIDTH}d}")
-  return "-".join(parts)
+    """
+    capability = clause.capability or ""
+    parts = [
+        config.READABLE_ID_PREFIX,
+        config.CAPABILITY_SHORT_NAME.get(
+            capability, config.capability_slug(capability)
+        ),
+    ]
+    document = config.document_token(clause.source.file)
+    if document:
+        parts.append(document)
+    parts.append(config.section_token(clause.source.section))
+    parts.append(f"{ordinal:0{config.ORDINAL_WIDTH}d}")
+    return "-".join(parts)
 
 
 def _group_key(clause: Clause) -> str:
-  """Return the identifier prefix a clause's ordinal is counted within."""
-  capability = clause.capability or ""
-  parts = [
-    config.READABLE_ID_PREFIX,
-    config.CAPABILITY_SHORT_NAME.get(
-      capability, config.capability_slug(capability)
-    ),
-  ]
-  document = config.document_token(clause.source.file)
-  if document:
-    parts.append(document)
-  parts.append(config.section_token(clause.source.section))
-  return "-".join(parts)
+    """Return the identifier prefix a clause's ordinal is counted within."""
+    capability = clause.capability or ""
+    parts = [
+        config.READABLE_ID_PREFIX,
+        config.CAPABILITY_SHORT_NAME.get(
+            capability, config.capability_slug(capability)
+        ),
+    ]
+    document = config.document_token(clause.source.file)
+    if document:
+        parts.append(document)
+    parts.append(config.section_token(clause.source.section))
+    return "-".join(parts)
 
 
 def assign_identities(
-  clauses: list[Clause], report: ExtractionReport | None = None
+    clauses: list[Clause], report: ExtractionReport | None = None
 ) -> tuple[list[Requirement], ExtractionReport]:
-  """Turn annotated clauses into identified requirements.
+    """Turn annotated clauses into identified requirements.
 
-  Each requirement receives two identifiers. `id` is readable and counts an
-  ordinal within its section, allocated in source order so the catalog reads
-  in document sequence. `content_digest` is derived from the clause's content
-  alone and moves only when the obligation's wording does.
+    Each requirement receives two identifiers. `id` is readable and counts an
+    ordinal within its section, allocated in source order so the catalog reads
+    in document sequence. `content_digest` is derived from the clause's content
+    alone and moves only when the obligation's wording does.
 
-  Clauses whose content and context are identical share a digest; that is
-  reported, but they still receive distinct identifiers, because the
-  identifier is positional and two copies occupy two positions.
+    Clauses whose content and context are identical share a digest; that is
+    reported, but they still receive distinct identifiers, because the
+    identifier is positional and two copies occupy two positions.
 
-  Args:
-    clauses: Clauses that have been through classification and metadata.
-    report: Existing diagnostics collector, or None to create one.
+    Args:
+      clauses: Clauses that have been through classification and metadata.
+      report: Existing diagnostics collector, or None to create one.
 
-  Returns:
-    The requirements, in the order given, and the diagnostics collected.
+    Returns:
+      The requirements, in the order given, and the diagnostics collected.
 
-  """
-  collected = report or ExtractionReport()
+    """
+    collected = report or ExtractionReport()
 
-  normalized_by_clause = [normalize(clause.text) for clause in clauses]
-  digests = [
-    requirement_digest(clause.capability, clause.compound_parent, normalized)
-    for clause, normalized in zip(clauses, normalized_by_clause, strict=True)
-  ]
+    normalized_by_clause = [normalize(clause.text) for clause in clauses]
+    digests = [
+        requirement_digest(clause.capability, clause.compound_parent, normalized)
+        for clause, normalized in zip(clauses, normalized_by_clause, strict=True)
+    ]
 
-  # Ordinals run in source order within each group, so an identifier's number
-  # reflects where the requirement sits in the document rather than the order
-  # the parser happened to visit blocks.
-  order = sorted(range(len(clauses)), key=lambda i: _order_key(clauses[i]))
-  counters: dict[str, int] = {}
-  ids: list[str] = [""] * len(clauses)
-  for index in order:
-    key = _group_key(clauses[index])
-    counters[key] = counters.get(key, 0) + 1
-    ids[index] = readable_id(clauses[index], counters[key])
+    # Ordinals run in source order within each group, so an identifier's number
+    # reflects where the requirement sits in the document rather than the order
+    # the parser happened to visit blocks.
+    order = sorted(range(len(clauses)), key=lambda i: _order_key(clauses[i]))
+    counters: dict[str, int] = {}
+    ids: list[str] = [""] * len(clauses)
+    for index in order:
+        key = _group_key(clauses[index])
+        counters[key] = counters.get(key, 0) + 1
+        ids[index] = readable_id(clauses[index], counters[key])
 
-  grouped: dict[str, list[int]] = {}
-  for index, digest in enumerate(digests):
-    grouped.setdefault(digest, []).append(index)
+    grouped: dict[str, list[int]] = {}
+    for index, digest in enumerate(digests):
+        grouped.setdefault(digest, []).append(index)
 
-  for digest, indices in grouped.items():
-    if len(indices) == 1:
-      continue
-    ordered = sorted(indices, key=lambda i: _order_key(clauses[i]))
-    collected.duplicate_requirements.append(
-      _record(
-        clauses[ordered[0]],
-        content_digest=digest,
-        copies=len(indices),
-        ids=[ids[i] for i in ordered],
-        locations=[
-          f"{clauses[i].source.file}:{clauses[i].source.line_start}"
-          for i in ordered
-        ],
-      )
-    )
+    for digest, indices in grouped.items():
+        if len(indices) == 1:
+            continue
+        ordered = sorted(indices, key=lambda i: _order_key(clauses[i]))
+        collected.duplicate_requirements.append(
+            _record(
+                clauses[ordered[0]],
+                content_digest=digest,
+                copies=len(indices),
+                ids=[ids[i] for i in ordered],
+                locations=[
+                    f"{clauses[i].source.file}:{clauses[i].source.line_start}"
+                    for i in ordered
+                ],
+            )
+        )
 
-  # A shallow copy of the fields: `dataclasses.asdict` would recurse and
-  # replace the nested SourceRef with a plain dict.
-  requirements = [
-    Requirement(
-      **(
-        {
-          field.name: getattr(clause, field.name)
-          for field in dataclasses.fields(clause)
-        }
-        | {
-          "normalized": normalized,
-          "id": identifier,
-          "content_digest": digest,
-        }
-      )
-    )
-    for clause, normalized, identifier, digest in zip(
-      clauses, normalized_by_clause, ids, digests, strict=True
-    )
-  ]
-  return requirements, collected
+    # A shallow copy of the fields: `dataclasses.asdict` would recurse and
+    # replace the nested SourceRef with a plain dict.
+    requirements = [
+        Requirement(
+            **(
+                {
+                    field.name: getattr(clause, field.name)
+                    for field in dataclasses.fields(clause)
+                }
+                | {
+                    "normalized": normalized,
+                    "id": identifier,
+                    "content_digest": digest,
+                }
+            )
+        )
+        for clause, normalized, identifier, digest in zip(
+            clauses, normalized_by_clause, ids, digests, strict=True
+        )
+    ]
+    return requirements, collected

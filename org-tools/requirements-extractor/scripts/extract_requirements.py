@@ -51,194 +51,194 @@ from requirements_extractor import catalog, config  # noqa: E402
 
 
 def _print_summary(summary: dict) -> None:
-  """Print the run summary in a form that is readable in CI logs."""
-  print(f"requirements: {summary['total']}")
+    """Print the run summary in a form that is readable in CI logs."""
+    print(f"requirements: {summary['total']}")
 
-  print("\n  by level:")
-  for level, count in summary["by_level"].items():
-    print(f"    {level:<12} {count}")
+    print("\n  by level:")
+    for level, count in summary["by_level"].items():
+        print(f"    {level:<12} {count}")
 
-  print("\n  by actor:")
-  for actor, count in summary["by_actor"].items():
-    print(f"    {actor:<20} {count}")
+    print("\n  by actor:")
+    for actor, count in summary["by_actor"].items():
+        print(f"    {actor:<20} {count}")
 
-  print("\n  by file:")
-  for name, count in summary["by_file"].items():
-    print(f"    {Path(name).name:<16} {count}")
+    print("\n  by file:")
+    for name, count in summary["by_file"].items():
+        print(f"    {Path(name).name:<16} {count}")
 
-  print(
-    f"\n  with a condition: {summary['with_condition']}"
-    f"   with referenced fields: {summary['with_referenced_fields']}"
-    f"   from a compound split: {summary['from_compound_split']}"
-  )
+    print(
+        f"\n  with a condition: {summary['with_condition']}"
+        f"   with referenced fields: {summary['with_referenced_fields']}"
+        f"   from a compound split: {summary['from_compound_split']}"
+    )
 
-  print("\n  diagnostics:")
-  for name, count in summary["diagnostics"].items():
-    marker = " " if count == 0 else "*"
-    print(f"   {marker}{name:<30} {count}")
+    print("\n  diagnostics:")
+    for name, count in summary["diagnostics"].items():
+        marker = " " if count == 0 else "*"
+        print(f"   {marker}{name:<30} {count}")
 
 
 def _display_path(path: Path) -> str:
-  """Render a path for humans, relative to the repository when possible.
+    """Render a path for humans, relative to the repository when possible.
 
-  `Path.relative_to` raises for a path outside the repository rather than
-  falling back, so redirecting output anywhere else -- a temporary directory
-  in a determinism check, for instance -- would otherwise crash the CLI
-  after the files had already been written.
+    `Path.relative_to` raises for a path outside the repository rather than
+    falling back, so redirecting output anywhere else -- a temporary directory
+    in a determinism check, for instance -- would otherwise crash the CLI
+    after the files had already been written.
 
-  Args:
-    path: Path to render.
+    Args:
+      path: Path to render.
 
-  Returns:
-    A repository-relative path, or the absolute path when outside the tree.
+    Returns:
+      A repository-relative path, or the absolute path when outside the tree.
 
-  """
-  try:
-    return str(path.relative_to(REPO_ROOT))
-  except ValueError:
-    return str(path)
+    """
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
 
 
 def _comparable(text: str) -> str:
-  """Return a document's text with non-deterministic fields removed.
+    """Return a document's text with non-deterministic fields removed.
 
-  `generated_at` is a wall clock reading, so a byte comparison against the
-  committed file would fail every time. Stripping it from both sides keeps
-  the check meaningful: everything that is a function of the specification
-  still has to match exactly.
+    `generated_at` is a wall clock reading, so a byte comparison against the
+    committed file would fail every time. Stripping it from both sides keeps
+    the check meaningful: everything that is a function of the specification
+    still has to match exactly.
 
-  Args:
-    text: Serialized JSON document.
+    Args:
+      text: Serialized JSON document.
 
-  Returns:
-    Serialized JSON with `config.NON_DETERMINISTIC_FIELDS` removed, or the
-    input unchanged if it does not parse.
+    Returns:
+      Serialized JSON with `config.NON_DETERMINISTIC_FIELDS` removed, or the
+      input unchanged if it does not parse.
 
-  """
-  try:
-    document = json.loads(text)
-  except json.JSONDecodeError:
-    return text
-  if isinstance(document, dict):
-    for field in config.NON_DETERMINISTIC_FIELDS:
-      document.pop(field, None)
-  return catalog.serialize(document)
+    """
+    try:
+        document = json.loads(text)
+    except json.JSONDecodeError:
+        return text
+    if isinstance(document, dict):
+        for field in config.NON_DETERMINISTIC_FIELDS:
+            document.pop(field, None)
+    return catalog.serialize(document)
 
 
 def _check(paths_and_documents: list[tuple[Path, dict]]) -> int:
-  """Compare regenerated documents against what is on disk.
+    """Compare regenerated documents against what is on disk.
 
-  Args:
-    paths_and_documents: Destination paths paired with fresh documents.
+    Args:
+      paths_and_documents: Destination paths paired with fresh documents.
 
-  Returns:
-    A process exit status: 0 when every file is already current.
+    Returns:
+      A process exit status: 0 when every file is already current.
 
-  """
-  stale = []
-  for path, document in paths_and_documents:
-    expected = _comparable(catalog.serialize(document))
-    if not path.exists():
-      stale.append((path, "missing"))
-    elif _comparable(path.read_text(encoding="utf-8")) != expected:
-      stale.append((path, "out of date"))
+    """
+    stale = []
+    for path, document in paths_and_documents:
+        expected = _comparable(catalog.serialize(document))
+        if not path.exists():
+            stale.append((path, "missing"))
+        elif _comparable(path.read_text(encoding="utf-8")) != expected:
+            stale.append((path, "out of date"))
 
-  if not stale:
-    print("Requirements catalog is up to date.")
-    return 0
+    if not stale:
+        print("Requirements catalog is up to date.")
+        return 0
 
-  for path, reason in stale:
-    print(f"{_display_path(path)}: {reason}", file=sys.stderr)
-  print(
-    "\nRegenerate with: python scripts/extract_requirements.py",
-    file=sys.stderr,
-  )
-  return 1
+    for path, reason in stale:
+        print(f"{_display_path(path)}: {reason}", file=sys.stderr)
+    print(
+        "\nRegenerate with: python scripts/extract_requirements.py",
+        file=sys.stderr,
+    )
+    return 1
 
 
 def main() -> int:
-  """Entry point.
+    """Entry point.
 
-  Returns:
-    A process exit status.
+    Returns:
+      A process exit status.
 
-  """
-  argument_parser = argparse.ArgumentParser(
-    description=__doc__,
-    formatter_class=argparse.RawDescriptionHelpFormatter,
-  )
-  argument_parser.add_argument(
-    "--catalog",
-    type=Path,
-    default=config.DEFAULT_CATALOG_PATH,
-    help="Where to write the requirements (default: %(default)s).",
-  )
-  argument_parser.add_argument(
-    "--report",
-    type=Path,
-    default=config.DEFAULT_REPORT_PATH,
-    help="Where to write the diagnostics (default: %(default)s).",
-  )
-  argument_parser.add_argument(
-    "--check",
-    action="store_true",
-    help=(
-      "Do not write. Exit non-zero if regenerating would change either "
-      "file, so CI can prove the committed catalog matches the spec."
-    ),
-  )
-  argument_parser.add_argument(
-    "--dry-run",
-    action="store_true",
-    help="Run the pipeline but write nothing.",
-  )
-  argument_parser.add_argument(
-    "--summary",
-    action="store_true",
-    help="Print counts for the run.",
-  )
-  argument_parser.add_argument(
-    "--fail-on-unresolved",
-    action="store_true",
-    help=(
-      "Exit non-zero if any document's capability could not be resolved. "
-      "Useful once scope widens past a single capability directory."
-    ),
-  )
-  args = argument_parser.parse_args()
-
-  requirements, report = catalog.build()
-  catalog_doc = catalog.catalog_document(requirements, report)
-  report_doc = catalog.report_document(requirements, report)
-
-  if args.summary:
-    _print_summary(catalog_doc["summary"])
-
-  unresolved = catalog.unresolved_capabilities(requirements)
-  if unresolved:
-    print(
-      f"\nwarning: {len(unresolved)} document(s) with no capability:",
-      file=sys.stderr,
+    """
+    argument_parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    for name in unresolved:
-      print(f"  {name}", file=sys.stderr)
-    if args.fail_on_unresolved:
-      return 1
+    argument_parser.add_argument(
+        "--catalog",
+        type=Path,
+        default=config.DEFAULT_CATALOG_PATH,
+        help="Where to write the requirements (default: %(default)s).",
+    )
+    argument_parser.add_argument(
+        "--report",
+        type=Path,
+        default=config.DEFAULT_REPORT_PATH,
+        help="Where to write the diagnostics (default: %(default)s).",
+    )
+    argument_parser.add_argument(
+        "--check",
+        action="store_true",
+        help=(
+            "Do not write. Exit non-zero if regenerating would change either "
+            "file, so CI can prove the committed catalog matches the spec."
+        ),
+    )
+    argument_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Run the pipeline but write nothing.",
+    )
+    argument_parser.add_argument(
+        "--summary",
+        action="store_true",
+        help="Print counts for the run.",
+    )
+    argument_parser.add_argument(
+        "--fail-on-unresolved",
+        action="store_true",
+        help=(
+            "Exit non-zero if any document's capability could not be resolved. "
+            "Useful once scope widens past a single capability directory."
+        ),
+    )
+    args = argument_parser.parse_args()
 
-  if args.check:
-    return _check([(args.catalog, catalog_doc), (args.report, report_doc)])
+    requirements, report = catalog.build()
+    catalog_doc = catalog.catalog_document(requirements, report)
+    report_doc = catalog.report_document(requirements, report)
 
-  if args.dry_run:
-    print("\nDry run: nothing written.")
+    if args.summary:
+        _print_summary(catalog_doc["summary"])
+
+    unresolved = catalog.unresolved_capabilities(requirements)
+    if unresolved:
+        print(
+            f"\nwarning: {len(unresolved)} document(s) with no capability:",
+            file=sys.stderr,
+        )
+        for name in unresolved:
+            print(f"  {name}", file=sys.stderr)
+        if args.fail_on_unresolved:
+            return 1
+
+    if args.check:
+        return _check([(args.catalog, catalog_doc), (args.report, report_doc)])
+
+    if args.dry_run:
+        print("\nDry run: nothing written.")
+        return 0
+
+    catalog.write(args.catalog, catalog_doc)
+    catalog.write(args.report, report_doc)
+    print(f"\nWrote {len(requirements)} requirements")
+    print(f"  {_display_path(args.catalog)}")
+    print(f"  {_display_path(args.report)}")
     return 0
-
-  catalog.write(args.catalog, catalog_doc)
-  catalog.write(args.report, report_doc)
-  print(f"\nWrote {len(requirements)} requirements")
-  print(f"  {_display_path(args.catalog)}")
-  print(f"  {_display_path(args.report)}")
-  return 0
 
 
 if __name__ == "__main__":
-  sys.exit(main())
+    sys.exit(main())

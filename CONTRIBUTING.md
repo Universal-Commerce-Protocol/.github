@@ -137,16 +137,29 @@ minor version of the core.
 
 ### Adding new extensions and capabilities to the core protocol
 
-UCP is designed to be extensible while keeping the core protocol light. A
-core principle of UCP is to ensure that the set of extensions and capabilities
-defined in UCP have broad ecosystem support. Vendors should first create
-capabilities & extensions in vendor-specific namespace pattern
-(e.g. com.{vendor}.\*) for new use cases. Requests to add new capabilities and
-extensions should only be submitted when there is proven widespread adoption of
-vendor-specific capabilities and extensions. See
-[Spec URL Binding](https://ucp.dev/specification/overview/#spec-url-binding)
-and [Governance Model](https://ucp.dev/specification/overview/#governance-model)
-for more details on using namespace pattern for creating vendor-specific
+UCP is designed to be extensible while keeping the core protocol light. A core
+principle of UCP is to ensure that the set of capabilities, extensions,
+services, and payment handlers defined in the core `dev.ucp.*` namespace have
+broad, cross-organization ecosystem support.
+
+**Self-Hosting Vendor-Specific Definitions:** The
+`Universal-Commerce-Protocol/ucp` repository only hosts core protocol
+specifications and schemas under `dev.ucp.*` (published at `ucp.dev`). You **do
+not** need to open a pull request to this repository to launch a vendor- or
+organization-specific capability, extension, service, or payment handler.
+Instead, define it under your organization's reverse-domain namespace (e.g.,
+`com.{vendor}.*`, `org.{org}.*`) and self-host its specification (`spec`) and
+JSON Schema (`schema`) URLs on your own domain.
+
+Requests to add new capabilities or extensions to `dev.ucp.*` should only be
+submitted when a capability is vendor-neutral and there is proven widespread
+adoption across multiple independent organizations. See
+[Namespace Governance](https://ucp.dev/latest/specification/overview/#namespace-governance)
+(specifically
+[Authority Binding](https://ucp.dev/latest/specification/overview/#authority-binding)
+and
+[Governance Model](https://ucp.dev/latest/specification/overview/#governance-model))
+for full details on reverse-domain namespaces and self-hosting vendor-specific
 capabilities and extensions.
 
 ### Code Reviews

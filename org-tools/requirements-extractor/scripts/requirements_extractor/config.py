@@ -330,12 +330,20 @@ EXTRACTOR_VERSION = "0.1.0"
 
 # Published identifier of the record schema, and where it lives in-repo.
 #
-# The schema sits beside the tool rather than in source/schemas, which holds
+# The schema ships with the tool, and the URL is where GitHub serves this
+# file from the default branch, so a catalog's `$schema` resolves without
+# any site hosting it. It must equal the schema's own `$id`. A ucp.dev path
+# would read better but nothing publishes one, and a `$schema` that returns
+# 404 is worse than a long one.
+#
+# It is deliberately not in the specification's source/schemas, which holds
 # protocol entity schemas that the specification's examples are validated
-# against by the ucp-schema binary. The catalog is tooling output, not a
-# protocol entity, and adding it there enlists it in a validation pass it has
-# nothing to do with.
-CATALOG_SCHEMA_URL = "https://ucp.dev/schemas/requirements-catalog-v1.json"
+# against. The catalog is tooling output, not a protocol entity, and adding
+# it there enlists it in a validation pass it has nothing to do with.
+CATALOG_SCHEMA_URL = (
+    "https://raw.githubusercontent.com/Universal-Commerce-Protocol/.github/"
+    "main/org-tools/requirements-extractor/schema/requirements-catalog-v1.json"
+)
 CATALOG_SCHEMA_PATH = TOOL_ROOT / "schema" / "requirements-catalog-v1.json"
 
 # Envelope fields excluded when comparing a regenerated document against the

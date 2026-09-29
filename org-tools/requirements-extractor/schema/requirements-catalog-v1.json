@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ucp.dev/schemas/requirements-catalog-v1.json",
+  "$id": "https://raw.githubusercontent.com/Universal-Commerce-Protocol/.github/main/org-tools/requirements-extractor/schema/requirements-catalog-v1.json",
   "title": "UCP Requirements Catalog",
-  "description": "A machine-readable catalog of the normative obligations stated in a UCP capability's specification prose. Produced by scripts/extract_requirements.py. Each record carries two identifiers: a readable positional 'id' for binding tests to, and a 'content_digest' derived from the clause's content alone. Comparing both is what distinguishes a requirement that was reworded from one that was removed.",
+  "description": "A machine-readable catalog of the normative obligations stated in a UCP capability's specification prose. Produced by org-tools/requirements-extractor/scripts/extract_requirements.py in the Universal-Commerce-Protocol/.github repository. Each record carries two identifiers: a readable positional 'id' for binding tests to, and a 'content_digest' derived from the clause's content alone. Comparing both is what distinguishes a requirement that was reworded from one that was removed.",
 
   "type": "object",
   "required": [

@@ -58,6 +58,7 @@ Usage, from the root of a ucp checkout:
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -167,8 +168,15 @@ def _check(paths_and_documents: list[tuple[Path, dict]], spec_root: Path) -> int
 
     for path, reason in stale:
         print(f"{_display_path(path, spec_root)}: {reason}", file=sys.stderr)
+    try:
+        script = os.path.relpath(Path(__file__).resolve())
+    except ValueError:
+        script = str(Path(__file__).resolve())
     print(
-        f"\nRegenerate with: uv run {Path(__file__).resolve()} --spec-root {spec_root}",
+        "\nRegenerate by running the extractor without --check:\n"
+        f"  uv run {script} --spec-root {spec_root}\n"
+        "The extractor is org-tools/requirements-extractor/scripts/"
+        "extract_requirements.py in Universal-Commerce-Protocol/.github.",
         file=sys.stderr,
     )
     return 1

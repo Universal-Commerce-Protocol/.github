@@ -237,7 +237,8 @@ class TestCheck(_FixtureCase):
         status, _, err = _run("--spec-root", str(self.spec_root), "--check")
         self.assertEqual(status, 1)
         self.assertIn("out of date", err)
-        self.assertIn("Regenerate with: uv run", err)
+        self.assertIn("Regenerate by running the extractor without --check", err)
+        self.assertIn(f"extract_requirements.py --spec-root {self.spec_root}", err)
 
     def test_check_ignores_generated_at(self):
         """The timestamp differs on every run and must not fail the check."""

@@ -40,12 +40,14 @@ import re
 
 from markdown.extensions.toc import slugify as _toc_slugify
 
-# Repository root, resolved from this file so the extractor can be invoked
-# from any working directory.
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+# The extractor lives in the organization's tools repository and reads a
+# checkout of the specification repository, so it has no root of its own.
+# Every path below that points into the specification is relative to the
+# spec root the caller passes in -- the directory holding mkdocs.yml.
+MKDOCS_FILENAME = "mkdocs.yml"
 
-MKDOCS_PATH = REPO_ROOT / "mkdocs.yml"
-SCHEMA_ROOT = REPO_ROOT / "source" / "schemas"
+# Where this tool's own files live, for the ones it ships with.
+TOOL_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # ---------------------------------------------------------------------------
 # Scope
@@ -166,8 +168,8 @@ CAPABILITY_DECLARATION_RE = re.compile(
 # some other capability, not a declaration of this one.
 CAPABILITY_DECLARATION_MAX_LINE = 40
 
-# Fallback when mkdocs.yml cannot be read. Release branches bake a date into
-# `extra.ucp_version`; main carries "draft".
+# Fallback when mkdocs.yml declares no version. Release branches bake a date
+# into `extra.ucp_version`; main carries "draft".
 DEFAULT_SPEC_VERSION = "draft"
 
 # ---------------------------------------------------------------------------
@@ -318,7 +320,8 @@ ID_PREFIX = "UCP"
 # Output
 # ---------------------------------------------------------------------------
 
-OUTPUT_DIR = REPO_ROOT / "generated" / "requirements"
+# Relative to the spec root.
+OUTPUT_DIR = Path("generated") / "requirements"
 DEFAULT_CATALOG_PATH = OUTPUT_DIR / "requirements.json"
 DEFAULT_REPORT_PATH = OUTPUT_DIR / "extraction_report.json"
 
@@ -333,9 +336,7 @@ EXTRACTOR_VERSION = "0.1.0"
 # protocol entity, and adding it there enlists it in a validation pass it has
 # nothing to do with.
 CATALOG_SCHEMA_URL = "https://ucp.dev/schemas/requirements-catalog-v1.json"
-CATALOG_SCHEMA_PATH = (
-    Path(__file__).resolve().parent / "schema" / "requirements-catalog-v1.json"
-)
+CATALOG_SCHEMA_PATH = TOOL_ROOT / "schema" / "requirements-catalog-v1.json"
 
 # Envelope fields excluded when comparing a regenerated document against the
 # one on disk, because neither is a function of the specification.
@@ -351,7 +352,7 @@ CATALOG_SCHEMA_PATH = (
 NON_DETERMINISTIC_FIELDS = frozenset({"generated_at", "commit_sha"})
 
 
-def spec_version() -> str:
+def spec_version(spec_root: Path) -> str:
     """Return the UCP release the specification tree represents.
 
     Read from ``extra.ucp_version`` in mkdocs.yml at runtime rather than being
@@ -363,14 +364,22 @@ def spec_version() -> str:
     depend on PyYAML and does not have to tolerate the custom mkdocs tags that a
     strict loader rejects.
 
+    A missing mkdocs.yml is an error rather than a fallback. It means the spec
+    root is wrong, and a catalog stamped "draft" from the wrong directory is
+    worse than no catalog.
+
+    Args:
+      spec_root: Root of the specification checkout.
+
     Returns:
-      The declared version, or DEFAULT_SPEC_VERSION if it cannot be determined.
+      The declared version, or DEFAULT_SPEC_VERSION if mkdocs.yml declares
+      none.
+
+    Raises:
+      OSError: If mkdocs.yml cannot be read.
 
     """
-    try:
-        text = MKDOCS_PATH.read_text(encoding="utf-8")
-    except OSError:
-        return DEFAULT_SPEC_VERSION
+    text = (spec_root / MKDOCS_FILENAME).read_text(encoding="utf-8")
     match = re.search(
         r"^\s*ucp_version:\s*[\"']?([^\"'\s]+)[\"']?\s*$", text, re.MULTILINE
     )

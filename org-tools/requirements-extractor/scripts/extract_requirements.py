@@ -13,9 +13,17 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "markdown-it-py==3.0.0",
+#   "markdown==3.10.2",
+# ]
+# ///
 """Extract a machine-readable requirements catalog from the specification.
 
-Reads the normative prose of the checkout capability and writes two files:
+Reads the normative prose of the checkout capability from a checkout of the
+specification repository and writes two files into that checkout:
 
   generated/requirements/requirements.json       the requirements
   generated/requirements/extraction_report.json  what was excluded, and why
@@ -26,17 +34,26 @@ two documents reconcile against the spec exactly. Reading the report is how
 an author finds obligations the extractor could not attribute, and prose
 that reads as normative but is not marked up as such.
 
-Usage:
+`--spec-root` is required and must be the directory holding the
+specification's mkdocs.yml. The published release (`extra.ucp_version`) is
+read from that file, so running against the wrong directory is an error
+rather than a catalog stamped with the wrong version.
+
+Dependencies are pinned to the versions the specification site builds with.
+`markdown` in particular decides heading anchors, and a different version
+can publish URLs that do not resolve.
+
+Usage, from the root of a ucp checkout:
 
   # Write both documents.
-  .venv/bin/python scripts/extract_requirements.py
+  uv run path/to/extract_requirements.py --spec-root .
 
   # Verify the committed documents match the specification. Exits non-zero
   # if regenerating would change anything, which is the form to run in CI.
-  .venv/bin/python scripts/extract_requirements.py --check
+  uv run path/to/extract_requirements.py --spec-root . --check
 
   # Print a summary without touching the filesystem.
-  .venv/bin/python scripts/extract_requirements.py --dry-run --summary
+  uv run path/to/extract_requirements.py --spec-root . --dry-run --summary
 """
 
 import argparse
@@ -44,7 +61,6 @@ import json
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from requirements_extractor import catalog, config  # noqa: E402
@@ -78,23 +94,24 @@ def _print_summary(summary: dict) -> None:
         print(f"   {marker}{name:<30} {count}")
 
 
-def _display_path(path: Path) -> str:
-    """Render a path for humans, relative to the repository when possible.
+def _display_path(path: Path, spec_root: Path) -> str:
+    """Render a path for humans, relative to the spec root when possible.
 
-    `Path.relative_to` raises for a path outside the repository rather than
+    `Path.relative_to` raises for a path outside the tree rather than
     falling back, so redirecting output anywhere else -- a temporary directory
     in a determinism check, for instance -- would otherwise crash the CLI
     after the files had already been written.
 
     Args:
       path: Path to render.
+      spec_root: Root of the specification checkout.
 
     Returns:
-      A repository-relative path, or the absolute path when outside the tree.
+      A spec-root-relative path, or the path as given when outside the tree.
 
     """
     try:
-        return str(path.relative_to(REPO_ROOT))
+        return str(path.resolve().relative_to(spec_root.resolve()))
     except ValueError:
         return str(path)
 
@@ -125,11 +142,12 @@ def _comparable(text: str) -> str:
     return catalog.serialize(document)
 
 
-def _check(paths_and_documents: list[tuple[Path, dict]]) -> int:
+def _check(paths_and_documents: list[tuple[Path, dict]], spec_root: Path) -> int:
     """Compare regenerated documents against what is on disk.
 
     Args:
       paths_and_documents: Destination paths paired with fresh documents.
+      spec_root: Root of the specification checkout.
 
     Returns:
       A process exit status: 0 when every file is already current.
@@ -148,16 +166,19 @@ def _check(paths_and_documents: list[tuple[Path, dict]]) -> int:
         return 0
 
     for path, reason in stale:
-        print(f"{_display_path(path)}: {reason}", file=sys.stderr)
+        print(f"{_display_path(path, spec_root)}: {reason}", file=sys.stderr)
     print(
-        "\nRegenerate with: python scripts/extract_requirements.py",
+        f"\nRegenerate with: uv run {Path(__file__).resolve()} --spec-root {spec_root}",
         file=sys.stderr,
     )
     return 1
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     """Entry point.
+
+    Args:
+      argv: Command-line arguments, or None to read them from sys.argv.
 
     Returns:
       A process exit status.
@@ -168,16 +189,28 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     argument_parser.add_argument(
+        "--spec-root",
+        type=Path,
+        required=True,
+        help=("Root of the specification checkout: the directory holding mkdocs.yml."),
+    )
+    argument_parser.add_argument(
         "--catalog",
         type=Path,
-        default=config.DEFAULT_CATALOG_PATH,
-        help="Where to write the requirements (default: %(default)s).",
+        default=None,
+        help=(
+            "Where to write the requirements "
+            f"(default: <spec-root>/{config.DEFAULT_CATALOG_PATH.as_posix()})."
+        ),
     )
     argument_parser.add_argument(
         "--report",
         type=Path,
-        default=config.DEFAULT_REPORT_PATH,
-        help="Where to write the diagnostics (default: %(default)s).",
+        default=None,
+        help=(
+            "Where to write the diagnostics "
+            f"(default: <spec-root>/{config.DEFAULT_REPORT_PATH.as_posix()})."
+        ),
     )
     argument_parser.add_argument(
         "--check",
@@ -205,11 +238,20 @@ def main() -> int:
             "Useful once scope widens past a single capability directory."
         ),
     )
-    args = argument_parser.parse_args()
+    args = argument_parser.parse_args(argv)
 
-    requirements, report = catalog.build()
-    catalog_doc = catalog.catalog_document(requirements, report)
-    report_doc = catalog.report_document(requirements, report)
+    spec_root: Path = args.spec_root
+    if not (spec_root / config.MKDOCS_FILENAME).is_file():
+        argument_parser.error(
+            f"--spec-root {spec_root} has no {config.MKDOCS_FILENAME}; "
+            "pass the root of the specification checkout"
+        )
+    catalog_path: Path = args.catalog or spec_root / config.DEFAULT_CATALOG_PATH
+    report_path: Path = args.report or spec_root / config.DEFAULT_REPORT_PATH
+
+    requirements, report = catalog.build(spec_root)
+    catalog_doc = catalog.catalog_document(requirements, report, spec_root)
+    report_doc = catalog.report_document(requirements, report, spec_root)
 
     if args.summary:
         _print_summary(catalog_doc["summary"])
@@ -226,17 +268,19 @@ def main() -> int:
             return 1
 
     if args.check:
-        return _check([(args.catalog, catalog_doc), (args.report, report_doc)])
+        return _check(
+            [(catalog_path, catalog_doc), (report_path, report_doc)], spec_root
+        )
 
     if args.dry_run:
         print("\nDry run: nothing written.")
         return 0
 
-    catalog.write(args.catalog, catalog_doc)
-    catalog.write(args.report, report_doc)
+    catalog.write(catalog_path, catalog_doc)
+    catalog.write(report_path, report_doc)
     print(f"\nWrote {len(requirements)} requirements")
-    print(f"  {_display_path(args.catalog)}")
-    print(f"  {_display_path(args.report)}")
+    print(f"  {_display_path(catalog_path, spec_root)}")
+    print(f"  {_display_path(report_path, spec_root)}")
     return 0
 
 

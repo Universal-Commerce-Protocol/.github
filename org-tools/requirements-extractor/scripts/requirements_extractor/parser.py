@@ -455,38 +455,36 @@ def parse_text(source: str, rel_path: str) -> list[Clause]:
     return _DocumentWalker(rel_path).walk(tokens)
 
 
-def parse_file(path: Path, repo_root: Path | None = None) -> list[Clause]:
+def parse_file(path: Path, spec_root: Path) -> list[Clause]:
     """Parse a Markdown file into clause candidates.
 
     Args:
-      path: Absolute path to the document.
-      repo_root: Root the recorded path is made relative to. Defaults to the
-        repository root.
+      path: Path to the document.
+      spec_root: Root the recorded path is made relative to.
 
     Returns:
       Clause candidates in document order.
 
     """
-    root = repo_root or config.REPO_ROOT
-    rel_path = path.resolve().relative_to(root).as_posix()
+    rel_path = path.resolve().relative_to(spec_root.resolve()).as_posix()
     return parse_text(path.read_text(encoding="utf-8"), rel_path)
 
 
 def iter_spec_files(
-    spec_dirs: list[Path] | None = None, repo_root: Path | None = None
+    spec_root: Path, spec_dirs: list[Path] | None = None
 ) -> Iterator[Path]:
     """Yield in-scope specification documents in a stable order.
 
     Args:
-      spec_dirs: Directories to scan, relative to the repository root.
-        Defaults to `config.SPEC_DIRS`.
-      repo_root: Repository root. Defaults to `config.REPO_ROOT`.
+      spec_root: Root of the specification checkout.
+      spec_dirs: Directories to scan, relative to the spec root. Defaults to
+        `config.SPEC_DIRS`.
 
     Yields:
       Absolute paths to Markdown documents that are not excluded.
 
     """
-    root = repo_root or config.REPO_ROOT
+    root = spec_root.resolve()
     for spec_dir in spec_dirs or config.SPEC_DIRS:
         base = spec_dir if spec_dir.is_absolute() else root / spec_dir
         for path in sorted(base.rglob("*.md")):
@@ -495,20 +493,18 @@ def iter_spec_files(
                 yield path
 
 
-def parse_all(
-    spec_dirs: list[Path] | None = None, repo_root: Path | None = None
-) -> list[Clause]:
+def parse_all(spec_root: Path, spec_dirs: list[Path] | None = None) -> list[Clause]:
     """Parse every in-scope document.
 
     Args:
+      spec_root: Root of the specification checkout.
       spec_dirs: Directories to scan. Defaults to `config.SPEC_DIRS`.
-      repo_root: Repository root. Defaults to `config.REPO_ROOT`.
 
     Returns:
       Clause candidates across all documents, grouped by document in path order.
 
     """
     clauses: list[Clause] = []
-    for path in iter_spec_files(spec_dirs, repo_root):
-        clauses.extend(parse_file(path, repo_root))
+    for path in iter_spec_files(spec_root, spec_dirs):
+        clauses.extend(parse_file(path, spec_root))
     return clauses

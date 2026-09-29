@@ -47,6 +47,7 @@ Condition
 from __future__ import annotations
 
 import dataclasses
+from pathlib import Path
 import re
 
 from requirements_extractor import classifier, config, parser
@@ -296,12 +297,14 @@ def _record(clause: Clause, **extra: object) -> dict[str, object]:
     return entry
 
 
-def annotate(clause: Clause, report: ExtractionReport) -> Clause:
+def annotate(clause: Clause, report: ExtractionReport, spec_root: Path) -> Clause:
     """Return a copy of `clause` with actor, fields and condition filled in.
 
     Args:
       clause: A classified obligation.
       report: Diagnostics collector.
+      spec_root: Root of the specification checkout, used to read the
+        document's own capability declaration.
 
     Returns:
       A new clause; the input is not modified.
@@ -324,7 +327,7 @@ def annotate(clause: Clause, report: ExtractionReport) -> Clause:
     return dataclasses.replace(
         clause,
         capability=config.resolve_capability(
-            clause.source.file, config.REPO_ROOT / clause.source.file
+            clause.source.file, spec_root / clause.source.file
         ),
         actor=actor,
         actor_confidence=confidence,
@@ -334,12 +337,13 @@ def annotate(clause: Clause, report: ExtractionReport) -> Clause:
 
 
 def annotate_all(
-    clauses: list[Clause], report: ExtractionReport | None = None
+    clauses: list[Clause], spec_root: Path, report: ExtractionReport | None = None
 ) -> tuple[list[Clause], ExtractionReport]:
     """Attach metadata to every obligation.
 
     Args:
       clauses: Classified obligations.
+      spec_root: Root of the specification checkout.
       report: Existing diagnostics collector, or None to create one.
 
     Returns:
@@ -347,4 +351,4 @@ def annotate_all(
 
     """
     collected = report or ExtractionReport()
-    return [annotate(clause, collected) for clause in clauses], collected
+    return [annotate(clause, collected, spec_root) for clause in clauses], collected

@@ -53,17 +53,20 @@ from requirements_extractor import (
 from requirements_extractor.models import ExtractionReport, Requirement
 
 
-def build() -> tuple[list[Requirement], ExtractionReport]:
+def build(spec_root: Path) -> tuple[list[Requirement], ExtractionReport]:
     """Run every stage and return the requirements and the diagnostics.
+
+    Args:
+      spec_root: Root of the specification checkout.
 
     Returns:
       Requirements in source order, and the report accumulated across all
       stages.
 
     """
-    clauses = parser.parse_all()
+    clauses = parser.parse_all(spec_root)
     obligations, report = classifier.classify_all(clauses)
-    annotated, report = metadata.annotate_all(obligations, report)
+    annotated, report = metadata.annotate_all(obligations, spec_root, report)
     requirements, report = identity.assign_identities(annotated, report)
 
     requirements.sort(
@@ -118,17 +121,18 @@ def summarize(
     }
 
 
-def _commit_sha() -> str | None:
-    """Return the current commit, or None outside a git checkout.
+def _commit_sha(spec_root: Path) -> str | None:
+    """Return the specification checkout's commit, or None outside git.
 
     Provenance that survives the file being copied out of the repository. It
     is stable for a given tree, so unlike a timestamp it does not by itself
-    make two runs differ.
+    make two runs differ. Read from the spec root rather than from this
+    tool's location, which is a different repository.
     """
     try:
         completed = subprocess.run(
             ["git", "rev-parse", "HEAD"],
-            cwd=config.REPO_ROOT,
+            cwd=spec_root,
             capture_output=True,
             text=True,
             check=False,
@@ -140,7 +144,7 @@ def _commit_sha() -> str | None:
     return sha or None
 
 
-def _envelope(spec_version: str) -> dict[str, object]:
+def _envelope(spec_version: str, spec_root: Path) -> dict[str, object]:
     """Return the provenance header shared by both documents.
 
     `$schema` is deliberately not here. Both documents share provenance, but
@@ -160,7 +164,7 @@ def _envelope(spec_version: str) -> dict[str, object]:
         "generated_at": datetime.datetime.now(datetime.UTC).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         ),
-        "commit_sha": _commit_sha(),
+        "commit_sha": _commit_sha(spec_root),
         # POSIX strings rather than Path objects, so the document is
         # serializable and identical regardless of the host platform.
         "source_spec": sorted(directory.as_posix() for directory in config.SPEC_DIRS),
@@ -168,42 +172,44 @@ def _envelope(spec_version: str) -> dict[str, object]:
 
 
 def catalog_document(
-    requirements: list[Requirement], report: ExtractionReport
+    requirements: list[Requirement], report: ExtractionReport, spec_root: Path
 ) -> dict[str, object]:
     """Assemble the catalog document.
 
     Args:
       requirements: The extracted requirements, in source order.
       report: Diagnostics from the run, used for the summary only.
+      spec_root: Root of the specification checkout, for provenance.
 
     Returns:
       A JSON-serializable catalog.
 
     """
-    spec_version = config.spec_version()
+    spec_version = config.spec_version(spec_root)
     return {
         "$schema": config.CATALOG_SCHEMA_URL,
-        **_envelope(spec_version),
+        **_envelope(spec_version, spec_root),
         "summary": summarize(requirements, report),
         "requirements": [r.as_dict(spec_version) for r in requirements],
     }
 
 
 def report_document(
-    requirements: list[Requirement], report: ExtractionReport
+    requirements: list[Requirement], report: ExtractionReport, spec_root: Path
 ) -> dict[str, object]:
     """Assemble the diagnostics document.
 
     Args:
       requirements: The extracted requirements, used for the summary.
       report: Diagnostics from the run.
+      spec_root: Root of the specification checkout, for provenance.
 
     Returns:
       A JSON-serializable report.
 
     """
     return {
-        **_envelope(config.spec_version()),
+        **_envelope(config.spec_version(spec_root), spec_root),
         "summary": summarize(requirements, report),
         "diagnostics": dict(sorted(report.as_dict().items())),
     }

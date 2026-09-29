@@ -24,12 +24,14 @@ jobs:
   run-tests:
     name: Run Unit Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           python-version: "3.12"
 
@@ -44,3 +46,8 @@ jobs:
 
       - name: Run copyright check tool tests
         run: uv run python -m unittest discover -s org-tools/copyright-check
+
+      - name: Run requirements extractor tests
+        run: >-
+          uv run --with markdown-it-py==3.0.0 --with markdown==3.10.2
+          python -m unittest discover -s org-tools/requirements-extractor/tests

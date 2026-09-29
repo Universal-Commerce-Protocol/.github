@@ -1,0 +1,3 @@
+site_name: Requirements extractor test fixture
+extra:
+  ucp_version: "2026-01-11"

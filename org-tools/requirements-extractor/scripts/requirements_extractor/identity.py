@@ -12,12 +12,19 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Stage 4: giving each requirement a stable, content-addressed identity.
+"""Stage 4: giving each requirement a readable id and a content digest.
 
 An identifier is only useful if it survives edits that do not change the
-requirement and changes when one does. Deriving it from position -- a file
-and a line -- fails the first test, because inserting a paragraph renumbers
-everything below it. So the identifier is derived from content.
+requirement and changes when one does. No single value does both, so each
+requirement carries two.
+
+  `id` is readable and positional, REQ-<CAPABILITY>-[<DOCUMENT>-]<SECTION>-NN,
+  so a test binding says what it binds to. Inserting a requirement above it
+  in the same section renumbers it.
+
+  `content_digest` is derived from content alone and does not move when the
+  document does. Comparing the two is how a consumer tells a reworded
+  requirement from a removed one.
 
 What goes into the digest
   Text alone is not enough. The obligation matrix in the checkout index
@@ -28,7 +35,7 @@ What goes into the digest
   under two capabilities is two requirements, which it is.
 
   Every component is published in the catalog record -- `capability`,
-  `compound_parent` and `normalized` -- so an identifier can be recomputed
+  `compound_parent` and `normalized` -- so a digest can be recomputed
   and checked without access to the spec or to this code.
 
 What stays out of the digest
@@ -40,10 +47,10 @@ What stays out of the digest
 
 Genuine duplicates
   Those two are the same sentence stated in both the REST and the MCP
-  binding. They are distinct requirements with identical content and
-  context, so content-addressing cannot separate them and an ordinal is
-  appended. They are reported as well, because the same normative sentence
-  maintained in two documents is a spec-authoring hazard.
+  binding. They share a digest, because their content and context are
+  identical, but occupy two positions and so receive two ids. They are
+  reported as well, because the same normative sentence maintained in two
+  documents is a spec-authoring hazard.
 """
 
 from __future__ import annotations

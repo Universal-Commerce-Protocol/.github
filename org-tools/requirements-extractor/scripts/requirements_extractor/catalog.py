@@ -20,14 +20,14 @@ and why -- it is the half that makes the other half trustworthy, because a
 clause citing an RFC 2119 keyword either reaches the catalog or appears in
 the report with a reason, never neither.
 
-Both are written deterministically. The same input produces byte-identical
-output, which is what lets a consumer regenerate and diff to prove the
-catalog matches the spec it claims to describe.
+Both are written deterministically. The same input produces the same
+output, apart from `generated_at`, which is what lets a consumer regenerate
+and diff to prove the catalog matches the spec it claims to describe.
 
-  No timestamp is recorded. A generation time would change every run and
-  destroy that property, so provenance is carried by the spec version and
-  the extractor version instead. This is deliberate and should not be
-  "fixed" by adding a generated_at field.
+  `generated_at` is a wall-clock reading and differs on every run. It is
+  published so a catalog read outside the repository can be dated, and
+  `--check` ignores it (see config.NON_DETERMINISTIC_FIELDS), so the
+  comparison still covers everything that is a function of the spec.
 
 Requirements are emitted in source order. The catalog's primary review path
 is reading it beside the specification, and an identifier is stable under

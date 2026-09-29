@@ -14,17 +14,19 @@
 
 """Extract normative requirements from UCP specification prose.
 
-Converts RFC 2119 obligations written in Markdown into a deterministic,
-machine-readable catalog. Each requirement receives a stable, content-addressed
-identifier derived from the normalized clause text, so routine editorial changes
-(re-wrapping a paragraph, moving a file, re-styling emphasis) do not churn IDs.
+Converts RFC 2119 obligations written in Markdown into a machine-readable
+catalog. Each requirement carries two identifiers: a readable, positional
+`id` such as REQ-CHECKOUT-WARNING-PRESENTATION-03 for tests to bind to, and a
+`content_digest` derived from the normalized clause alone, so routine
+editorial changes (re-wrapping a paragraph, moving a file, re-styling
+emphasis) do not change it.
 
-The pipeline is six stages, each owning one module:
+The pipeline is five stages, each owning one module:
 
   parser      Markdown -> Clause candidates, with code blocks excluded
   classifier  Which candidates are normative, and at what obligation level
   metadata    Actor, referenced schema fields, and conditions
-  identity    Canonicalization and content-addressed hashing
+  identity    Readable identifiers and content digests
   catalog     Serialization of the catalog and the diagnostics report
 
 Scope is currently the checkout capability. See config.SPEC_DIRS.

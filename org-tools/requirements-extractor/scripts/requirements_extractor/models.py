@@ -61,8 +61,9 @@ class Annotation(enum.Enum):
     In UCP prose these overwhelmingly mark schema field optionality, as in
     ``payload: - checkout (object, REQUIRED)``, rather than stating an obligation
     on a party. They are tracked separately and excluded from the catalog unless
-    `--include-annotations` is passed, because treating them as obligations was
-    measured to be the largest single source of spurious requirements.
+    the classifier is called with `include_annotations=True`, because treating
+    them as obligations was measured to be the largest single source of
+    spurious requirements.
     """
 
     REQUIRED = "REQUIRED"

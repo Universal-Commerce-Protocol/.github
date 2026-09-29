@@ -81,7 +81,12 @@ _SENTENCE_SPLIT_RE = re.compile(
 # Ordered-list numerals that survive sentence splitting, e.g. a fragment
 # ending "... unless already cached. 2." where the trailing numeral is the
 # marker of the following list item rather than part of the sentence.
-_TRAILING_NUMERAL_RE = re.compile(r"\s*\b\d+\.\s*$")
+#
+# The marker is only recognized after the sentence's own closing punctuation
+# and whitespace. A bare word boundary is not enough: the dot inside a
+# number is a boundary too, so "minimum TLS version 1.3." lost its "3." and
+# became "version 1.", and "proceed to step 2." lost its step number.
+_TRAILING_NUMERAL_RE = re.compile(r"(?<=[.:;])\s+\d+\.\s*$")
 _LEADING_NUMERAL_RE = re.compile(r"^\s*\d+\.\s+")
 
 # Inline code spans. Matched here so keyword scanning can ignore their

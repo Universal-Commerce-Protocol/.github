@@ -83,7 +83,12 @@ _CLOSERS = ")]}"
 
 
 def keyword_position(clause: Clause) -> int:
-    """Return the offset where this clause's obligation keyword begins.
+    """Return the offset where this clause's governing keyword begins.
+
+    Obligation keywords are searched first. A clause promoted from an
+    annotation keyword ("is **REQUIRED** to") has none, so the annotation
+    keywords are searched next; without them the actor and condition stages
+    would treat the whole sentence as "before the keyword".
 
     Args:
       clause: A classified obligation.
@@ -94,11 +99,12 @@ def keyword_position(clause: Clause) -> int:
 
     """
     masked = parser.mask_code_spans(clause.text)
-    hits = classifier.find_keywords(masked, config.OBLIGATION_KEYWORDS)
-    if not hits:
-        return len(clause.text)
-    bolded = [hit for hit in hits if hit.bolded]
-    return (bolded[0] if bolded else hits[0]).outer_start
+    for keywords in (config.OBLIGATION_KEYWORDS, config.ANNOTATION_KEYWORDS):
+        hits = classifier.find_keywords(masked, keywords)
+        if hits:
+            bolded = [hit for hit in hits if hit.bolded]
+            return (bolded[0] if bolded else hits[0]).outer_start
+    return len(clause.text)
 
 
 def _last_match_before(text: str, cutoff: int) -> str | None:

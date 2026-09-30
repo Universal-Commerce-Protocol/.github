@@ -103,6 +103,20 @@ class TestExtractActor(unittest.TestCase):
             ("host", config.ACTOR_CONFIDENCE_ANNOTATION),
         )
 
+    def test_party_after_an_annotation_keyword_is_not_used(self):
+        """An annotation keyword anchors the subject search just as MUST does."""
+        clause = _clause(
+            "The `created` parameter is **OPTIONAL** and is checked by the business."
+        )
+        self.assertEqual(
+            metadata.extract_actor(clause), (None, config.ACTOR_CONFIDENCE_NONE)
+        )
+
+    def test_obligation_keyword_is_preferred_to_an_annotation_keyword(self):
+        """With both kinds present, the obligation keyword is the anchor."""
+        text = "A REQUIRED field is set, so the platform **MUST** send it."
+        self.assertEqual(metadata.keyword_position(_clause(text)), text.index("**MUST"))
+
 
 class TestReferencedFields(unittest.TestCase):
     """Tests for recognizing schema field names in inline code."""
@@ -146,6 +160,11 @@ class TestExtractCondition(unittest.TestCase):
         """A condition after the keyword runs to the end of the sentence."""
         clause = _clause("The host **MUST** fire the event when the action occurs.")
         self.assertEqual(metadata.extract_condition(clause), "when the action occurs")
+
+    def test_trailing_condition_after_an_annotation_keyword(self):
+        """A condition after REQUIRED is trailing, not leading."""
+        clause = _clause("The platform is **REQUIRED** to retry when the call fails.")
+        self.assertEqual(metadata.extract_condition(clause), "when the call fails")
 
     def test_no_trigger_means_no_condition(self):
         """An unconditional obligation has no condition."""

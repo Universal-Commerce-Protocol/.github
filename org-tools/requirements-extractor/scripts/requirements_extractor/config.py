@@ -328,8 +328,6 @@ CONDITION_MAX_LENGTH = 200
 # keeping IDs readable in prose and commit messages.
 ID_DIGEST_LENGTH = 10
 
-ID_PREFIX = "UCP"
-
 # ---------------------------------------------------------------------------
 # Output
 # ---------------------------------------------------------------------------

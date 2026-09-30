@@ -19,17 +19,19 @@ import io
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../scripts"))
 )
 
 import extract_requirements
-from requirements_extractor import config
+from requirements_extractor import catalog, config
 
 FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "spec"
 REST_DOC = "docs/specification/shopping/checkout/rest.md"
@@ -281,6 +283,18 @@ class TestDeterminism(_FixtureCase):
             [r["id"] for r in catalog["requirements"]],
             [expected[0] for expected in EXPECTED_REQUIREMENTS],
         )
+
+
+class TestCommitSha(unittest.TestCase):
+    """Tests for recording the specification commit."""
+
+    def test_failed_git_call_records_no_commit(self):
+        """Output from a failing `git rev-parse` is not taken as a commit."""
+        failed = subprocess.CompletedProcess(
+            args=["git"], returncode=128, stdout="not-a-sha\n", stderr="fatal"
+        )
+        with mock.patch.object(catalog.subprocess, "run", return_value=failed):
+            self.assertIsNone(catalog._commit_sha(FIXTURE_ROOT))
 
 
 if __name__ == "__main__":

@@ -187,11 +187,6 @@ class Clause:
     compound_parent: str | None = None
     split_from_compound: bool = False
 
-    @property
-    def is_obligation(self) -> bool:
-        """Whether this clause carries an RFC 2119 obligation level."""
-        return self.level is not None
-
 
 @dataclasses.dataclass
 class Requirement(Clause):

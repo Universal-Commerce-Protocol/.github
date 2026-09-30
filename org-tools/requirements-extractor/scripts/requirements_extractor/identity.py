@@ -200,19 +200,7 @@ def readable_id(clause: Clause, ordinal: int) -> str:
       An identifier such as ``REQ-CHECKOUT-WARNING-PRESENTATION-03``.
 
     """
-    capability = clause.capability or ""
-    parts = [
-        config.READABLE_ID_PREFIX,
-        config.CAPABILITY_SHORT_NAME.get(
-            capability, config.capability_slug(capability)
-        ),
-    ]
-    document = config.document_token(clause.source.file)
-    if document:
-        parts.append(document)
-    parts.append(config.section_token(clause.source.section, clause.source.anchor))
-    parts.append(f"{ordinal:0{config.ORDINAL_WIDTH}d}")
-    return "-".join(parts)
+    return f"{_group_key(clause)}-{ordinal:0{config.ORDINAL_WIDTH}d}"
 
 
 def _group_key(clause: Clause) -> str:

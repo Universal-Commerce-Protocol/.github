@@ -140,6 +140,8 @@ def _commit_sha(spec_root: Path) -> str | None:
         )
     except (OSError, subprocess.SubprocessError):
         return None
+    if completed.returncode != 0:
+        return None
     sha = completed.stdout.strip()
     return sha or None
 

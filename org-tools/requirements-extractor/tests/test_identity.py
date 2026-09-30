@@ -69,6 +69,29 @@ class TestNormalize(unittest.TestCase):
             "the business must set status - always",
         )
 
+    def test_link_attribute_block_is_dropped_with_the_link(self):
+        """`{ target="_blank" }` on a link is markup, not wording."""
+        self.assertEqual(
+            identity.normalize(
+                "Bodies **MUST** be valid JSON as specified in "
+                '[RFC 8259](https://tools.ietf.org/html/rfc8259){ target="_blank" }.'
+            ),
+            "bodies must be valid json as specified in rfc 8259",
+        )
+        self.assertEqual(
+            identity.normalize(
+                'Use field syntax ([RFC 8941](https://x.test){target="_blank"}).'
+            ),
+            "use field syntax (rfc 8941)",
+        )
+
+    def test_braces_not_attached_to_a_link_are_kept(self):
+        """A brace in prose or inline code is content."""
+        self.assertEqual(
+            identity.normalize("Send `{action}_request` to [the host](h.md)."),
+            "send {action}_request to the host",
+        )
+
 
 class TestRequirementDigest(unittest.TestCase):
     """Tests for the content digest."""

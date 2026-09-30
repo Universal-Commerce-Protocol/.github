@@ -72,8 +72,9 @@ from requirements_extractor.models import (
 DIGEST_SEPARATOR = "\x1f"
 
 # `[label](target)` -> `label`. Retargeting a link, or the tree being
-# rearranged beneath it, must not change what the requirement says.
-_LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+# rearranged beneath it, must not change what the requirement says. An
+# attr_list block on the link is dropped with it; see config.MARKDOWN_LINK_RE.
+_LINK_RE = config.MARKDOWN_LINK_RE
 
 # Bold markers. The corpus contains no italics, and underscores are left
 # alone because they occur inside field names such as `continue_url`.

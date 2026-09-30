@@ -75,7 +75,7 @@ _SURFACE_RE = {
 _CODE_SPAN_RE = re.compile(r"`([^`]*)`")
 
 # Markdown that should not survive into a recorded condition.
-_LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+_LINK_RE = config.MARKDOWN_LINK_RE
 _EMPHASIS_RE = re.compile(r"\*\*|\*|__")
 
 _OPENERS = "([{"

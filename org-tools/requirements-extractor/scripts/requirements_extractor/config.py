@@ -294,6 +294,18 @@ FIELD_STOP_WORDS = frozenset({"true", "false", "null"})
 FIELD_URL_RE = re.compile(r"^https?://")
 
 # ---------------------------------------------------------------------------
+# Links
+# ---------------------------------------------------------------------------
+
+# `[label](target)` -> `label`, together with an attr_list block attached to
+# the link, as in `[RFC 8259](https://...){ target="_blank" }`. The site
+# renders the block as HTML attributes, not text, so it is no more part of the
+# obligation than the link target is. Only a block directly after the closing
+# parenthesis is consumed; a brace elsewhere, such as `{action}` in inline
+# code, is prose.
+MARKDOWN_LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)(?:\{:?[^}\n]*\})?")
+
+# ---------------------------------------------------------------------------
 # Conditions
 # ---------------------------------------------------------------------------
 

@@ -38,6 +38,8 @@ from __future__ import annotations
 from pathlib import Path
 import re
 
+from markdown.extensions.attr_list import AttrListTreeprocessor as _AttrList
+from markdown.extensions.attr_list import get_attrs as _get_attrs
 from markdown.extensions.toc import slugify as _toc_slugify
 
 # The extractor lives in the organization's tools repository and reads a
@@ -492,6 +494,31 @@ def resolve_capability(rel_path: str, abs_path: Path | None = None) -> str | Non
     return None
 
 
+def split_heading_attributes(heading: str) -> tuple[str, str | None]:
+    """Separate a heading's text from a trailing attr_list block.
+
+    The site enables `attr_list`, so a heading can end in a block such as
+    ``{: #totals }``. The site renders the heading without it and uses its
+    `#id`, if any, as the anchor. This uses attr_list's own pattern and parser
+    so the result matches what the site renders.
+
+    Args:
+      heading: Heading text as it appears in the Markdown source.
+
+    Returns:
+      The heading text without the block, and the explicit id or None.
+
+    """
+    match = _AttrList.HEADER_RE.search(heading)
+    if not match:
+        return heading, None
+    anchor = None
+    for key, value in _get_attrs(match.group(1)):
+        if key == "id":
+            anchor = value
+    return heading[: match.start()].rstrip(), anchor
+
+
 def heading_anchor(heading: str) -> str:
     """Return the HTML anchor the site generates for a heading.
 
@@ -509,13 +536,17 @@ def heading_anchor(heading: str) -> str:
     return _toc_slugify(heading, "-")
 
 
-def published_url(rel_path: str, section: str | None, version: str) -> str:
+def published_url(
+    rel_path: str, section: str | None, version: str, anchor: str | None = None
+) -> str:
     """Return the public URL for the clause's section.
 
     Args:
       rel_path: Repository-relative POSIX path to the source document.
       section: Heading breadcrumb, or None.
       version: Spec version segment, such as "draft".
+      anchor: Explicit id of the deepest heading, from an attr_list block.
+        When given it is used as is instead of slugifying the heading.
 
     Returns:
       An absolute URL, anchored on the deepest heading when one is known.
@@ -534,6 +565,8 @@ def published_url(rel_path: str, section: str | None, version: str) -> str:
 
     url = "/".join([SITE_BASE_URL, version, *parts]) + "/"
 
+    if anchor:
+        return url + "#" + anchor
     if section:
         crumbs = [crumb.strip() for crumb in section.split(">") if crumb.strip()]
         if crumbs:
@@ -558,26 +591,34 @@ def published_actor(actor: str | None) -> str | None:
     return PUBLISHED_ACTOR.get(actor, actor.upper())
 
 
-def section_token(section: str | None) -> str:
+def section_token(section: str | None, anchor: str | None = None) -> str:
     """Return the section component of a readable identifier.
 
     Uses the deepest heading, since that is the one that names the rule. The
-    first breadcrumb is the document title and is dropped as redundant.
+    first breadcrumb is the document title and is dropped as redundant. When
+    that heading has an explicit attr_list id, the id is used instead: authors
+    add one to tell apart headings that share a name (the order capability has
+    two "Guidelines" sections, `#operations-guidelines` and
+    `#events-guidelines`), and it is as stable as the published link.
 
     Args:
       section: Heading breadcrumb, or None.
+      anchor: Explicit id of the deepest heading, or None.
 
     Returns:
       An uppercase hyphenated token, truncated on a word boundary.
 
     """
-    if not section:
+    if anchor:
+        crumbs = [anchor]
+    elif not section:
         return "GENERAL"
-    crumbs = [crumb.strip() for crumb in section.split(">") if crumb.strip()]
-    if len(crumbs) > 1:
-        crumbs = crumbs[1:]
-    if not crumbs:
-        return "GENERAL"
+    else:
+        crumbs = [crumb.strip() for crumb in section.split(">") if crumb.strip()]
+        if len(crumbs) > 1:
+            crumbs = crumbs[1:]
+        if not crumbs:
+            return "GENERAL"
 
     token = re.sub(r"[^A-Za-z0-9]+", "-", crumbs[-1].replace("`", ""))
     token = token.strip("-").upper()

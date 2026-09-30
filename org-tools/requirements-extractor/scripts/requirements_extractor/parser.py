@@ -233,7 +233,7 @@ class _DocumentWalker:
         """
         self.rel_path = rel_path
         self.clauses: list[Clause] = []
-        self._headings: list[tuple[int, str]] = []
+        self._headings: list[tuple[int, str, str | None]] = []
         self._context: list[str] = []
         self._stem_stack: list[str | None] = []
         self._pending_stem: str | None = None
@@ -253,7 +253,12 @@ class _DocumentWalker:
     @property
     def _section(self) -> str:
         """Return the current heading breadcrumb."""
-        return " > ".join(text for _, text in self._headings)
+        return " > ".join(text for _, text, _ in self._headings)
+
+    @property
+    def _anchor(self) -> str | None:
+        """Return the explicit anchor of the deepest heading, if it has one."""
+        return self._headings[-1][2] if self._headings else None
 
     @property
     def _block_type(self) -> BlockType:
@@ -266,10 +271,16 @@ class _DocumentWalker:
         return BlockType.PARAGRAPH
 
     def _push_heading(self, level: int, text: str) -> None:
-        """Replace the breadcrumb tail with a heading at the given level."""
+        """Replace the breadcrumb tail with a heading at the given level.
+
+        An attr_list block such as ``{: #totals }`` is not part of the heading
+        the site shows, so it is kept out of the breadcrumb; its id, if any,
+        is kept for the published URL.
+        """
+        text, anchor = config.split_heading_attributes(text)
         while self._headings and self._headings[-1][0] >= level:
             self._headings.pop()
-        self._headings.append((level, text))
+        self._headings.append((level, text, anchor))
 
     def walk(self, tokens: list[Token]) -> list[Clause]:
         """Traverse the token stream and return the clauses found.
@@ -426,6 +437,7 @@ class _DocumentWalker:
                         line_end=line_end,
                         section=self._section,
                         block_type=block_type,
+                        anchor=self._anchor,
                     ),
                     document_order=self._order,
                     compound_parent=compound_parent,

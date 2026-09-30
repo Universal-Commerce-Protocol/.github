@@ -79,6 +79,45 @@ class TestPublishedUrl(unittest.TestCase):
             "#transport-security",
         )
 
+    def test_explicit_anchor_is_used_as_is(self):
+        """A heading's attr_list id replaces the slugified heading."""
+        self.assertEqual(
+            config.published_url(
+                f"{CHECKOUT_DIR}/index.md",
+                "Checkout Capability > Entities > Total",
+                "draft",
+                "totals",
+            ),
+            "https://ucp.dev/draft/specification/shopping/checkout/#totals",
+        )
+
+
+class TestHeadingAttributes(unittest.TestCase):
+    """Tests for separating attr_list blocks from heading text."""
+
+    def test_id_is_extracted_and_block_removed(self):
+        """`{: #totals }` is dropped from the text and its id returned."""
+        self.assertEqual(
+            config.split_heading_attributes("Total {: #totals }"), ("Total", "totals")
+        )
+
+    def test_colon_is_optional(self):
+        """attr_list accepts the block without the leading colon."""
+        self.assertEqual(
+            config.split_heading_attributes("Detail Product { #detail-product }"),
+            ("Detail Product", "detail-product"),
+        )
+
+    def test_block_without_an_id_is_removed(self):
+        """A class-only block is not shown, and the heading is slugified."""
+        self.assertEqual(config.split_heading_attributes("X {: .note }"), ("X", None))
+
+    def test_heading_without_a_block_is_unchanged(self):
+        """Ordinary headings pass through."""
+        self.assertEqual(
+            config.split_heading_attributes("Continue URL"), ("Continue URL", None)
+        )
+
 
 class TestTokens(unittest.TestCase):
     """Tests for the pieces of a readable id."""
@@ -88,6 +127,13 @@ class TestTokens(unittest.TestCase):
         self.assertEqual(
             config.section_token("Checkout Capability > Status > `continue_url`"),
             "CONTINUE-URL",
+        )
+
+    def test_section_token_prefers_an_explicit_anchor(self):
+        """Same-named headings stay distinct through their explicit ids."""
+        self.assertEqual(
+            config.section_token("Order > Events > Guidelines", "events-guidelines"),
+            "EVENTS-GUIDELINES",
         )
 
     def test_long_section_token_is_cut_on_a_word_boundary(self):

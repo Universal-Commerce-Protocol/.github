@@ -124,6 +124,24 @@ class TestParseText(unittest.TestCase):
         self.assertEqual(clause.text, "All endpoints **MUST** use TLS version 1.3.")
         self.assertEqual((clause.source.line_start, clause.source.line_end), (3, 4))
 
+    def test_heading_attribute_block_is_kept_out_of_the_breadcrumb(self):
+        """`{: #totals }` is not in the section, and its id reaches the URL."""
+        source = "# Checkout\n\n### Total {: #totals }\n\nIt **MUST** add up.\n"
+        [clause] = parser.parse_text(source, DOC)
+        self.assertEqual(clause.source.section, "Checkout > Total")
+        self.assertEqual(clause.source.anchor, "totals")
+        self.assertTrue(clause.source.as_dict("draft")["url"].endswith("/#totals"))
+
+    def test_deeper_heading_without_a_block_has_no_anchor(self):
+        """An explicit id belongs to its own heading, not to subsections."""
+        source = (
+            "# Checkout\n\n## Total {: #totals }\n\n### Verification\n\n"
+            "It **MUST** add up.\n"
+        )
+        [clause] = parser.parse_text(source, DOC)
+        self.assertIsNone(clause.source.anchor)
+        self.assertEqual(clause.source.section, "Checkout > Total > Verification")
+
     def test_list_under_colon_stem_inherits_the_stem(self):
         """Items of a list introduced by a colon record the stem as parent."""
         source = (

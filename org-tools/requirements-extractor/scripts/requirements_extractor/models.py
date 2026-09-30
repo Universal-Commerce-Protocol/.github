@@ -107,6 +107,9 @@ class SourceRef:
       line_end: 1-based last line of the enclosing block, inclusive.
       section: Heading breadcrumb, e.g. ``Checkout Capability > Continue URL``.
       block_type: Markdown construct the clause was found in.
+      anchor: Explicit id of the deepest heading, set by an attr_list block
+        such as ``{: #totals }``; None when the site slugifies the heading.
+        Only used to build `url`; not published on its own.
 
     """
 
@@ -115,6 +118,7 @@ class SourceRef:
     line_end: int
     section: str
     block_type: BlockType
+    anchor: str | None = None
 
     def as_dict(self, spec_version: str) -> dict[str, object]:
         """Return a JSON-serializable form with enums reduced to strings.
@@ -133,7 +137,9 @@ class SourceRef:
             "end_line": self.line_end,
             "section": self.section,
             "block_type": str(self.block_type),
-            "url": config.published_url(self.file, self.section, spec_version),
+            "url": config.published_url(
+                self.file, self.section, spec_version, self.anchor
+            ),
         }
 
 

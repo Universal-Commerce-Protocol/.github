@@ -49,7 +49,7 @@ A catalog record looks like this:
 
 ### Two identifiers
 
-- **`id`** is readable and positional: `REQ-<CAPABILITY>-[<DOCUMENT>-]<SECTION>-<NN>`. It is meant for conformance tests to bind to, so a binding says what it covers. Inserting a requirement above it in the same section renumbers it.
+- **`id`** is readable and positional: `REQ-<CAPABILITY>-[<DOCUMENT>-]<SECTION>-<NN>`. `<SECTION>` comes from the deepest heading, or from its explicit id when it has one (`### Guidelines {: #events-guidelines }` gives `EVENTS-GUIDELINES`). It is meant for conformance tests to bind to, so a binding says what it covers. Inserting a requirement above it in the same section renumbers it.
 - **`content_digest`** is the first 10 hex characters of the SHA-256 of the capability, the normalized `compound_parent` and the `normalized` clause, joined by U+001F. It does not depend on file, line or heading, so it survives the document being reorganized, and it can be recomputed from the published record alone.
 
 Comparing the two distinguishes a requirement that was reworded (same id, new digest) from one that was moved or removed.

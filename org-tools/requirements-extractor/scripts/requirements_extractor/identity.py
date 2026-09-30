@@ -209,7 +209,7 @@ def readable_id(clause: Clause, ordinal: int) -> str:
     document = config.document_token(clause.source.file)
     if document:
         parts.append(document)
-    parts.append(config.section_token(clause.source.section))
+    parts.append(config.section_token(clause.source.section, clause.source.anchor))
     parts.append(f"{ordinal:0{config.ORDINAL_WIDTH}d}")
     return "-".join(parts)
 
@@ -226,7 +226,7 @@ def _group_key(clause: Clause) -> str:
     document = config.document_token(clause.source.file)
     if document:
         parts.append(document)
-    parts.append(config.section_token(clause.source.section))
+    parts.append(config.section_token(clause.source.section, clause.source.anchor))
     return "-".join(parts)
 
 

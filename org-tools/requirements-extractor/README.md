@@ -112,7 +112,7 @@ jobs:
 
 - **Emphasis marks an obligation.** UCP bolds the keyword of a real obligation, so only bolded keywords produce requirements. An uppercase keyword without bold is reported under `candidates_without_emphasis` rather than dropped silently.
 - **Code is not prose.** Fenced blocks, indented blocks, raw HTML and inline code spans are excluded, so a literal `MUST` inside backticks is never an obligation.
-- **Schema annotations are not obligations.** `REQUIRED`, `OPTIONAL` and `RECOMMENDED` marking a field's optionality are excluded; the same words in running prose are promoted to their RFC 2119 level and reported.
+- **Schema annotations are not obligations.** `REQUIRED`, `OPTIONAL` and `RECOMMENDED` marking a field's optionality are excluded. The same words in running prose follow the emphasis rule above: bolded, they are promoted to their RFC 2119 level and reported; unbolded, they are reported under `candidates_without_emphasis`.
 - **One sentence can hold several obligations.** "The host **MUST** tear down the context and **MAY** redirect the buyer" becomes two requirements that share the subject.
 - **The actor is the subject, not the object.** The party is the last one named before the keyword. A party named only after it is usually the object ("**MUST** present the content to the buyer" binds the host), so it is reported rather than used. Colon stems such as "**Host responsibilities:**" and headings are weaker fallbacks, and each strategy carries its own `actor_confidence`.
 

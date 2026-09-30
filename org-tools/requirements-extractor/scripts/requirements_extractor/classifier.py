@@ -387,8 +387,19 @@ def _classify_annotation(
             return [dataclasses.replace(clause, annotation=annotation)]
         return []
 
-    # Used in running prose, so it states an obligation. RFC 2119 defines the
-    # equivalence; the promotion is logged because the call is a judgement.
+    # In running prose the same emphasis rule applies as for MUST and SHOULD:
+    # only a bolded keyword states an obligation. An unbolded one is reported
+    # rather than promoted, so "This is the RECOMMENDED path" stays prose.
+    bolded = [hit for hit in hits if hit.bolded]
+    if not bolded:
+        report.candidates_without_emphasis.append(
+            _record(clause, keywords=[hit.keyword for hit in hits])
+        )
+        return []
+
+    # RFC 2119 defines the equivalence; the promotion is logged because the
+    # call is a judgement.
+    annotation = _ANNOTATION_BY_KEYWORD[bolded[0].keyword]
     level = _ANNOTATION_TO_LEVEL[annotation]
     report.annotation_as_obligation.append(
         _record(clause, annotation=str(annotation), level=str(level))
@@ -398,7 +409,7 @@ def _classify_annotation(
             clause,
             level=level,
             annotation=annotation,
-            bolded=any(hit.bolded for hit in hits),
+            bolded=True,
         )
     ]
 

@@ -155,6 +155,28 @@ class TestClassify(unittest.TestCase):
         self.assertIs(result.annotation, Annotation.RECOMMENDED)
         self.assertEqual(len(self.report.annotation_as_obligation), 1)
 
+    def test_unbolded_annotation_keyword_in_prose_is_reported_not_emitted(self):
+        """An unbolded REQUIRED follows the same emphasis rule as MUST."""
+        result = classifier.classify(
+            _clause("PKCE (`S256`) is REQUIRED for all authorization code flows."),
+            self.report,
+        )
+        self.assertEqual(result, [])
+        self.assertEqual(self.report.annotation_as_obligation, [])
+        self.assertEqual(len(self.report.candidates_without_emphasis), 1)
+        self.assertEqual(
+            self.report.candidates_without_emphasis[0]["keywords"], ["REQUIRED"]
+        )
+
+    def test_bolded_annotation_decides_the_level(self):
+        """With mixed emphasis, the bolded annotation sets the level."""
+        [result] = classifier.classify(
+            _clause("OPTIONAL fields aside, a signature is **REQUIRED** here."),
+            self.report,
+        )
+        self.assertIs(result.level, Level.MUST)
+        self.assertIs(result.annotation, Annotation.REQUIRED)
+
 
 if __name__ == "__main__":
     unittest.main()

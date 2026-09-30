@@ -146,6 +146,38 @@ class TestParseText(unittest.TestCase):
         ]
         self.assertEqual([item.compound_parent for item in items], [None])
 
+    def _item_parents(self, source):
+        return [
+            c.compound_parent
+            for c in parser.parse_text(source, DOC)
+            if c.source.block_type is BlockType.LIST_ITEM
+        ]
+
+    def test_stem_does_not_carry_past_a_code_block_and_heading(self):
+        """A stem followed by a code sample and a new section is dropped."""
+        source = (
+            "# T\n\nPlatforms **MUST** include a `meta` object:\n\n"
+            "```json\n{}\n```\n\n## Platform Requirements\n\n"
+            "1. Platforms **MUST** send a profile.\n"
+        )
+        self.assertEqual(self._item_parents(source), [None])
+
+    def test_stem_does_not_carry_past_a_code_block(self):
+        """A code block between a stem and a list ends the stem."""
+        source = "# T\n\nSend this:\n\n```json\n{}\n```\n\n- **MUST** retry.\n"
+        self.assertEqual(self._item_parents(source), [None])
+
+    def test_stem_does_not_carry_past_an_html_block(self):
+        """An HTML block between a stem and a list ends the stem."""
+        source = "# T\n\nSend this:\n\n<div>x</div>\n\n- **MUST** retry.\n"
+        self.assertEqual(self._item_parents(source), [None])
+
+    def test_stem_does_not_carry_past_a_table(self):
+        """A table between a stem and a list ends the stem."""
+        # Header-only, because header cells return before the stem update.
+        source = "# T\n\nFields:\n\n| A | B |\n| - | - |\n\n- **MUST** retry.\n"
+        self.assertEqual(self._item_parents(source), [None])
+
     def test_table_cell_carries_row_and_column_context(self):
         """A matrix cell holding only a keyword keeps its row and column."""
         source = (

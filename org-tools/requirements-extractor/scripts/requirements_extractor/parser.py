@@ -289,10 +289,15 @@ class _DocumentWalker:
         """Dispatch a single token."""
         kind = token.type
 
+        # A colon stem introduces the list directly beneath it and nothing
+        # else. Blocks that return early here would otherwise carry it past a
+        # code sample or into a later section's list.
         if kind in _SKIPPED_BLOCK_TYPES:
+            self._pending_stem = None
             return
 
         if kind == "heading_open":
+            self._pending_stem = None
             self._in_heading = True
             self._heading_level = int(token.tag[1:]) if token.tag[1:].isdigit() else 1
             return
@@ -318,6 +323,7 @@ class _DocumentWalker:
             return
 
         if kind == "table_open":
+            self._pending_stem = None
             self._table_headers = []
             return
         if kind == "thead_open":

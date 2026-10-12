@@ -34,10 +34,13 @@ import extract_requirements
 from requirements_extractor import catalog, config
 
 FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "spec"
+INDEX_DOC = "docs/specification/shopping/checkout/index.md"
 REST_DOC = "docs/specification/shopping/checkout/rest.md"
+INDEX_CATALOG = Path("shopping/checkout/index.json")
+REST_CATALOG = Path("shopping/checkout/rest.json")
 
 # The fixture is small enough to pin completely. Each entry is
-# (id, level, target_actor, clause).
+# (id, level, target_actor, clause), in catalog-file order.
 EXPECTED_REQUIREMENTS = [
     (
         "REQ-CHECKOUT-CONTINUE-URL-01",
@@ -104,16 +107,40 @@ class _FixtureCase(unittest.TestCase):
         self._scratch = tempfile.TemporaryDirectory()
         self.spec_root = Path(self._scratch.name) / "spec"
         shutil.copytree(FIXTURE_ROOT, self.spec_root)
-        self.catalog_path = self.spec_root / config.DEFAULT_CATALOG_PATH
+        self.catalog_dir = self.spec_root / config.DEFAULT_CATALOG_DIR
         self.report_path = self.spec_root / config.DEFAULT_REPORT_PATH
 
     def tearDown(self):
         self._scratch.cleanup()
 
-    def _write(self) -> dict:
+    def _read_catalog(self) -> dict[Path, dict]:
+        """Return the catalog files on disk, keyed relative to the catalog dir."""
+        return {
+            path.relative_to(self.catalog_dir): json.loads(
+                path.read_text(encoding="utf-8")
+            )
+            for path in sorted(self.catalog_dir.rglob("*.json"))
+        }
+
+    def _write(self) -> dict[Path, dict]:
+        """Run the CLI and return the catalog files it wrote."""
         status, _, err = _run("--spec-root", str(self.spec_root))
         self.assertEqual(status, 0, err)
-        return json.loads(self.catalog_path.read_text(encoding="utf-8"))
+        return self._read_catalog()
+
+    def _stray(self, relative: str) -> Path:
+        """Leave a catalog file behind that no page produces."""
+        path = self.catalog_dir / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}\n", encoding="utf-8")
+        return path
+
+
+def _records(documents: dict[Path, dict]) -> list[dict]:
+    """Return every record of a run, in catalog-file order."""
+    return [
+        record for document in documents.values() for record in document["requirements"]
+    ]
 
 
 class TestArguments(unittest.TestCase):
@@ -138,62 +165,66 @@ class TestCatalog(_FixtureCase):
 
     def test_requirements_match_the_fixture(self):
         """Every requirement in the fixture, and nothing else, is extracted."""
-        catalog = self._write()
         self.assertEqual(
             [
                 (r["id"], r["level"], r["target_actor"], r["clause"])
-                for r in catalog["requirements"]
+                for r in _records(self._write())
             ],
             EXPECTED_REQUIREMENTS,
         )
 
-    def test_envelope(self):
-        """Provenance fields are present and well formed."""
-        catalog = self._write()
-        self.assertEqual(catalog["$schema"], config.CATALOG_SCHEMA_URL)
-        self.assertEqual(catalog["schema_version"], config.CATALOG_SCHEMA_VERSION)
-        self.assertEqual(catalog["extractor_version"], config.EXTRACTOR_VERSION)
-        self.assertEqual(catalog["spec_version"], "2026-01-11")
-        self.assertRegex(
-            catalog["generated_at"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
-        )
-        self.assertEqual(
-            catalog["source_spec"], ["docs/specification/shopping/checkout"]
-        )
+    def test_one_catalog_file_per_page(self):
+        """Each page's requirements are in the file mirroring its path."""
+        documents = self._write()
+        self.assertEqual(list(documents), [INDEX_CATALOG, REST_CATALOG])
+        self.assertEqual(documents[INDEX_CATALOG]["source_file"], INDEX_DOC)
+        self.assertEqual(documents[REST_CATALOG]["source_file"], REST_DOC)
+        for document in documents.values():
+            self.assertEqual(
+                {r["source"]["file"] for r in document["requirements"]},
+                {document["source_file"]},
+            )
 
-    def test_records_carry_version_url_and_metadata(self):
-        """A record links to the published spec and carries its metadata."""
-        first = self._write()["requirements"][0]
-        self.assertEqual(first["capability"], "dev.ucp.shopping.checkout")
-        self.assertEqual(first["version"], "2026-01-11")
+    def test_envelope(self):
+        """Provenance fields are present and well formed in every file."""
+        for document in self._write().values():
+            self.assertEqual(document["$schema"], config.CATALOG_SCHEMA_URL)
+            self.assertEqual(document["schema_version"], config.CATALOG_SCHEMA_VERSION)
+            self.assertEqual(document["extractor_version"], config.EXTRACTOR_VERSION)
+            self.assertEqual(document["spec_version"], "2026-01-11")
+            self.assertRegex(
+                document["generated_at"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
+            )
+            self.assertNotIn("source_spec", document)
+
+    def test_records_carry_no_release_and_keep_their_metadata(self):
+        """The release is in the header; a record names a page and an anchor."""
+        first = self._write()[INDEX_CATALOG]["requirements"][0]
+        self.assertNotIn("version", first)
+        self.assertNotIn("url", first["source"])
+        self.assertEqual(first["scope"], "capability")
+        self.assertEqual(first["capabilities"], ["dev.ucp.shopping.checkout"])
         self.assertEqual(first["condition"], "When `continue_url` is present")
         self.assertEqual(first["referenced_fields"], ["continue_url"])
-        self.assertRegex(first["content_digest"], r"^[0-9a-f]{10}$")
-        self.assertEqual(
-            first["source"]["url"],
-            "https://ucp.dev/2026-01-11/specification/shopping/checkout/#continue-url",
-        )
+        self.assertRegex(first["text_digest"], r"^[0-9a-f]{10}$")
+        self.assertEqual(first["source"]["page"], "specification/shopping/checkout/")
+        self.assertEqual(first["source"]["anchor"], "continue-url")
 
     def test_catalog_fits_the_published_schema(self):
-        """Required keys are present and no key falls outside the schema."""
-        catalog = self._write()
-        schema = json.loads(config.CATALOG_SCHEMA_PATH.read_text(encoding="utf-8"))
+        """Every file validates against the schema the catalog names."""
+        for relative, document in self._write().items():
+            self.assertEqual(catalog.validate(document), [], relative)
 
-        def assert_fits(document: dict, definition: dict, where: str) -> None:
-            keys = set(document)
-            missing = set(definition["required"]) - keys
-            extra = keys - set(definition["properties"])
-            self.assertFalse(missing, f"{where} is missing {sorted(missing)}")
-            self.assertFalse(extra, f"{where} has unexpected {sorted(extra)}")
-
-        assert_fits(catalog, schema, "catalog")
-        for record in catalog["requirements"]:
-            assert_fits(record, schema["$defs"]["requirement"], record["id"])
-            assert_fits(record["source"], schema["$defs"]["source"], record["id"])
-            self.assertRegex(
-                record["id"],
-                schema["$defs"]["requirement"]["properties"]["id"]["pattern"],
-            )
+    def test_page_summary_counts_only_its_own_diagnostics(self):
+        """A page's totals reconcile against that page alone."""
+        documents = self._write()
+        index = documents[INDEX_CATALOG]["summary"]
+        rest = documents[REST_CATALOG]["summary"]
+        self.assertEqual((index["total"], rest["total"]), (6, 1))
+        self.assertEqual(index["diagnostics"]["candidates_without_emphasis"], 1)
+        self.assertEqual(rest["diagnostics"]["candidates_without_emphasis"], 0)
+        self.assertEqual(index["diagnostics"]["actor_unresolved"], 0)
+        self.assertEqual(rest["diagnostics"]["actor_unresolved"], 1)
 
     def test_report_accounts_for_what_the_catalog_left_out(self):
         """Excluded clauses land in the report with their reason."""
@@ -209,6 +240,9 @@ class TestCatalog(_FixtureCase):
         )
         self.assertEqual(
             [entry["file"] for entry in diagnostics["actor_unresolved"]], [REST_DOC]
+        )
+        self.assertEqual(
+            report["source_spec"], ["docs/specification/shopping/checkout"]
         )
         self.assertNotIn("$schema", report)
 
@@ -230,7 +264,7 @@ class TestCheck(_FixtureCase):
         self.assertIn("missing", err)
 
     def test_check_fails_when_the_spec_changes(self):
-        """Editing a normative sentence makes the committed catalog stale."""
+        """Editing a normative sentence makes that page's catalog stale."""
         self._write()
         rest = self.spec_root / REST_DOC
         rest.write_text(
@@ -238,15 +272,26 @@ class TestCheck(_FixtureCase):
         )
         status, _, err = _run("--spec-root", str(self.spec_root), "--check")
         self.assertEqual(status, 1)
-        self.assertIn("out of date", err)
+        self.assertIn(f"{REST_CATALOG.as_posix()}: out of date", err)
+        self.assertNotIn(f"{INDEX_CATALOG.as_posix()}: out of date", err)
         self.assertIn("Regenerate by running the extractor without --check", err)
         self.assertIn(f"extract_requirements.py --spec-root {self.spec_root}", err)
 
+    def test_check_fails_on_a_catalog_file_no_page_produces(self):
+        """A file left behind by a deleted page is stale too."""
+        self._write()
+        self._stray("shopping/checkout/retired.json")
+        status, _, err = _run("--spec-root", str(self.spec_root), "--check")
+        self.assertEqual(status, 1)
+        self.assertIn("retired.json: no longer generated", err)
+
     def test_check_ignores_generated_at(self):
         """The timestamp differs on every run and must not fail the check."""
-        catalog = self._write()
-        catalog["generated_at"] = "2000-01-01T00:00:00Z"
-        self.catalog_path.write_text(json.dumps(catalog, indent=2) + "\n")
+        document = self._write()[INDEX_CATALOG]
+        document["generated_at"] = "2000-01-01T00:00:00Z"
+        (self.catalog_dir / INDEX_CATALOG).write_text(
+            json.dumps(document, indent=2) + "\n"
+        )
         status, _, _ = _run("--spec-root", str(self.spec_root), "--check")
         self.assertEqual(status, 0)
 
@@ -255,7 +300,53 @@ class TestCheck(_FixtureCase):
         status, out, _ = _run("--spec-root", str(self.spec_root), "--dry-run")
         self.assertEqual(status, 0)
         self.assertIn("Dry run", out)
-        self.assertFalse(self.catalog_path.exists())
+        self.assertFalse(self.catalog_dir.exists())
+        self.assertFalse(self.report_path.exists())
+
+
+class TestWrite(_FixtureCase):
+    """Tests for regenerating over an existing catalog."""
+
+    def test_files_no_page_produces_are_removed(self):
+        """Regenerating deletes stale files and the directories they emptied."""
+        self._write()
+        stray = self._stray("shopping/retired/index.json")
+        notes = self.catalog_dir / "NOTES.txt"
+        notes.write_text("Not a catalog file.\n", encoding="utf-8")
+        status, out, err = _run("--spec-root", str(self.spec_root))
+        self.assertEqual(status, 0, err)
+        self.assertIn("Removed", out)
+        self.assertFalse(stray.parent.exists())
+        self.assertTrue(notes.exists())
+        self.assertEqual(list(self._read_catalog()), [INDEX_CATALOG, REST_CATALOG])
+
+
+class TestRefusals(_FixtureCase):
+    """Tests for runs that must stop before writing anything."""
+
+    def test_document_without_a_capability_fails(self):
+        """A requirement that belongs to nothing has no valid record."""
+        with mock.patch.dict(config.CAPABILITY_BY_PREFIX, {}, clear=True):
+            status, _, err = _run("--spec-root", str(self.spec_root))
+            check_status, _, _ = _run("--spec-root", str(self.spec_root), "--check")
+        self.assertEqual(status, 1)
+        self.assertEqual(check_status, 1)
+        self.assertIn("no capability", err)
+        self.assertIn(REST_DOC, err)
+        self.assertFalse(self.catalog_dir.exists())
+        self.assertFalse(self.report_path.exists())
+
+    def test_catalog_that_fails_its_schema_is_not_written(self):
+        """The tool never writes a catalog its own contract rejects."""
+        with mock.patch.object(
+            catalog, "validate", return_value=["$.requirements[0]: rejected"]
+        ):
+            status, _, err = _run("--spec-root", str(self.spec_root))
+        self.assertEqual(status, 1)
+        self.assertIn("does not match its published schema", err)
+        self.assertIn("rejected", err)
+        self.assertFalse(self.catalog_dir.exists())
+        self.assertFalse(self.report_path.exists())
 
 
 class TestDeterminism(_FixtureCase):
@@ -265,8 +356,9 @@ class TestDeterminism(_FixtureCase):
         """Regenerating produces the same bytes once the timestamp is removed."""
         first = self._write()
         second = self._write()
-        for document in (first, second):
-            document.pop("generated_at")
+        for documents in (first, second):
+            for document in documents.values():
+                document.pop("generated_at")
         self.assertEqual(first, second)
 
     def test_relative_spec_root(self):
@@ -278,9 +370,8 @@ class TestDeterminism(_FixtureCase):
         finally:
             os.chdir(previous)
         self.assertEqual(status, 0, err)
-        catalog = json.loads(self.catalog_path.read_text(encoding="utf-8"))
         self.assertEqual(
-            [r["id"] for r in catalog["requirements"]],
+            [r["id"] for r in _records(self._read_catalog())],
             [expected[0] for expected in EXPECTED_REQUIREMENTS],
         )
 

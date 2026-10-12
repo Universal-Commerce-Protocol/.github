@@ -22,8 +22,8 @@ an `id`.
 Nothing here performs I/O or parsing; keeping the models inert lets every other
 module import them without risking a circular dependency. The one import is
 `config`, which is pure policy and imports nothing from this package -- the
-published field names, actor vocabulary and URL shape are naming decisions, so
-they belong there rather than hardcoded in a serializer.
+published field names, actor vocabulary and published locations are naming
+decisions, so they belong there rather than hardcoded in a serializer.
 """
 
 from __future__ import annotations
@@ -91,11 +91,28 @@ class BlockType(enum.Enum):
         return self.value
 
 
+class Scope(enum.Enum):
+    """What a requirement belongs to.
+
+    A capability requirement binds whoever implements the capabilities it
+    names. A protocol requirement binds every participant, whatever they
+    implement, and so names no capability at all. Publishing the distinction
+    keeps "protocol-wide" from being confused with "could not be attributed".
+    """
+
+    CAPABILITY = "capability"
+    PROTOCOL = "protocol"
+
+    def __str__(self) -> str:
+        """Return the serialized spelling, e.g. ``capability``."""
+        return self.value
+
+
 @dataclasses.dataclass(frozen=True)
 class SourceRef:
     """Where a clause came from.
 
-    None of these fields feed `content_digest`. Section paths and file paths
+    None of these fields feed `text_digest`. Section paths and file paths
     are both volatile -- headings get reorganized, files get moved -- and
     including them would re-mint the digest on changes that do not alter the
     obligation itself. The readable `id` does incorporate the section, which
@@ -109,7 +126,8 @@ class SourceRef:
       block_type: Markdown construct the clause was found in.
       anchor: Explicit id of the deepest heading, set by an attr_list block
         such as ``{: #totals }``; None when the site slugifies the heading.
-        Only used to build `url`; not published on its own.
+        The published `anchor` is this id when set, and the slugified heading
+        otherwise.
 
     """
 
@@ -120,11 +138,12 @@ class SourceRef:
     block_type: BlockType
     anchor: str | None = None
 
-    def as_dict(self, spec_version: str) -> dict[str, object]:
+    def as_dict(self) -> dict[str, object]:
         """Return a JSON-serializable form with enums reduced to strings.
 
-        Args:
-          spec_version: Release segment for the published URL.
+        The location is published as a page and an anchor, without a release:
+        the release is `spec_version` in the catalog header, so a record does
+        not change when a release is cut.
 
         Returns:
           A dict whose keys match the published source schema. Line numbers are
@@ -137,9 +156,8 @@ class SourceRef:
             "end_line": self.line_end,
             "section": self.section,
             "block_type": str(self.block_type),
-            "url": config.published_url(
-                self.file, self.section, spec_version, self.anchor
-            ),
+            "page": config.published_page(self.file),
+            "anchor": config.published_anchor(self.section, self.anchor),
         }
 
 
@@ -159,6 +177,9 @@ class Clause:
       annotation: Annotation keyword, when the clause is a schema annotation.
       bolded: Whether the governing keyword was wrapped in ``**``.
       capability: Reverse-DNS capability identifier.
+      scope: Whether the clause binds implementers of its capability or every
+        participant in the protocol. Every page in scope today belongs to a
+        capability.
       actor: Party the obligation falls on, or None when genuinely absent.
       actor_confidence: 0.0-1.0. See metadata.extract_actor for the scale.
       referenced_fields: Sorted, deduplicated inline-code identifiers.
@@ -180,6 +201,7 @@ class Clause:
     annotation: Annotation | None = None
     bolded: bool = False
     capability: str | None = None
+    scope: Scope = Scope.CAPABILITY
     actor: str | None = None
     actor_confidence: float = 0.0
     referenced_fields: list[str] = dataclasses.field(default_factory=list)
@@ -198,9 +220,10 @@ class Requirement(Clause):
     -- so a test binding says what it binds to. Being positional, it renumbers
     when a requirement is inserted above it.
 
-    `content_digest` is a pure function of the clause's content: capability,
-    normalized `compound_parent` and `normalized`, joined by a unit separator
-    (see identity.digest_input). It does not move when the document does.
+    `text_digest` is a pure function of the clause's wording: normalized
+    `compound_parent` and `normalized`, joined by a unit separator (see
+    identity.digest_input). It does not move when the document does, and it
+    does not move when the page is attributed to a different capability.
 
     Carrying both lets a consumer distinguish "this requirement was reworded"
     from "this requirement is gone", which is exactly the difference between a
@@ -211,30 +234,33 @@ class Requirement(Clause):
 
     Attributes:
       id: Readable identifier, ``REQ-<CAPABILITY>-[<DOCUMENT>-]<SECTION>-<NN>``.
-      content_digest: Ten hex characters derived from the clause's content.
+      text_digest: Ten hex characters derived from the clause's wording.
 
     """
 
     id: str = ""
-    content_digest: str = ""
+    text_digest: str = ""
 
-    def as_dict(self, spec_version: str) -> dict[str, object]:
+    def as_dict(self) -> dict[str, object]:
         """Return the JSON-serializable catalog record.
 
-        Args:
-          spec_version: Release the catalog was generated from. Carried on the
-            catalog rather than per clause, because UCP documents do not declare
-            individual versions.
+        A record carries no release. The release is `spec_version` in the
+        catalog header, so cutting a release changes one line per catalog file
+        rather than every record.
 
         Returns:
           A dict whose keys match the published requirement schema.
 
         """
+        if self.scope is Scope.CAPABILITY and self.capability:
+            capabilities = [self.capability]
+        else:
+            capabilities = []
         return {
             "id": self.id,
-            "content_digest": self.content_digest,
-            "capability": self.capability,
-            "version": spec_version,
+            "text_digest": self.text_digest,
+            "scope": str(self.scope),
+            "capabilities": capabilities,
             "level": str(self.level) if self.level else None,
             "target_actor": config.published_actor(self.actor),
             "actor_confidence": round(self.actor_confidence, 2),
@@ -244,7 +270,7 @@ class Requirement(Clause):
             "referenced_fields": list(self.referenced_fields),
             "compound_parent": self.compound_parent,
             "document_order": self.document_order,
-            "source": self.source.as_dict(spec_version),
+            "source": self.source.as_dict(),
         }
 
 
@@ -281,8 +307,8 @@ class ExtractionReport:
       actor_after_keyword_only: Obligations whose sole lexicon match follows
         the keyword. Recorded rather than used: the match is usually the
         direct object, not the party under obligation.
-      duplicate_requirements: Groups sharing content, context and capability,
-        and therefore a digest. Each is given an ordinal, and reported because
+      duplicate_requirements: Groups sharing wording and context, and
+        therefore a digest. Each is given an ordinal, and reported because
         one normative sentence maintained in two documents can drift.
 
     """

@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Stage 4: giving each requirement a readable id and a content digest.
+"""Stage 4: giving each requirement a readable id and a text digest.
 
 An identifier is only useful if it survives edits that do not change the
 requirement and changes when one does. No single value does both, so each
@@ -22,7 +22,7 @@ requirement carries two.
   so a test binding says what it binds to. Inserting a requirement above it
   in the same section renumbers it.
 
-  `content_digest` is derived from content alone and does not move when the
+  `text_digest` is derived from wording alone and does not move when the
   document does. Comparing the two is how a consumer tells a reworded
   requirement from a removed one.
 
@@ -31,23 +31,25 @@ What goes into the digest
   reduces eight cells to the single words "must" or "may", and on text alone
   they collide four ways. Their meaning lives in the row and column that
   head them, which the parser recorded as the compound parent, so the digest
-  covers that too. Capability is included so the same sentence appearing
-  under two capabilities is two requirements, which it is.
+  covers that too.
 
-  Every component is published in the catalog record -- `capability`,
-  `compound_parent` and `normalized` -- so a digest can be recomputed
-  and checked without access to the spec or to this code.
+  Both components are published in the catalog record -- `compound_parent`
+  and `normalized` -- so a digest can be recomputed and checked without
+  access to the spec or to this code.
 
 What stays out of the digest
-  The file, the line and the section heading. All three are positional: a
-  file can move, a heading can be reworded, and neither event changes what
-  is required of whom. Including them would trade churn for a property the
-  digest does not need, because context from the compound parent already
+  The capability, the file, the line and the section heading, because none
+  of them is wording. A file can move and a heading can be reworded without
+  changing what is required of whom. A page's capability is an attribution,
+  which can be corrected or renamed after publication; if it fed the digest,
+  a relabelled page would look like a page of new rules. The same sentence
+  under two capabilities therefore shares a digest, and its ids and
+  capabilities tell the two apart. Context from the compound parent already
   separates every clause in this corpus but two.
 
 Genuine duplicates
   Those two are the same sentence stated in both the REST and the MCP
-  binding. They share a digest, because their content and context are
+  binding. They share a digest, because their wording and context are
   identical, but occupy two positions and so receive two ids. They are
   reported as well, because the same normative sentence maintained in two
   documents is a spec-authoring hazard.
@@ -113,16 +115,13 @@ def normalize(text: str) -> str:
     return out.strip().strip(_TRAILING_PUNCTUATION).strip().lower()
 
 
-def digest_input(
-    capability: str | None, compound_parent: str | None, normalized: str
-) -> str:
-    """Assemble the exact string the identifier digests.
+def digest_input(compound_parent: str | None, normalized: str) -> str:
+    """Assemble the exact string the digest is computed over.
 
     Kept separate from hashing so a verifier can reproduce the hash input from
     the published catalog fields alone.
 
     Args:
-      capability: Reverse-DNS capability identifier.
       compound_parent: Stem or matrix context, if the clause has one.
       normalized: Canonical clause text from `normalize`.
 
@@ -132,25 +131,22 @@ def digest_input(
     """
     return DIGEST_SEPARATOR.join(
         (
-            capability or "",
             normalize(compound_parent) if compound_parent else "",
             normalized,
         )
     )
 
 
-def requirement_digest(
-    capability: str | None, compound_parent: str | None, normalized: str
-) -> str:
-    """Return the content digest for a requirement.
+def text_digest(compound_parent: str | None, normalized: str) -> str:
+    """Return the text digest for a requirement.
 
     This is the stable half of a requirement's identity. It depends only on
-    what the clause says, never on where it sits, so reformatting the document
-    or moving a section leaves it untouched. The readable identifier carries
-    location; this carries content.
+    what the clause says, never on where it sits or which capability it is
+    attributed to, so reformatting the document, moving a section or
+    relabelling the page leaves it untouched. The readable identifier carries
+    location; this carries wording.
 
     Args:
-      capability: Reverse-DNS capability identifier.
       compound_parent: Stem or matrix context, if the clause has one.
       normalized: Canonical clause text from `normalize`.
 
@@ -159,7 +155,7 @@ def requirement_digest(
       `digest_input`.
 
     """
-    hash_input = digest_input(capability, compound_parent, normalized)
+    hash_input = digest_input(compound_parent, normalized)
     digest = hashlib.sha256(hash_input.encode("utf-8")).hexdigest()
     return digest[: config.ID_DIGEST_LENGTH]
 
@@ -226,10 +222,10 @@ def assign_identities(
 
     Each requirement receives two identifiers. `id` is readable and counts an
     ordinal within its section, allocated in source order so the catalog reads
-    in document sequence. `content_digest` is derived from the clause's content
-    alone and moves only when the obligation's wording does.
+    in document sequence. `text_digest` is derived from the clause's wording
+    alone and moves only when that wording does.
 
-    Clauses whose content and context are identical share a digest; that is
+    Clauses whose wording and context are identical share a digest; that is
     reported, but they still receive distinct identifiers, because the
     identifier is positional and two copies occupy two positions.
 
@@ -245,7 +241,7 @@ def assign_identities(
 
     normalized_by_clause = [normalize(clause.text) for clause in clauses]
     digests = [
-        requirement_digest(clause.capability, clause.compound_parent, normalized)
+        text_digest(clause.compound_parent, normalized)
         for clause, normalized in zip(clauses, normalized_by_clause, strict=True)
     ]
 
@@ -271,7 +267,7 @@ def assign_identities(
         collected.duplicate_requirements.append(
             _record(
                 clauses[ordered[0]],
-                content_digest=digest,
+                text_digest=digest,
                 copies=len(indices),
                 ids=[ids[i] for i in ordered],
                 locations=[
@@ -293,7 +289,7 @@ def assign_identities(
                 | {
                     "normalized": normalized,
                     "id": identifier,
-                    "content_digest": digest,
+                    "text_digest": digest,
                 }
             )
         )

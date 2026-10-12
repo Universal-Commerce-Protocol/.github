@@ -125,12 +125,12 @@ class TestParseText(unittest.TestCase):
         self.assertEqual((clause.source.line_start, clause.source.line_end), (3, 4))
 
     def test_heading_attribute_block_is_kept_out_of_the_breadcrumb(self):
-        """`{: #totals }` is not in the section, and its id reaches the URL."""
+        """`{: #totals }` is not in the section, and its id is the anchor."""
         source = "# Checkout\n\n### Total {: #totals }\n\nIt **MUST** add up.\n"
         [clause] = parser.parse_text(source, DOC)
         self.assertEqual(clause.source.section, "Checkout > Total")
         self.assertEqual(clause.source.anchor, "totals")
-        self.assertTrue(clause.source.as_dict("draft")["url"].endswith("/#totals"))
+        self.assertEqual(clause.source.as_dict()["anchor"], "totals")
 
     def test_deeper_heading_without_a_block_has_no_anchor(self):
         """An explicit id belongs to its own heading, not to subsections."""

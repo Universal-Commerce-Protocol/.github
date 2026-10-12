@@ -49,5 +49,6 @@ jobs:
 
       - name: Run requirements extractor tests
         run: >-
-          uv run --with markdown-it-py==3.0.0 --with markdown==3.10.2
+          uv run --with jsonschema==4.26.0 --with markdown-it-py==3.0.0
+          --with markdown==3.10.2
           python -m unittest discover -s org-tools/requirements-extractor/tests

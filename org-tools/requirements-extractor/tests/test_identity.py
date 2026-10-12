@@ -93,27 +93,22 @@ class TestNormalize(unittest.TestCase):
         )
 
 
-class TestRequirementDigest(unittest.TestCase):
-    """Tests for the content digest."""
+class TestTextDigest(unittest.TestCase):
+    """Tests for the text digest."""
 
     def test_digest_is_the_prefix_of_sha256_over_the_published_fields(self):
         """A consumer can recompute the digest from the catalog alone."""
-        expected = hashlib.sha256(
-            f"{CHECKOUT}\x1f\x1fthe business must reply".encode()
-        ).hexdigest()[:10]
+        hash_input = "\x1fthe business must reply"
+        expected = hashlib.sha256(hash_input.encode()).hexdigest()[:10]
         self.assertEqual(
-            identity.requirement_digest(CHECKOUT, None, "the business must reply"),
-            expected,
+            identity.text_digest(None, "the business must reply"), expected
         )
 
-    def test_capability_and_context_change_the_digest(self):
-        """The same words under another capability or parent are different."""
-        base = identity.requirement_digest(CHECKOUT, None, "must")
+    def test_context_changes_the_digest(self):
+        """The same words under another parent are a different requirement."""
         self.assertNotEqual(
-            base, identity.requirement_digest("dev.ucp.shopping.cart", None, "must")
-        )
-        self.assertNotEqual(
-            base, identity.requirement_digest(CHECKOUT, "Platform | Create", "must")
+            identity.text_digest(None, "must"),
+            identity.text_digest("Platform | Create", "must"),
         )
 
 
@@ -155,7 +150,7 @@ class TestAssignIdentities(unittest.TestCase):
         [before], _ = identity.assign_identities([_clause("It **MUST** reply.")])
         [after], _ = identity.assign_identities([_clause("It **MUST** respond.")])
         self.assertEqual(before.id, after.id)
-        self.assertNotEqual(before.content_digest, after.content_digest)
+        self.assertNotEqual(before.text_digest, after.text_digest)
 
     def test_moving_a_clause_keeps_the_digest(self):
         """The digest ignores file, line and heading."""
@@ -164,7 +159,17 @@ class TestAssignIdentities(unittest.TestCase):
             [_clause("It **MUST** reply.", file=REST, line=90, section="R > Other")]
         )
         self.assertNotEqual(here.id, there.id)
-        self.assertEqual(here.content_digest, there.content_digest)
+        self.assertEqual(here.text_digest, there.text_digest)
+
+    def test_relabelling_the_page_keeps_the_digest(self):
+        """Attributing a page to another capability does not re-mint digests."""
+        clause = _clause("It **MUST** reply.")
+        relabelled = _clause("It **MUST** reply.")
+        relabelled.capability = "dev.ucp.shopping.cart"
+        [checkout], _ = identity.assign_identities([clause])
+        [cart], _ = identity.assign_identities([relabelled])
+        self.assertNotEqual(checkout.id, cart.id)
+        self.assertEqual(checkout.text_digest, cart.text_digest)
 
     def test_identical_clauses_share_a_digest_and_are_reported(self):
         """One sentence kept in two documents is flagged as a hazard."""
@@ -175,7 +180,7 @@ class TestAssignIdentities(unittest.TestCase):
                 _clause(text, file=MCP, line=20, section="M > Errors"),
             ]
         )
-        self.assertEqual(len({r.content_digest for r in requirements}), 1)
+        self.assertEqual(len({r.text_digest for r in requirements}), 1)
         self.assertEqual(len({r.id for r in requirements}), 2)
         [entry] = report.duplicate_requirements
         self.assertEqual(entry["copies"], 2)

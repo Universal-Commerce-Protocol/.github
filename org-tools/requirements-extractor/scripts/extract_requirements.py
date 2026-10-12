@@ -16,6 +16,7 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
+#   "jsonschema==4.26.0",
 #   "markdown-it-py==3.0.0",
 #   "markdown==3.10.2",
 # ]
@@ -23,32 +24,37 @@
 """Extract a machine-readable requirements catalog from the specification.
 
 Reads the normative prose of the checkout capability from a checkout of the
-specification repository and writes two files into that checkout:
+specification repository and writes into that checkout:
 
-  generated/requirements/requirements.json       the requirements
+  generated/requirements/catalog/<page>.json     one catalog per page
   generated/requirements/extraction_report.json  what was excluded, and why
+
+The catalog mirrors the specification tree: the requirements of
+docs/specification/shopping/checkout/rest.md are written to
+generated/requirements/catalog/shopping/checkout/rest.json. Every file is
+validated against the published schema before it is written.
 
 The report is not a debug log. Every clause citing an RFC 2119 keyword
 either becomes a requirement or appears in the report with a reason, so the
-two documents reconcile against the spec exactly. Reading the report is how
-an author finds obligations the extractor could not attribute, and prose
-that reads as normative but is not marked up as such.
+two reconcile against the spec exactly. Reading the report is how an author
+finds obligations the extractor could not attribute, and prose that reads
+as normative but is not marked up as such.
 
 `--spec-root` is required and must be the directory holding the
 specification's mkdocs.yml. The published release (`extra.ucp_version`) is
 read from that file, so running against the wrong directory is an error
 rather than a catalog stamped with the wrong version.
 
-Dependencies are pinned to the versions the specification site builds with.
-`markdown` in particular decides heading anchors, and a different version
-can publish URLs that do not resolve.
+Dependencies are pinned. `markdown` matches the version the specification
+site builds with, because it decides heading anchors, and a different
+version can publish anchors that do not resolve.
 
 Usage, from the root of a ucp checkout:
 
-  # Write both documents.
+  # Write the catalog and the report.
   uv run path/to/extract_requirements.py --spec-root .
 
-  # Verify the committed documents match the specification. Exits non-zero
+  # Verify the committed files match the specification. Exits non-zero
   # if regenerating would change anything, which is the form to run in CI.
   uv run path/to/extract_requirements.py --spec-root . --check
 
@@ -143,30 +149,36 @@ def _comparable(text: str) -> str:
     return catalog.serialize(document)
 
 
-def _check(paths_and_documents: list[tuple[Path, dict]], spec_root: Path) -> int:
+def _check(
+    paths_and_documents: list[tuple[Path, dict]],
+    stale: list[Path],
+    spec_root: Path,
+) -> int:
     """Compare regenerated documents against what is on disk.
 
     Args:
       paths_and_documents: Destination paths paired with fresh documents.
+      stale: Catalog files on disk that this run no longer produces.
       spec_root: Root of the specification checkout.
 
     Returns:
       A process exit status: 0 when every file is already current.
 
     """
-    stale = []
+    problems = []
     for path, document in paths_and_documents:
         expected = _comparable(catalog.serialize(document))
         if not path.exists():
-            stale.append((path, "missing"))
+            problems.append((path, "missing"))
         elif _comparable(path.read_text(encoding="utf-8")) != expected:
-            stale.append((path, "out of date"))
+            problems.append((path, "out of date"))
+    problems.extend((path, "no longer generated") for path in stale)
 
-    if not stale:
+    if not problems:
         print("Requirements catalog is up to date.")
         return 0
 
-    for path, reason in stale:
+    for path, reason in problems:
         print(f"{_display_path(path, spec_root)}: {reason}", file=sys.stderr)
     try:
         script = os.path.relpath(Path(__file__).resolve())
@@ -180,6 +192,34 @@ def _check(paths_and_documents: list[tuple[Path, dict]], spec_root: Path) -> int
         file=sys.stderr,
     )
     return 1
+
+
+def _report_unresolved(unresolved: list[str]) -> None:
+    """Explain why a run that found unattributed documents stopped."""
+    print(
+        f"\nerror: {len(unresolved)} document(s) with no capability:",
+        file=sys.stderr,
+    )
+    for name in unresolved:
+        print(f"  {name}", file=sys.stderr)
+    print(
+        "Every requirement in the catalog must belong to a capability. Declare "
+        "it with a `**Capability Name:**` bullet in the document, or map the "
+        "document's directory in config.CAPABILITY_BY_PREFIX.",
+        file=sys.stderr,
+    )
+
+
+def _report_invalid(
+    invalid: dict[Path, list[str]], catalog_dir: Path, spec_root: Path
+) -> None:
+    """Explain why a run whose catalog failed schema validation stopped."""
+    print("\nerror: the catalog does not match its published schema:", file=sys.stderr)
+    for relative, errors in invalid.items():
+        location = _display_path(catalog_dir / relative, spec_root)
+        for error in errors:
+            print(f"  {location}: {error}", file=sys.stderr)
+    print("Nothing was written.", file=sys.stderr)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -203,12 +243,12 @@ def main(argv: list[str] | None = None) -> int:
         help=("Root of the specification checkout: the directory holding mkdocs.yml."),
     )
     argument_parser.add_argument(
-        "--catalog",
+        "--catalog-dir",
         type=Path,
         default=None,
         help=(
-            "Where to write the requirements "
-            f"(default: <spec-root>/{config.DEFAULT_CATALOG_PATH.as_posix()})."
+            "Directory to write one catalog file per page into "
+            f"(default: <spec-root>/{config.DEFAULT_CATALOG_DIR.as_posix()})."
         ),
     )
     argument_parser.add_argument(
@@ -224,7 +264,7 @@ def main(argv: list[str] | None = None) -> int:
         "--check",
         action="store_true",
         help=(
-            "Do not write. Exit non-zero if regenerating would change either "
+            "Do not write. Exit non-zero if regenerating would change any "
             "file, so CI can prove the committed catalog matches the spec."
         ),
     )
@@ -238,14 +278,6 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Print counts for the run.",
     )
-    argument_parser.add_argument(
-        "--fail-on-unresolved",
-        action="store_true",
-        help=(
-            "Exit non-zero if any document's capability could not be resolved. "
-            "Useful once scope widens past a single capability directory."
-        ),
-    )
     args = argument_parser.parse_args(argv)
 
     spec_root: Path = args.spec_root
@@ -254,41 +286,53 @@ def main(argv: list[str] | None = None) -> int:
             f"--spec-root {spec_root} has no {config.MKDOCS_FILENAME}; "
             "pass the root of the specification checkout"
         )
-    catalog_path: Path = args.catalog or spec_root / config.DEFAULT_CATALOG_PATH
+    catalog_dir: Path = args.catalog_dir or spec_root / config.DEFAULT_CATALOG_DIR
     report_path: Path = args.report or spec_root / config.DEFAULT_REPORT_PATH
 
     requirements, report = catalog.build(spec_root)
-    catalog_doc = catalog.catalog_document(requirements, report, spec_root)
     report_doc = catalog.report_document(requirements, report, spec_root)
 
     if args.summary:
-        _print_summary(catalog_doc["summary"])
+        _print_summary(report_doc["summary"])
 
+    # A requirement that belongs to no capability has no valid catalog
+    # record, so stop before anything is written and name the documents.
     unresolved = catalog.unresolved_capabilities(requirements)
     if unresolved:
-        print(
-            f"\nwarning: {len(unresolved)} document(s) with no capability:",
-            file=sys.stderr,
-        )
-        for name in unresolved:
-            print(f"  {name}", file=sys.stderr)
-        if args.fail_on_unresolved:
-            return 1
+        _report_unresolved(unresolved)
+        return 1
+
+    documents = catalog.catalog_documents(requirements, report, spec_root)
+    invalid = {
+        relative: errors
+        for relative, document in documents.items()
+        if (errors := catalog.validate(document))
+    }
+    if invalid:
+        _report_invalid(invalid, catalog_dir, spec_root)
+        return 1
 
     if args.check:
         return _check(
-            [(catalog_path, catalog_doc), (report_path, report_doc)], spec_root
+            [(catalog_dir / relative, doc) for relative, doc in documents.items()]
+            + [(report_path, report_doc)],
+            catalog.stale_catalog_files(catalog_dir, documents, keep=[report_path]),
+            spec_root,
         )
 
     if args.dry_run:
         print("\nDry run: nothing written.")
         return 0
 
-    catalog.write(catalog_path, catalog_doc)
+    removed = catalog.write_catalog(catalog_dir, documents, keep=[report_path])
     catalog.write(report_path, report_doc)
-    print(f"\nWrote {len(requirements)} requirements")
-    print(f"  {_display_path(catalog_path, spec_root)}")
+    print(
+        f"\nWrote {len(requirements)} requirements to {len(documents)} catalog file(s)"
+    )
+    print(f"  {_display_path(catalog_dir, spec_root)}/")
     print(f"  {_display_path(report_path, spec_root)}")
+    for path in removed:
+        print(f"Removed {_display_path(path, spec_root)}: no longer generated")
     return 0
 
 

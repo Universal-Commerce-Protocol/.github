@@ -12,8 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Unit tests for configuration helpers: versions, URLs, tokens, schema."""
+"""Unit tests for configuration helpers: versions, locations, tokens, schema."""
 
+import hashlib
 import json
 import os
 import sys
@@ -29,6 +30,12 @@ from requirements_extractor import config
 
 FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "spec"
 CHECKOUT_DIR = "docs/specification/shopping/checkout"
+
+# SHA-256 of the canonical JSON of the shipped catalog schema. It changes only
+# together with a new schema file and a new CATALOG_SCHEMA_VERSION.
+PUBLISHED_SCHEMA_DIGEST = (
+    "f46f75751ed9b87fbaaff3a8923fe95b60ae0141b9c9905724475d78a6a72393"
+)
 
 
 class TestSpecVersion(unittest.TestCase):
@@ -53,43 +60,62 @@ class TestSpecVersion(unittest.TestCase):
                 config.spec_version(Path(directory))
 
 
-class TestPublishedUrl(unittest.TestCase):
-    """Tests for the URLs published with each requirement."""
+class TestPublishedLocation(unittest.TestCase):
+    """Tests for the page and anchor published with each requirement."""
 
     def test_index_document_renders_as_its_directory(self):
-        """index.md maps to the directory URL, anchored on the last heading."""
+        """index.md maps to the directory, anchored on the last heading."""
         self.assertEqual(
-            config.published_url(
-                f"{CHECKOUT_DIR}/index.md",
-                "Checkout Capability > Continue URL",
-                "2026-01-11",
-            ),
-            "https://ucp.dev/2026-01-11/specification/shopping/checkout/#continue-url",
+            config.published_page(f"{CHECKOUT_DIR}/index.md"),
+            "specification/shopping/checkout/",
+        )
+        self.assertEqual(
+            config.published_anchor("Checkout Capability > Continue URL"),
+            "continue-url",
         )
 
     def test_other_documents_render_as_a_subdirectory(self):
         """rest.md maps to .../checkout/rest/."""
         self.assertEqual(
-            config.published_url(
-                f"{CHECKOUT_DIR}/rest.md",
-                "Checkout REST Binding > Transport Security",
-                "draft",
-            ),
-            "https://ucp.dev/draft/specification/shopping/checkout/rest/"
-            "#transport-security",
+            config.published_page(f"{CHECKOUT_DIR}/rest.md"),
+            "specification/shopping/checkout/rest/",
+        )
+        self.assertEqual(
+            config.published_anchor("Checkout REST Binding > Transport Security"),
+            "transport-security",
         )
 
     def test_explicit_anchor_is_used_as_is(self):
         """A heading's attr_list id replaces the slugified heading."""
         self.assertEqual(
-            config.published_url(
-                f"{CHECKOUT_DIR}/index.md",
-                "Checkout Capability > Entities > Total",
-                "draft",
-                "totals",
-            ),
-            "https://ucp.dev/draft/specification/shopping/checkout/#totals",
+            config.published_anchor("Checkout Capability > Entities > Total", "totals"),
+            "totals",
         )
+
+    def test_clause_before_any_heading_has_no_anchor(self):
+        """No heading means no fragment, rather than an empty one."""
+        self.assertIsNone(config.published_anchor(""))
+        self.assertIsNone(config.published_anchor(None))
+
+
+class TestCatalogFile(unittest.TestCase):
+    """Tests for mapping a page to its catalog file."""
+
+    def test_catalog_mirrors_the_specification_tree(self):
+        """A page's catalog sits at the same path below the catalog dir."""
+        self.assertEqual(
+            config.catalog_file(f"{CHECKOUT_DIR}/rest.md"),
+            Path("shopping/checkout/rest.json"),
+        )
+        self.assertEqual(
+            config.catalog_file(f"{CHECKOUT_DIR}/index.md"),
+            Path("shopping/checkout/index.json"),
+        )
+
+    def test_page_outside_the_specification_is_rejected(self):
+        """Only pages under the specification root have a catalog file."""
+        with self.assertRaises(ValueError):
+            config.catalog_file("docs/index.md")
 
 
 class TestHeadingAttributes(unittest.TestCase):
@@ -200,6 +226,30 @@ class TestCatalogSchema(unittest.TestCase):
         self.assertEqual(
             config.CATALOG_SCHEMA_URL.removeprefix(prefix),
             config.CATALOG_SCHEMA_PATH.relative_to(repo_root).as_posix(),
+        )
+
+    def test_schema_file_name_carries_its_version(self):
+        """Each format version is its own file, so none is edited in place."""
+        self.assertEqual(
+            config.CATALOG_SCHEMA_PATH.name,
+            f"requirements-catalog-{config.CATALOG_SCHEMA_VERSION}.json",
+        )
+
+    def test_published_schema_is_unchanged(self):
+        """The shipped schema matches the contract catalogs were written to.
+
+        Committed catalogs name this file, so editing it in place would change
+        what every one of them means without any of them changing. A format
+        change ships as a new schema file with a new version instead. The
+        digest covers the canonical JSON, so reformatting the file is free.
+        """
+        schema = json.loads(config.CATALOG_SCHEMA_PATH.read_text(encoding="utf-8"))
+        canonical = json.dumps(
+            schema, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+        )
+        self.assertEqual(
+            hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+            PUBLISHED_SCHEMA_DIGEST,
         )
 
 

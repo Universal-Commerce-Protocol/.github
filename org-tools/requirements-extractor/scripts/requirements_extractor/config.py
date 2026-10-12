@@ -35,7 +35,7 @@ caller needs to change when they are.
 
 from __future__ import annotations
 
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 
 from markdown.extensions.attr_list import AttrListTreeprocessor as _AttrList
@@ -57,6 +57,11 @@ TOOL_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # Directories scanned for normative prose. Scoped to the checkout capability.
 SPEC_DIRS = [Path("docs/specification/shopping/checkout")]
+
+# Root of the specification pages. The catalog mirrors the tree below it, one
+# file per page: docs/specification/shopping/checkout/rest.md is described by
+# <catalog dir>/shopping/checkout/rest.json. Every SPEC_DIRS entry lies under it.
+SPEC_DOCS_ROOT = Path("docs/specification")
 
 # Documents excluded even when they fall inside SPEC_DIRS.
 #
@@ -90,7 +95,7 @@ CAPABILITY_BY_PREFIX = {
 # grepped, so a test binding says what it binds to.
 #
 # The ordinal is positional, which means inserting a requirement renumbers the
-# ones after it. That is why every record also publishes `content_digest`: the
+# ones after it. That is why every record also publishes `text_digest`: the
 # identifier locates a requirement, and the digest says whether the rule it
 # names still has the same text. A maintenance check comparing both can tell
 # "this test's requirement was reworded" from "this test is orphaned", which
@@ -122,15 +127,19 @@ MAX_SECTION_TOKEN_LENGTH = 24
 ORDINAL_WIDTH = 2
 
 # ---------------------------------------------------------------------------
-# Published URLs
+# Published locations
 # ---------------------------------------------------------------------------
-
+#
+# A record names where its rule is published as a page and an anchor, with no
+# site root and no release. The release is `spec_version` in the catalog
+# header, so cutting a release changes one line per catalog file rather than
+# every record; a consumer joins the three into a link.
+#
 # Anchors are derived with `markdown.extensions.toc.slugify`, which is what
 # renders the site: mkdocs.yml configures `toc` with only `permalink: true`,
 # so headings use Python-Markdown's default slugify. The `pymdownx.slugs`
 # entry in mkdocs.yml applies to `pymdownx.tabbed`, not to headings -- using
 # it for headings instead produces anchors that differ on some of them.
-SITE_BASE_URL = "https://ucp.dev"
 
 # Path segment under the site root. Documents map to a directory-style URL,
 # and `index.md` maps to the parent directory itself.
@@ -332,13 +341,14 @@ ID_DIGEST_LENGTH = 10
 # Output
 # ---------------------------------------------------------------------------
 
-# Relative to the spec root.
+# Relative to the spec root. The catalog is a directory of per-page files
+# (see SPEC_DOCS_ROOT and catalog_file); the report covers the whole run.
 OUTPUT_DIR = Path("generated") / "requirements"
-DEFAULT_CATALOG_PATH = OUTPUT_DIR / "requirements.json"
+DEFAULT_CATALOG_DIR = OUTPUT_DIR / "catalog"
 DEFAULT_REPORT_PATH = OUTPUT_DIR / "extraction_report.json"
 
 CATALOG_SCHEMA_VERSION = "1.0.0"
-EXTRACTOR_VERSION = "0.2.0"
+EXTRACTOR_VERSION = "0.3.0"
 
 # Published identifier of the record schema, and where it lives in-repo.
 #
@@ -348,15 +358,21 @@ EXTRACTOR_VERSION = "0.2.0"
 # would read better but nothing publishes one, and a `$schema` that returns
 # 404 is worse than a long one.
 #
+# The file name carries the version, and a published schema file is never
+# edited: committed catalogs name it, so changing it in place would silently
+# change what every one of them means. A format change ships as a new file
+# beside it, with CATALOG_SCHEMA_VERSION bumped to match.
+#
 # It is deliberately not in the specification's source/schemas, which holds
 # protocol entity schemas that the specification's examples are validated
 # against. The catalog is tooling output, not a protocol entity, and adding
 # it there enlists it in a validation pass it has nothing to do with.
+CATALOG_SCHEMA_FILENAME = f"requirements-catalog-{CATALOG_SCHEMA_VERSION}.json"
 CATALOG_SCHEMA_URL = (
     "https://raw.githubusercontent.com/Universal-Commerce-Protocol/.github/"
-    "main/org-tools/requirements-extractor/schema/requirements-catalog-v1.json"
+    f"main/org-tools/requirements-extractor/schema/{CATALOG_SCHEMA_FILENAME}"
 )
-CATALOG_SCHEMA_PATH = TOOL_ROOT / "schema" / "requirements-catalog-v1.json"
+CATALOG_SCHEMA_PATH = TOOL_ROOT / "schema" / CATALOG_SCHEMA_FILENAME
 
 # Envelope fields excluded when comparing a regenerated document against the
 # one on disk, because neither is a function of the specification.
@@ -486,8 +502,8 @@ def resolve_capability(rel_path: str, abs_path: Path | None = None) -> str | Non
       abs_path: Absolute path, when available, enabling the tier 1 lookup.
 
     Returns:
-      The reverse-DNS capability identifier, or None when unresolved. Callers
-      decide whether an unresolved document is fatal; see --fail-on-unresolved.
+      The reverse-DNS capability identifier, or None when unresolved. The CLI
+      treats an unresolved document as fatal: the schema has no place for it.
 
     """
     if abs_path is not None:
@@ -546,42 +562,81 @@ def heading_anchor(heading: str) -> str:
     return _toc_slugify(heading, "-")
 
 
-def published_url(
-    rel_path: str, section: str | None, version: str, anchor: str | None = None
-) -> str:
-    """Return the public URL for the clause's section.
+def published_page(rel_path: str) -> str:
+    """Return the site-relative path a document is published at.
+
+    The release segment is left out. It is `spec_version` in the catalog
+    header, and a consumer builds the link as
+    ``<site>/<spec_version>/<page>#<anchor>``.
 
     Args:
       rel_path: Repository-relative POSIX path to the source document.
-      section: Heading breadcrumb, or None.
-      version: Spec version segment, such as "draft".
-      anchor: Explicit id of the deepest heading, from an attr_list block.
-        When given it is used as is instead of slugifying the heading.
 
     Returns:
-      An absolute URL, anchored on the deepest heading when one is known.
+      A directory-style path ending in '/', such as
+      ``specification/shopping/checkout/rest/``.
 
     """
-    path = Path(rel_path)
     # `docs/specification/...` renders at `/<version>/specification/...`.
-    parts = list(path.parts)
+    parts = list(PurePosixPath(rel_path).parts)
     if parts and parts[0] == DOCS_URL_ROOT:
         parts = parts[1:]
     # A page renders as a directory; index.md *is* its parent directory.
     if parts and parts[-1] == INDEX_DOCUMENT:
         parts = parts[:-1]
     elif parts:
-        parts[-1] = Path(parts[-1]).stem
+        parts[-1] = PurePosixPath(parts[-1]).stem
+    return "/".join(parts) + "/"
 
-    url = "/".join([SITE_BASE_URL, version, *parts]) + "/"
 
+def published_anchor(section: str | None, anchor: str | None = None) -> str | None:
+    """Return the fragment of the deepest heading above a clause.
+
+    Args:
+      section: Heading breadcrumb, or None.
+      anchor: Explicit id of the deepest heading, from an attr_list block.
+        When given it is used as is instead of slugifying the heading.
+
+    Returns:
+      The fragment, without a leading '#', or None when the clause precedes
+      every heading.
+
+    """
     if anchor:
-        return url + "#" + anchor
+        return anchor
     if section:
         crumbs = [crumb.strip() for crumb in section.split(">") if crumb.strip()]
         if crumbs:
-            url += "#" + heading_anchor(crumbs[-1])
-    return url
+            return heading_anchor(crumbs[-1]) or None
+    return None
+
+
+def catalog_file(rel_path: str) -> Path:
+    """Return where a page's catalog is written, relative to the catalog dir.
+
+    The catalog mirrors the specification tree, one file per page, so a
+    page's requirements are always in exactly one predictable file and a
+    catalog diff names the page it came from.
+
+    Args:
+      rel_path: Repository-relative POSIX path to a page under SPEC_DOCS_ROOT.
+
+    Returns:
+      The page's path below SPEC_DOCS_ROOT with a ``.json`` suffix, such as
+      ``shopping/checkout/rest.json``.
+
+    Raises:
+      ValueError: If the page is not under SPEC_DOCS_ROOT.
+
+    """
+    try:
+        below = PurePosixPath(rel_path).relative_to(SPEC_DOCS_ROOT.as_posix())
+    except ValueError as error:
+        raise ValueError(
+            f"{rel_path} is not under {SPEC_DOCS_ROOT.as_posix()}, so it has no "
+            "place in the catalog"
+        ) from error
+    return Path(*below.with_suffix(".json").parts)
 
 
 def published_actor(actor: str | None) -> str | None:

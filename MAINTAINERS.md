@@ -118,9 +118,9 @@ The Payments Tech Council is responsible for the technical direction and overall
 design of the protocol for Payments Domain.
 
 <!-- cSpell:ignore Archana Malhotra Daniel Wyckoff Drew Olson Ed Siok -->
-<!-- cSpell:ignore Fabrice Cheng Harsh Mehta Ilya Grigorik Jose Mendez -->
-<!-- cSpell:ignore Nick Chen Prasad Wangikar Prateek Dudeja Steven Chen -->
-<!-- cSpell:ignore Vita Valeikaite -->
+<!-- cSpell:ignore Fabrice Cheng Ilya Grigorik Jose Mendez Nick Chen -->
+<!-- cSpell:ignore Prasad Wangikar Prateek Dudeja Rose Wiegley Simon Farrow -->
+<!-- cSpell:ignore Steven Chen Vita Valeikaite -->
 
 | Name             | Company           |
 | :--------------- | :---------------- |
@@ -129,12 +129,12 @@ design of the protocol for Payments Domain.
 | Drew Olson       | Google            |
 | Ed Siok          | PayPal            |
 | Fabrice Cheng    | Coinbase          |
-| Harsh Mehta      | Global Payments   |
 | Ilya Grigorik\*  | Shopify           |
 | Jose Mendez      | Adyen NV          |
 | Prasad Wangikar  | Stripe            |
 | Prateek Dudeja   | Google            |
 | Rose Wiegley     | Shopify           |
+| Simon Farrow     | Global Payments   |
 | Steven Chen      | Ant International |
 | Vita Valeikaite  | Shopify           |
 | Open             | to be elected     |

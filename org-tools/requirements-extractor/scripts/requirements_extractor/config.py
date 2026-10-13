@@ -190,6 +190,10 @@ DEFAULT_SPEC_VERSION = "draft"
 # Ordered longest-first. Callers MUST match in this order so that "MUST NOT" is
 # never truncated to "MUST" - a truncation bug here silently inverts the
 # meaning of every prohibition in the corpus.
+#
+# The levels themselves are defined by models.Level. This module imports
+# nothing from the package, so the list cannot be derived from it here;
+# tests/test_config.py fails if the two ever hold different keywords.
 OBLIGATION_KEYWORDS = (
     "MUST NOT",
     "SHALL NOT",

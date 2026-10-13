@@ -37,9 +37,13 @@ from requirements_extractor import config
 class Level(enum.Enum):
     """RFC 2119 obligation levels.
 
-    These are the only values that appear as a requirement's `level` in the
-    emitted catalog. `SHALL`/`SHALL_NOT` are retained because the corpus contains
-    one instance of each, even though `MUST` is the house style.
+    The single definition of the levels the tool recognizes. They are the only
+    values that appear as a requirement's `level` in the emitted catalog, and
+    the summary's per-level counters are generated from this enum, so a level
+    added here is counted everywhere. Copies that cannot import it -- the
+    keyword list in config and the published schema -- are checked against it
+    by unit tests. `SHALL` and `SHALL NOT` are kept because RFC 2119 defines
+    them, even though the specification currently writes `MUST` throughout.
     """
 
     MUST = "MUST"
@@ -53,6 +57,11 @@ class Level(enum.Enum):
     def __str__(self) -> str:
         """Return the spec-facing spelling, e.g. ``MUST NOT``."""
         return self.value
+
+    @property
+    def count_field(self) -> str:
+        """Return the summary field that counts this level, e.g. ``must_not_count``."""
+        return f"{self.name.lower()}_count"
 
 
 class Annotation(enum.Enum):

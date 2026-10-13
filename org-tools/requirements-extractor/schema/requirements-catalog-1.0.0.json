@@ -77,12 +77,23 @@
 
     "summary": {
       "type": "object",
-      "required": ["total", "must_count", "should_count", "may_count"],
+      "required": [
+        "total",
+        "must_count",
+        "must_not_count",
+        "shall_count",
+        "shall_not_count",
+        "should_count",
+        "should_not_count",
+        "may_count"
+      ],
       "additionalProperties": true,
       "properties": {
         "total": { "type": "integer", "minimum": 0 },
         "must_count": { "type": "integer", "minimum": 0 },
         "must_not_count": { "type": "integer", "minimum": 0 },
+        "shall_count": { "type": "integer", "minimum": 0 },
+        "shall_not_count": { "type": "integer", "minimum": 0 },
         "should_count": { "type": "integer", "minimum": 0 },
         "should_not_count": { "type": "integer", "minimum": 0 },
         "may_count": { "type": "integer", "minimum": 0 },

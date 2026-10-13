@@ -26,6 +26,13 @@ sys.path.insert(
 )
 
 from requirements_extractor import catalog
+from requirements_extractor.models import (
+    BlockType,
+    ExtractionReport,
+    Level,
+    Requirement,
+    SourceRef,
+)
 
 FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "spec"
 
@@ -36,6 +43,23 @@ def _fixture_documents() -> dict[Path, dict]:
     return catalog.catalog_documents(requirements, report, FIXTURE_ROOT)
 
 
+def _requirement(level: Level, line: int) -> Requirement:
+    """Build a minimal requirement at a given obligation level."""
+    return Requirement(
+        text=f"The business **{level}** reply.",
+        source=SourceRef(
+            file="docs/specification/shopping/checkout/index.md",
+            line_start=line,
+            line_end=line,
+            section="Checkout Capability > Replies",
+            block_type=BlockType.PARAGRAPH,
+        ),
+        document_order=line,
+        level=level,
+        capability="dev.ucp.shopping.checkout",
+    )
+
+
 class TestCatalogDocuments(unittest.TestCase):
     """Tests for splitting a run into one document per page."""
 
@@ -44,6 +68,22 @@ class TestCatalogDocuments(unittest.TestCase):
         self.assertEqual(
             list(_fixture_documents()),
             [Path("shopping/checkout/index.json"), Path("shopping/checkout/rest.json")],
+        )
+
+
+class TestSummarize(unittest.TestCase):
+    """Tests for the counts at the head of each document."""
+
+    def test_every_level_has_a_counter_and_they_add_up(self):
+        """A requirement at any level, SHALL included, is counted once."""
+        requirements = [
+            _requirement(level, line) for line, level in enumerate(Level, start=1)
+        ]
+        summary = catalog.summarize(requirements, ExtractionReport())
+        for level in Level:
+            self.assertEqual(summary[level.count_field], 1, level)
+        self.assertEqual(
+            sum(summary[level.count_field] for level in Level), summary["total"]
         )
 
 

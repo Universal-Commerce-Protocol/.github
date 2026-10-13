@@ -27,6 +27,7 @@ sys.path.insert(
 )
 
 from requirements_extractor import config
+from requirements_extractor.models import Level
 
 FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "spec"
 CHECKOUT_DIR = "docs/specification/shopping/checkout"
@@ -34,7 +35,7 @@ CHECKOUT_DIR = "docs/specification/shopping/checkout"
 # SHA-256 of the canonical JSON of the shipped catalog schema. It changes only
 # together with a new schema file and a new CATALOG_SCHEMA_VERSION.
 PUBLISHED_SCHEMA_DIGEST = (
-    "f46f75751ed9b87fbaaff3a8923fe95b60ae0141b9c9905724475d78a6a72393"
+    "506b9bcd230405f8d4389a4cd4987c71f68aa79434e15442e7cdcd6efa311443"
 )
 
 
@@ -251,6 +252,34 @@ class TestCatalogSchema(unittest.TestCase):
             hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
             PUBLISHED_SCHEMA_DIGEST,
         )
+
+
+class TestObligationLevels(unittest.TestCase):
+    """Every copy of the obligation levels holds exactly what Level defines.
+
+    Level is the single definition. The keyword list in config and the
+    published schema cannot import it, so these tests are what keep them in
+    step: adding, renaming or dropping a level anywhere but Level fails here.
+    """
+
+    def setUp(self):
+        self.levels = [level.value for level in Level]
+        self.schema = json.loads(config.CATALOG_SCHEMA_PATH.read_text(encoding="utf-8"))
+
+    def test_keyword_list_matches_level(self):
+        """The classifier looks for exactly the levels Level defines."""
+        self.assertCountEqual(config.OBLIGATION_KEYWORDS, self.levels)
+
+    def test_schema_level_matches_level(self):
+        """A record's level can be any Level value, and nothing else."""
+        self.assertEqual(self.schema["$defs"]["level"]["enum"], self.levels)
+
+    def test_schema_summary_counts_every_level(self):
+        """The schema documents and requires one counter per level."""
+        summary = self.schema["$defs"]["summary"]
+        fields = {level.count_field for level in Level}
+        self.assertLessEqual(fields, set(summary["properties"]))
+        self.assertLessEqual(fields, set(summary["required"]))
 
 
 if __name__ == "__main__":

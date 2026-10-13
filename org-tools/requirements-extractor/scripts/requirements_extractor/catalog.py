@@ -60,7 +60,7 @@ from requirements_extractor import (
     metadata,
     parser,
 )
-from requirements_extractor.models import ExtractionReport, Requirement
+from requirements_extractor.models import ExtractionReport, Level, Requirement
 
 
 def build(spec_root: Path) -> tuple[list[Requirement], ExtractionReport]:
@@ -114,11 +114,9 @@ def summarize(
     by_level = _counter([str(r.level) for r in requirements if r.level is not None])
     return {
         "total": len(requirements),
-        "must_count": by_level.get("MUST", 0),
-        "must_not_count": by_level.get("MUST NOT", 0),
-        "should_count": by_level.get("SHOULD", 0),
-        "should_not_count": by_level.get("SHOULD NOT", 0),
-        "may_count": by_level.get("MAY", 0),
+        # One counter per level, generated from Level so that none is left
+        # out: they always add up to `total`.
+        **{level.count_field: by_level.get(level.value, 0) for level in Level},
         "by_level": by_level,
         "by_actor": _counter(
             [config.published_actor(r.actor) or "UNRESOLVED" for r in requirements]

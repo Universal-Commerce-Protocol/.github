@@ -1,0 +1,269 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Universal-Commerce-Protocol/.github/main/org-tools/requirements-extractor/schema/requirements-catalog-1.0.0.json",
+  "title": "UCP Requirements Catalog",
+  "description": "The normative obligations stated in one page of a UCP specification, in machine-readable form. Produced by org-tools/requirements-extractor/scripts/extract_requirements.py in the Universal-Commerce-Protocol/.github repository, which writes one such file per specification page. Records carry no release of their own: the release is spec_version in this header, so cutting a release changes one line per file rather than every record. Once published, this file does not change; a change to the format ships as a new file whose name carries the new version.",
+
+  "type": "object",
+  "required": [
+    "schema_version",
+    "extractor_version",
+    "spec_version",
+    "source_file",
+    "summary",
+    "requirements"
+  ],
+  "additionalProperties": false,
+
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri",
+      "description": "Identifier of this schema."
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semantic version of the catalog format, which names the schema file the catalog conforms to."
+    },
+    "extractor_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Version of the tool that produced the catalog."
+    },
+    "spec_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "UCP release the specification tree represents, such as 'draft' or a dated release. This is the only place a catalog names its release: combined with a record's source.page and source.anchor, it gives the published link."
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "description": "UTC timestamp of the run. This is the only field that differs between two runs over identical input, so consumers comparing catalogs for drift must exclude it; --check does."
+    },
+    "commit_sha": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "Commit the catalog was generated from, or null outside a git checkout."
+    },
+    "source_file": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repository-relative path of the specification page this catalog describes, POSIX separators. Every record's source.file equals it."
+    },
+    "summary": { "$ref": "#/$defs/summary" },
+    "requirements": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/requirement" },
+      "minItems": 1,
+      "description": "The page's requirements, in source order. A page with none has no catalog file."
+    }
+  },
+
+  "$defs": {
+    "level": {
+      "type": "string",
+      "enum": [
+        "MUST",
+        "MUST NOT",
+        "SHALL",
+        "SHALL NOT",
+        "SHOULD",
+        "SHOULD NOT",
+        "MAY"
+      ],
+      "description": "RFC 2119 obligation level."
+    },
+
+    "summary": {
+      "type": "object",
+      "required": [
+        "total",
+        "must_count",
+        "must_not_count",
+        "shall_count",
+        "shall_not_count",
+        "should_count",
+        "should_not_count",
+        "may_count"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "must_count": { "type": "integer", "minimum": 0 },
+        "must_not_count": { "type": "integer", "minimum": 0 },
+        "shall_count": { "type": "integer", "minimum": 0 },
+        "shall_not_count": { "type": "integer", "minimum": 0 },
+        "should_count": { "type": "integer", "minimum": 0 },
+        "should_not_count": { "type": "integer", "minimum": 0 },
+        "may_count": { "type": "integer", "minimum": 0 },
+        "by_level": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "by_actor": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "by_file": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "with_condition": { "type": "integer", "minimum": 0 },
+        "with_referenced_fields": { "type": "integer", "minimum": 0 },
+        "from_compound_split": { "type": "integer", "minimum": 0 },
+        "diagnostics": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 },
+          "description": "Counts per diagnostic bucket for this page. Every clause citing an RFC 2119 keyword either reaches the catalog or appears in one of these, so the totals reconcile."
+        }
+      }
+    },
+
+    "requirement": {
+      "type": "object",
+      "required": [
+        "id",
+        "text_digest",
+        "scope",
+        "capabilities",
+        "level",
+        "target_actor",
+        "actor_confidence",
+        "clause",
+        "normalized",
+        "condition",
+        "referenced_fields",
+        "compound_parent",
+        "document_order",
+        "source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^REQ-[A-Z0-9-]+-[0-9]{2,}$",
+          "description": "Readable identifier for conformance tests to bind to. Read together with text_digest, it distinguishes a requirement that was reworded from one that was removed."
+        },
+        "text_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{10}$",
+          "description": "First ten hex characters of the SHA-256 of the normalized compound_parent and the normalized clause, joined by U+001F. It depends on the wording alone, not on capability, file, line or heading, so it survives a page being relabelled or reorganized, and it can be recomputed from this record."
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["capability", "protocol"],
+          "description": "Whether the requirement belongs to particular capabilities or to the protocol as a whole."
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(\\.[a-z0-9_]+)+$"
+          },
+          "uniqueItems": true,
+          "description": "Reverse-DNS identifiers of the capabilities the requirement belongs to: at least one when scope is 'capability', none when scope is 'protocol'."
+        },
+        "level": { "$ref": "#/$defs/level" },
+        "target_actor": {
+          "type": ["string", "null"],
+          "description": "Uppercase party bound by the requirement, following the specification's own vocabulary (BUSINESS, not MERCHANT). Null when no actor could be attributed; guessing was measured and rejected as worse than admitting ignorance.",
+          "examples": ["BUSINESS", "PLATFORM", "HOST", "BUYER"]
+        },
+        "actor_confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence of the strategy that resolved target_actor. 0 when unresolved."
+        },
+        "clause": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The obligation as written, Markdown emphasis intact."
+        },
+        "normalized": {
+          "type": "string",
+          "description": "Canonical form of the clause, used as digest input."
+        },
+        "condition": {
+          "type": ["string", "null"],
+          "description": "Leading conditional the obligation is scoped by, verbatim, or null."
+        },
+        "referenced_fields": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Schema field names the clause names, deduplicated and sorted."
+        },
+        "compound_parent": {
+          "type": ["string", "null"],
+          "description": "List stem or matrix context the clause inherits meaning from. A matrix cell reading only 'must' means nothing without it."
+        },
+        "document_order": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Position of the source block within its document."
+        },
+        "source": { "$ref": "#/$defs/source" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "scope": { "const": "capability" } } },
+          "then": { "properties": { "capabilities": { "minItems": 1 } } }
+        },
+        {
+          "if": { "properties": { "scope": { "const": "protocol" } } },
+          "then": { "properties": { "capabilities": { "maxItems": 0 } } }
+        }
+      ]
+    },
+
+    "source": {
+      "type": "object",
+      "required": [
+        "file",
+        "start_line",
+        "end_line",
+        "section",
+        "block_type",
+        "page",
+        "anchor"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Repository-relative path, POSIX separators."
+        },
+        "start_line": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-based first line of the enclosing block."
+        },
+        "end_line": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-based last line of the enclosing block, inclusive."
+        },
+        "section": {
+          "type": "string",
+          "description": "Heading breadcrumb, joined by ' > '."
+        },
+        "block_type": {
+          "type": "string",
+          "enum": ["paragraph", "list_item", "table_cell"],
+          "description": "Markdown construct the clause was found in."
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^[^/#?\\s][^#?\\s]*/$",
+          "description": "Site-relative path of the published page, without the release segment, such as 'specification/shopping/checkout/rest/'. The published link is the site root, the catalog's spec_version, this page and the anchor: https://ucp.dev/<spec_version>/<page>#<anchor>."
+        },
+        "anchor": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "description": "Fragment of the deepest heading above the clause, as the site renders it: the heading's explicit attr_list id when it has one, otherwise the renderer's own slugify of the heading. Null when the clause precedes every heading."
+        }
+      }
+    }
+  }
+}

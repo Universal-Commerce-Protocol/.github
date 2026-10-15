@@ -140,6 +140,28 @@ class TestPRModels(unittest.TestCase):
         self.assertEqual(devops_req.target_key, (RequirementTargetType.TEAM, "devops"))
         self.assertEqual(admin_req.target_key, (RequirementTargetType.TEAM, "admins"))
 
+    def test_merge_requirements_preserves_escalation_reasons(self):
+        """Test that merge_requirements preserves and combines distinct escalation reasons."""
+        tc_team = Team.create(name="technical-council", level=3)
+        req1 = RuleRequirement(
+            min_approvals=1,
+            min_team=tc_team,
+            escalation_reason="Escalated in docs/a.md",
+        )
+        req2 = RuleRequirement(
+            min_approvals=2,
+            min_team=tc_team,
+            escalation_reason="Escalated in docs/b.md",
+        )
+
+        merged = merge_requirements([req1, req2])
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0].min_approvals, 2)
+        self.assertEqual(
+            merged[0].escalation_reason,
+            "Escalated in docs/a.md; Escalated in docs/b.md",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

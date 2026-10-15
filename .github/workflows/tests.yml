@@ -36,7 +36,9 @@ jobs:
           python-version: "3.12"
 
       - name: Run governance tests
-        run: uv run python -m unittest discover -s org-tools/governance/tests
+        run: >-
+          uv run --with markdown-it-py==3.0.0 --with markdown==3.10.2
+          python -m unittest discover -s org-tools/governance/tests
 
       - name: Run label-sync tests
         run: uv run python -m unittest discover -s org-tools/label-sync

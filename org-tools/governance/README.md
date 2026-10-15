@@ -19,16 +19,23 @@ graph TD
         C[GovernanceConfigParser]
         D[GovernanceConfigValidator]
     end
+    subgraph normative_detector.py
+        H[detect_normative_changes]
+    end
+    I[requirements_extractor]
     B --> C
     B --> D
     B --> E
-    C -->|Reads Config| F(python-sdk-rules.yml)
+    C -->|Reads Config| F(ucp-rules.yml)
     D -->|Static Sanity Analysis| F
+    E -->|Checks normative clauses in ucp| H
+    H -->|Delegates parsing & classification| I
     E -->|Evaluates approvals| G[GitHub API]
 ```
 
 - **`pr_validator.py`**: The entrypoint script and validator logic.
-  - `PullRequestValidator`: Fetches PR metadata (changed files, reviews, authors) from GitHub, queries team memberships, and evaluates reviews against the governance rules.
+  - `PullRequestValidator`: Fetches PR metadata (changed files, reviews, authors, and — for the `ucp` repository — Markdown file diffs/contents) from GitHub, queries team memberships, escalates `ucp` Markdown files that modify normative RFC 2119 clauses to at least Level 3 (Technical Council), and evaluates reviews against the governance rules.
+- **`normative_detector.py`**: Normative RFC 2119 clause change detector for Markdown documents (`*.md`, `*.markdown`). Delegates Markdown parsing, RFC 2119 classification (`MUST`, `MUST NOT`, `SHALL`, `SHALL NOT`, `SHOULD`, `SHOULD NOT`, `MAY`, and prose `REQUIRED`, `RECOMMENDED`, `OPTIONAL`), exclusion filtering, and clause digest normalization directly to `org-tools/requirements-extractor`, while also flagging unbolded uppercase RFC 2119 keywords in prose.
 - **`governance_config_parser.py`**: Helper module for loading rules and analyzing configurations.
   - `GovernanceConfigParser`: Parses YAML configuration files into typed python dataclasses (`Team`, `GovernanceRule`, `GovernanceConfig`, etc.).
   - `GovernanceConfigValidator`: Performs static analysis on the repository files to detect rule design flaws (overlapping rules or files falling into default fallbacks).
@@ -113,12 +120,17 @@ When evaluating a pull request:
 
 1.  **Filter Author**: The PR author's own approvals are ignored.
 2.  **Match Rules**: Compares all modified files in the PR against the rules to collect the matching `RuleRequirement` sets. If a file matches no rule, the `fallback` requirements are applied.
-3.  **Resolve Approvals**:
+3.  **Normative Clause L3 Escalation (`ucp` repository only)**: When validating the `ucp` specification repository, for any changed Markdown document (`*.md`, `*.markdown`), `normative_detector.py` (backed by `org-tools/requirements-extractor`) compares the base and head normative RFC 2119 clauses (excluding code blocks, inline code spans, HTML blocks/comments, headings, table headers, RFC 2119 boilerplate definitions, and schema field optionality annotations).
+    - If normative clauses (`MUST`, `MUST NOT`, `SHALL`, `SHALL NOT`, `SHOULD`, `SHOULD NOT`, `MAY`, or prose `REQUIRED`, `RECOMMENDED`, `OPTIONAL`) were added, removed, or modified, any requirement on that file with a tier below Level 3 (`level < 3`, such as `devops-maintainers` or `maintainers`) is automatically escalated to **Level 3 (Technical Council)** while preserving `min_approvals`.
+    - Domain-specific paths (`shopping`, `food`, `lodging`, `payment`/`payments`) escalate to the corresponding Domain Tech Council (`shopping-tech-council`, `food-tech-council`, `lodging-tech-council`, `payments-tech-council`), while cross-domain documents escalate to any Technical Council (Level 3) or higher.
+    - The escalation reason and touched RFC 2119 keywords are explicitly surfaced in both the Global PR Summary (`* **Reason:** ⚠️ ...`) and the File-by-File Breakdown (`* **Escalation:** ⚠️ ...`).
+    - Other repositories (such as `samples`, `conformance`, or SDK repositories) are not subject to normative clause escalation.
+4.  **Resolve Approvals**:
     - Retrieves active PR reviews from GitHub.
     - Checks if the reviewer is a proxy reviewer.
     - Queries team memberships for reviewers from the GitHub API.
     - Maps team memberships to hierarchical levels.
-4.  **Evaluate Gates**: Validates that the approvals fulfill every required target. Prints results and writes a review summary to `summary.txt`.
+5.  **Evaluate Gates**: Validates that the approvals fulfill every required target. Prints results and writes a review summary to `summary.txt`.
 
 ---
 
@@ -150,9 +162,11 @@ python3 scripts/pr_validator.py \
 The test suite mock-patches the GitHub API and local git files to allow fast, isolated test runs:
 
 ```bash
-# Run pr_validator tests
-python3 org-tools/governance/tests/test_pr_validator.py
+# Run all governance unit tests
+uv run python3 -m unittest discover -s org-tools/governance/tests
 
-# Run config parser and validator tests
-python3 org-tools/governance/tests/test_governance_config_parser.py
+# Or run individual test suites
+uv run python3 org-tools/governance/tests/test_pr_validator.py
+uv run python3 org-tools/governance/tests/test_normative_detector.py
+uv run python3 org-tools/governance/tests/test_governance_config_parser.py
 ```

@@ -63,18 +63,20 @@ Each requirement in the summary is formatted with detailed progress:
 
 ```markdown
 - **[Min Approvals] approval(s)** from [Target Team / Hierarchical Level]
+  - **Reason:** ⚠️ [Optional escalation reason when normative RFC 2119 clauses are modified]
   - **Met:** [🟢 Yes / 🔴 No] ([Approved Count]/[Min Approvals] approved - approved by: [Reviewers])
   - **Pending:** Needs [Remaining Count] approval(s) from [Target Team] ([Eligible Count] eligible reviewer(s) assigned). [Hint]
 ```
 
 #### Key Fields:
 
-1.  **Requirement Line**: Describes the rule (e.g., `* **2 approvals** from team 'shopping-tech-council'` or `* **1 approval** from team 'shopping-tech-council' or higher in the UCP governance hierarchy`).
-2.  **Met Line**:
+1.  **Requirement Line**: Describes the rule (e.g., `* **2 approvals** from team 'shopping-tech-council'`, `* **1 approval** from team 'shopping-tech-council' or higher in the UCP governance hierarchy`, or `* **2 approvals** from any Technical Council (Level 3) or higher in the UCP governance hierarchy`).
+2.  **Reason Line** (only shown when escalated): Explains why a lower-level requirement (such as Level 1 `devops-maintainers` or Level 2 `maintainers`) was automatically escalated to **Level 3 (Technical Council)** because a Markdown document added, removed, or modified normative RFC 2119 clauses (`MUST`, `MUST NOT`, `SHALL`, `SHALL NOT`, `SHOULD`, `SHOULD NOT`, `MAY`, `REQUIRED`, `RECOMMENDED`, `OPTIONAL`).
+3.  **Met Line**:
     - **🟢 Yes**: The requirement is fully satisfied.
     - **🔴 No**: The requirement is not yet satisfied.
     - **approved by**: Displays a comma-separated list of the authorized users whose reviews satisfied this requirement.
-3.  **Pending Line** (only shown if **Met** is **🔴 No**):
+4.  **Pending Line** (only shown if **Met** is **🔴 No**):
     - Shows the number of remaining approvals needed.
     - Displays the number of **eligible reviewers** currently assigned/requested on the PR who can satisfy this requirement.
     - **Hint:** Explains the current status and next steps:
@@ -92,6 +94,7 @@ This section shows the validation status of every single changed file. This is e
 ```markdown
 - **File:** `path/to/file.py`
   - **Status:** [🟢 SATISFIED / 🔴 UNSATISFIED]
+  - **Escalation:** ⚠️ [Optional escalation reason when normative RFC 2119 clauses are modified]
   - **Requirements:**
     [List of individual requirements for this file]
 ```
@@ -101,6 +104,7 @@ This section shows the validation status of every single changed file. This is e
 1.  **Rule Matching**: The validator compares the file path against the glob patterns defined in your governance configuration file (e.g., `rules/python-sdk-rules.yml`).
 2.  **Cumulative Rules**: If a file matches multiple rules, it must satisfy the requirements of **all** matching rules.
 3.  **Fallback**: If a file does not match any custom rule in the configuration, the catch-all `fallback` requirement is applied.
+4.  **Normative Clause Escalation (Level 3 Technical Council, `ucp` repository only)**: In the `ucp` specification repository, if any Markdown document (`*.md`, `*.markdown`) adds, removes, or modifies normative RFC 2119 clauses (`MUST`, `MUST NOT`, `SHALL`, `SHALL NOT`, `SHOULD`, `SHOULD NOT`, `MAY`, or prose `REQUIRED`, `RECOMMENDED`, `OPTIONAL`), any lower-level requirement (`level < 3`) for that file is automatically escalated to at least **Level 3 (Technical Council)** while keeping its required `min_approvals` count. Requirements already at Level 3 or Level 4 (`governance-council`) remain unchanged, and other repositories (e.g., `samples`) are unaffected.
 
 ---
 

@@ -104,6 +104,7 @@ class RuleRequirement:
     min_approvals: int
     team: Team | None = None
     min_team: Team | None = None
+    escalation_reason: str | None = None
 
     def __post_init__(self):
         if self.min_approvals is None or not isinstance(self.min_approvals, int):
@@ -144,8 +145,20 @@ def merge_requirements(requirements: list[RuleRequirement]) -> list[RuleRequirem
             merged[key] = req
         else:
             existing = merged[key]
-            if req.min_approvals > existing.min_approvals:
-                merged[key] = req
+            max_approvals = max(existing.min_approvals, req.min_approvals)
+            if existing.escalation_reason and req.escalation_reason:
+                if req.escalation_reason not in existing.escalation_reason:
+                    reason = f"{existing.escalation_reason}; {req.escalation_reason}"
+                else:
+                    reason = existing.escalation_reason
+            else:
+                reason = existing.escalation_reason or req.escalation_reason
+            merged[key] = RuleRequirement(
+                min_approvals=max_approvals,
+                team=existing.team,
+                min_team=existing.min_team,
+                escalation_reason=reason,
+            )
     return list(merged.values())
 
 
@@ -177,6 +190,10 @@ class PullRequest:
     reviews: list[Review]
     assigned_user_names: list[str] = field(default_factory=list)
     assigned_team_names: list[str] = field(default_factory=list)
+    file_patches: dict[str, str] = field(default_factory=dict)
+    file_contents: dict[str, tuple[str | None, str | None]] = field(
+        default_factory=dict
+    )
 
     @classmethod
     def create(
@@ -188,6 +205,8 @@ class PullRequest:
         reviews: list[Review],
         assigned_user_names: list[str] = None,
         assigned_team_names: list[str] = None,
+        file_patches: dict[str, str] = None,
+        file_contents: dict[str, tuple[str | None, str | None]] = None,
     ) -> "PullRequest":
         # Normalize to lowercase. GitHub usernames and team slugs are case-insensitive.
         # Reference: https://docs.github.com/en/rest/teams/teams?apiVersion=2026-03-10#get-a-team-by-name
@@ -205,6 +224,8 @@ class PullRequest:
             reviews=reviews,
             assigned_user_names=assigned_u,
             assigned_team_names=assigned_t,
+            file_patches=dict(file_patches) if file_patches else {},
+            file_contents=dict(file_contents) if file_contents else {},
         )
 
     @property
@@ -275,6 +296,7 @@ class FileValidationStatus:
     file_path: str
     requirement_statuses: list[RequirementStatus]
     is_satisfied: bool
+    escalation_reason: str | None = None
 
 
 @dataclass(frozen=True)

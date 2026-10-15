@@ -1,0 +1,88 @@
+#   Copyright 2026 UCP Authors
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+name: Reusable Requirements Catalog Check
+
+# Verifies that a repository's committed requirements catalog matches its
+# specification, by regenerating it with the extractor in
+# org-tools/requirements-extractor and comparing. Fails when an edit to the
+# specification changed a normative sentence without regenerating the
+# catalog.
+#
+# Callers choose when it runs with `paths:` on their own trigger, since a
+# reusable workflow cannot filter paths itself. Callers should pin both the
+# `uses:` line and `central_ref` to the same commit of this repository, so
+# the workflow and the extractor it runs change only when the caller opts in.
+
+on:
+  workflow_call:
+    inputs:
+      central_repo:
+        required: false
+        type: string
+        default: ".github"
+        description: "Name of the central organization tools repository"
+      central_ref:
+        required: false
+        type: string
+        default: "main"
+        description: "Ref of the central repository to run the extractor from. Pin to the same commit as the `uses:` line."
+      spec_root:
+        required: false
+        type: string
+        default: "."
+        description: "Path, relative to the caller's repository root, of the directory holding the specification's mkdocs.yml."
+    secrets:
+      ORG_READ_TOKEN:
+        required: false
+        description: "Org-level read token to check out central repository if private"
+
+jobs:
+  check-requirements:
+    name: Check Requirements Catalog
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      # 1. Check out the caller repository (the PR code)
+      - name: Check out PR code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # 2. Check out the central tools repository containing the extractor
+      - name: Check out central tools
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.repository_owner }}/${{ inputs.central_repo }}
+          ref: ${{ inputs.central_ref }}
+          path: .github-central
+          token: ${{ secrets.ORG_READ_TOKEN || github.token }}
+          persist-credentials: false
+
+      # 3. Set up uv using the standard action
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      # 4. Regenerate the catalog in memory and compare it with the committed
+      #    one. The script declares its own pinned dependencies (PEP 723), so
+      #    uv runs it in an isolated environment regardless of the caller's
+      #    project.
+      - name: Check requirements catalog
+        env:
+          SPEC_ROOT: ${{ inputs.spec_root }}
+        run: |
+          uv run .github-central/org-tools/requirements-extractor/scripts/extract_requirements.py \
+            --spec-root "$SPEC_ROOT" \
+            --check

@@ -34,6 +34,6 @@ You can run all unit tests locally from the root of the repository:
 uv run python3 -m unittest discover -s org-tools/governance/tests && \
 uv run python3 -m unittest discover -s org-tools/label-sync && \
 uv run python3 -m unittest discover -s org-tools/triage/tests && \
-uv run --with markdown-it-py==3.0.0 --with markdown==3.10.2 \
+uv run --with jsonschema==4.26.0 --with markdown-it-py==3.0.0 --with markdown==3.10.2 \
   python3 -m unittest discover -s org-tools/requirements-extractor/tests
 ```

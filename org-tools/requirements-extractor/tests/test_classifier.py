@@ -137,6 +137,14 @@ class TestClassify(unittest.TestCase):
         self.assertIs(result.level, Level.MUST)
         self.assertEqual(len(self.report.compounds_not_split), 1)
 
+    def test_conjunction_inside_code_is_not_a_boundary(self):
+        """A ';' in backticks is part of a value, so nothing is cut there."""
+        text = "The host **MUST** send `a; b` then **MAY** close."
+        [result] = classifier.classify(_clause(text), self.report)
+        self.assertEqual(result.text, text)
+        self.assertIs(result.level, Level.MUST)
+        self.assertEqual(len(self.report.compounds_not_split), 1)
+
     def test_schema_field_annotation_is_excluded(self):
         """Field optionality markers are not obligations on a party."""
         result = classifier.classify(

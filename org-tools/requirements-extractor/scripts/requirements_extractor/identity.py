@@ -78,9 +78,13 @@ DIGEST_SEPARATOR = "\x1f"
 # attr_list block on the link is dropped with it; see config.MARKDOWN_LINK_RE.
 _LINK_RE = config.MARKDOWN_LINK_RE
 
-# Bold markers. The corpus contains no italics, and underscores are left
-# alone because they occur inside field names such as `continue_url`.
-_BOLD_RE = re.compile(r"\*\*")
+# Emphasis markers, bold and italic alike: emphasizing a word does not change
+# what a requirement says. Inside a code span an asterisk is content, as in
+# `dev.ucp.*` or `^[a-z][a-z0-9_]*$`, so code spans are left as they are --
+# the same spans the parser masks. Underscores are left alone everywhere,
+# because they occur inside field names such as `continue_url`.
+_EMPHASIS_RE = re.compile(r"\*+")
+_CODE_SPAN_RE = re.compile(r"`[^`]*`")
 
 # Dashes an author may swap for one another without changing meaning.
 _DASH_RE = re.compile(r"[\u2012\u2013\u2014\u2015]")
@@ -89,6 +93,18 @@ _WHITESPACE_RE = re.compile(r"\s+")
 
 # Punctuation carrying no meaning at the end of a clause.
 _TRAILING_PUNCTUATION = ".,;: "
+
+
+def _strip_emphasis(text: str) -> str:
+    """Remove emphasis markers from everything but the code spans."""
+    pieces: list[str] = []
+    last = 0
+    for span in _CODE_SPAN_RE.finditer(text):
+        pieces.append(_EMPHASIS_RE.sub("", text[last : span.start()]))
+        pieces.append(span.group(0))
+        last = span.end()
+    pieces.append(_EMPHASIS_RE.sub("", text[last:]))
+    return "".join(pieces)
 
 
 def normalize(text: str) -> str:
@@ -108,7 +124,7 @@ def normalize(text: str) -> str:
 
     """
     out = _LINK_RE.sub(r"\1", text)
-    out = _BOLD_RE.sub("", out)
+    out = _strip_emphasis(out)
     out = out.replace("`", "")
     out = _DASH_RE.sub("-", out)
     out = _WHITESPACE_RE.sub(" ", out)

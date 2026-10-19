@@ -245,11 +245,15 @@ def split_compound(clause: Clause, hits: list[KeywordHit]) -> list[Clause] | Non
 
     """
     text = clause.text
+    # Conjunctions are looked for in the masked text, so a ";", "and" or "or"
+    # inside a code span is never taken for the boundary. Masking keeps every
+    # offset, so a cut found there lands on the same place in `text`.
+    masked = parser.mask_code_spans(text)
     subject = _trim(text[: hits[0].outer_start])
 
     cut_points: list[tuple[int, int]] = []
     for current, following in zip(hits, hits[1:], strict=False):
-        segment = text[current.outer_end : following.outer_start]
+        segment = masked[current.outer_end : following.outer_start]
         matches = list(_CONJUNCTION_RE.finditer(segment))
         if not matches:
             return None

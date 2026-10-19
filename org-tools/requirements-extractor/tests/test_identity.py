@@ -92,6 +92,22 @@ class TestNormalize(unittest.TestCase):
             "send {action}_request to the host",
         )
 
+    def test_italics_are_erased_like_bold(self):
+        """Emphasizing a word, bold or italic, does not change the wording."""
+        self.assertEqual(
+            identity.normalize("The host **MUST** allow *only* the *merchant* origin."),
+            identity.normalize("The host **MUST** allow only the merchant origin."),
+        )
+
+    def test_asterisks_inside_code_are_kept(self):
+        """In a code span an asterisk is content, not emphasis."""
+        self.assertEqual(
+            identity.normalize(
+                "Names **MUST** match `^[a-z][a-z0-9_]*$` under `dev.ucp.*`."
+            ),
+            "names must match ^[a-z][a-z0-9_]*$ under dev.ucp.*",
+        )
+
 
 class TestTextDigest(unittest.TestCase):
     """Tests for the text digest."""

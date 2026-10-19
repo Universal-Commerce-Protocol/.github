@@ -35,7 +35,7 @@ CHECKOUT_DIR = "docs/specification/shopping/checkout"
 # SHA-256 of the canonical JSON of the shipped catalog schema. It changes only
 # together with a new schema file and a new CATALOG_SCHEMA_VERSION.
 PUBLISHED_SCHEMA_DIGEST = (
-    "506b9bcd230405f8d4389a4cd4987c71f68aa79434e15442e7cdcd6efa311443"
+    "ea81766b983a6402c07330085516a060e78b8eb7f73bf48d743c74f27c7778b1"
 )
 
 

@@ -26,14 +26,13 @@ Every catalog file is checked against the published schema before it is
 written or compared, so the tool cannot emit a catalog that its own contract
 rejects.
 
-Everything is written deterministically. The same input produces the same
-output, apart from `generated_at`, which is what lets a consumer regenerate
-and diff to prove the catalog matches the spec it claims to describe.
-
-  `generated_at` is a wall-clock reading and differs on every run. It is
-  published so a catalog read outside the repository can be dated, and
-  `--check` ignores it (see config.NON_DETERMINISTIC_FIELDS), so the
-  comparison still covers everything that is a function of the spec.
+Everything is written deterministically: the same input produces the same
+bytes. That is what lets a consumer regenerate and diff to prove the catalog
+matches the spec it claims to describe, and what lets `--check` compare
+files byte for byte. No file records when or from which commit it was
+generated. Git already holds both, a timestamp would rewrite every file on
+every run, and a commit recorded inside the file it describes is stale the
+moment that file is committed.
 
 Requirements are emitted in source order. The catalog's primary review path
 is reading it beside the specification, and an identifier is stable under
@@ -45,11 +44,9 @@ from __future__ import annotations
 
 import collections
 from collections.abc import Iterable
-import datetime
 import functools
 import json
 from pathlib import Path
-import subprocess
 
 import jsonschema
 
@@ -152,32 +149,7 @@ def _page_report(report: ExtractionReport, source_file: str) -> ExtractionReport
     )
 
 
-def _commit_sha(spec_root: Path) -> str | None:
-    """Return the specification checkout's commit, or None outside git.
-
-    Provenance that survives the file being copied out of the repository. It
-    is stable for a given tree, so unlike a timestamp it does not by itself
-    make two runs differ. Read from the spec root rather than from this
-    tool's location, which is a different repository.
-    """
-    try:
-        completed = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=spec_root,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=10,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    if completed.returncode != 0:
-        return None
-    sha = completed.stdout.strip()
-    return sha or None
-
-
-def _envelope(spec_version: str, spec_root: Path) -> dict[str, object]:
+def _envelope(spec_version: str) -> dict[str, object]:
     """Return the provenance header shared by every document of a run.
 
     `spec_version` lives here and nowhere else. Records carry no release, so
@@ -188,20 +160,14 @@ def _envelope(spec_version: str, spec_root: Path) -> dict[str, object]:
     only the catalog has a published schema; claiming it on the report would
     assert a shape the report does not have.
 
-    `generated_at` is the one field here that changes between runs of the same
-    input. It is published because a consumer reading the catalog outside the
-    repository has no other way to date it, but it is excluded from the
-    comparison `--check` performs -- otherwise every run would report the
-    committed catalog as stale and the CI gate would be worthless.
+    Every field is a function of the input, so two runs over the same
+    specification write the same bytes. When a catalog was generated, and
+    from which commit, is what git records for the file.
     """
     return {
         "schema_version": config.CATALOG_SCHEMA_VERSION,
         "extractor_version": config.EXTRACTOR_VERSION,
         "spec_version": spec_version,
-        "generated_at": datetime.datetime.now(datetime.UTC).strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
-        ),
-        "commit_sha": _commit_sha(spec_root),
     }
 
 
@@ -223,7 +189,7 @@ def catalog_documents(
       directory (see config.catalog_file), in path order.
 
     """
-    envelope = _envelope(config.spec_version(spec_root), spec_root)
+    envelope = _envelope(config.spec_version(spec_root))
     by_page: dict[str, list[Requirement]] = {}
     for requirement in requirements:
         by_page.setdefault(requirement.source.file, []).append(requirement)
@@ -256,7 +222,7 @@ def report_document(
 
     """
     return {
-        **_envelope(config.spec_version(spec_root), spec_root),
+        **_envelope(config.spec_version(spec_root)),
         # POSIX strings rather than Path objects, so the document is
         # serializable and identical regardless of the host platform.
         "source_spec": sorted(directory.as_posix() for directory in config.SPEC_DIRS),

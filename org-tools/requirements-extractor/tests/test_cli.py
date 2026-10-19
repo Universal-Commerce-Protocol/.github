@@ -19,7 +19,6 @@ import io
 import json
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -192,10 +191,13 @@ class TestCatalog(_FixtureCase):
             self.assertEqual(document["schema_version"], config.CATALOG_SCHEMA_VERSION)
             self.assertEqual(document["extractor_version"], config.EXTRACTOR_VERSION)
             self.assertEqual(document["spec_version"], "2026-01-11")
-            self.assertRegex(
-                document["generated_at"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
-            )
             self.assertNotIn("source_spec", document)
+
+    def test_envelope_records_no_time_or_commit(self):
+        """Nothing in the header depends on when, or from which commit, a run was."""
+        for document in self._write().values():
+            self.assertNotIn("generated_at", document)
+            self.assertNotIn("commit_sha", document)
 
     def test_records_carry_no_release_and_keep_their_metadata(self):
         """The release is in the header; a record names a page and an anchor."""
@@ -285,15 +287,16 @@ class TestCheck(_FixtureCase):
         self.assertEqual(status, 1)
         self.assertIn("retired.json: no longer generated", err)
 
-    def test_check_ignores_generated_at(self):
-        """The timestamp differs on every run and must not fail the check."""
+    def test_check_compares_files_byte_for_byte(self):
+        """Any difference fails, such as a field an older version wrote."""
         document = self._write()[INDEX_CATALOG]
         document["generated_at"] = "2000-01-01T00:00:00Z"
         (self.catalog_dir / INDEX_CATALOG).write_text(
-            json.dumps(document, indent=2) + "\n"
+            json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
-        status, _, _ = _run("--spec-root", str(self.spec_root), "--check")
-        self.assertEqual(status, 0)
+        status, _, err = _run("--spec-root", str(self.spec_root), "--check")
+        self.assertEqual(status, 1)
+        self.assertIn(f"{INDEX_CATALOG.as_posix()}: out of date", err)
 
     def test_dry_run_writes_nothing(self):
         """--dry-run runs the pipeline and leaves the tree untouched."""
@@ -350,16 +353,18 @@ class TestRefusals(_FixtureCase):
 
 
 class TestDeterminism(_FixtureCase):
-    """Two runs over the same input agree on everything but the clock."""
+    """Two runs over the same input write the same bytes."""
 
-    def test_runs_are_identical_apart_from_generated_at(self):
-        """Regenerating produces the same bytes once the timestamp is removed."""
-        first = self._write()
-        second = self._write()
-        for documents in (first, second):
-            for document in documents.values():
-                document.pop("generated_at")
-        self.assertEqual(first, second)
+    def _written_bytes(self) -> dict[Path, bytes]:
+        """Run the CLI and return every file it wrote, as raw bytes."""
+        status, _, err = _run("--spec-root", str(self.spec_root))
+        self.assertEqual(status, 0, err)
+        paths = [*sorted(self.catalog_dir.rglob("*.json")), self.report_path]
+        return {path: path.read_bytes() for path in paths}
+
+    def test_runs_are_byte_identical(self):
+        """Regenerating rewrites every file, catalog and report, identically."""
+        self.assertEqual(self._written_bytes(), self._written_bytes())
 
     def test_relative_spec_root(self):
         """A relative spec root such as '.' works."""
@@ -374,18 +379,6 @@ class TestDeterminism(_FixtureCase):
             [r["id"] for r in _records(self._read_catalog())],
             [expected[0] for expected in EXPECTED_REQUIREMENTS],
         )
-
-
-class TestCommitSha(unittest.TestCase):
-    """Tests for recording the specification commit."""
-
-    def test_failed_git_call_records_no_commit(self):
-        """Output from a failing `git rev-parse` is not taken as a commit."""
-        failed = subprocess.CompletedProcess(
-            args=["git"], returncode=128, stdout="not-a-sha\n", stderr="fatal"
-        )
-        with mock.patch.object(catalog.subprocess, "run", return_value=failed):
-            self.assertIsNone(catalog._commit_sha(FIXTURE_ROOT))
 
 
 if __name__ == "__main__":

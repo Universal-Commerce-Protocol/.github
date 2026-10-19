@@ -90,7 +90,7 @@ uv run ../.github/org-tools/requirements-extractor/scripts/extract_requirements.
 
 Every requirement must belong to a capability. A document whose capability cannot be resolved stops the run, before anything is written, with the list of such documents.
 
-`--check` ignores `generated_at` and `commit_sha`, which change on every run and every commit, and compares everything else exactly. It also fails on a catalog file that no page produces any more, such as one left behind by a deleted page; regenerating removes it.
+Every file is a function of the specification alone, so two runs over the same tree write the same bytes and `--check` compares files byte for byte. No file records when or from which commit it was generated; git holds both. `--check` also fails on a catalog file that no page produces any more, such as one left behind by a deleted page; regenerating removes it.
 
 ---
 

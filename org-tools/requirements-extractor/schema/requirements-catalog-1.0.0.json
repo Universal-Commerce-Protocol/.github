@@ -36,16 +36,6 @@
       "minLength": 1,
       "description": "UCP release the specification tree represents, such as 'draft' or a dated release. This is the only place a catalog names its release: combined with a record's source.page and source.anchor, it gives the published link."
     },
-    "generated_at": {
-      "type": "string",
-      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
-      "description": "UTC timestamp of the run. This is the only field that differs between two runs over identical input, so consumers comparing catalogs for drift must exclude it; --check does."
-    },
-    "commit_sha": {
-      "type": ["string", "null"],
-      "pattern": "^[0-9a-f]{40}$",
-      "description": "Commit the catalog was generated from, or null outside a git checkout."
-    },
     "source_file": {
       "type": "string",
       "minLength": 1,

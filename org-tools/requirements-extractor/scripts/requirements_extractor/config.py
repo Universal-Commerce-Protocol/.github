@@ -392,19 +392,6 @@ CATALOG_SCHEMA_URL = (
 )
 CATALOG_SCHEMA_PATH = TOOL_ROOT / "schema" / CATALOG_SCHEMA_FILENAME
 
-# Envelope fields excluded when comparing a regenerated document against the
-# one on disk, because neither is a function of the specification.
-#
-# `generated_at` is a wall clock reading, so comparing it would fail on every
-# invocation.
-#
-# `commit_sha` is subtler: it cannot be known at generation time for the
-# commit that will contain the catalog. Writing the file changes the tree,
-# committing changes HEAD, and the recorded SHA is then always one commit
-# behind. Including it would mean the catalog invalidated itself the moment
-# it was committed.
-NON_DETERMINISTIC_FIELDS = frozenset({"generated_at", "commit_sha"})
-
 
 def spec_version(spec_root: Path) -> str:
     """Return the UCP release the specification tree represents.

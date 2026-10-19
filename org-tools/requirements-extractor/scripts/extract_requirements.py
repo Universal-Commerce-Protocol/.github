@@ -63,7 +63,6 @@ Usage, from the root of a ucp checkout:
 """
 
 import argparse
-import json
 import os
 import sys
 from pathlib import Path
@@ -123,38 +122,16 @@ def _display_path(path: Path, spec_root: Path) -> str:
         return str(path)
 
 
-def _comparable(text: str) -> str:
-    """Return a document's text with non-deterministic fields removed.
-
-    `generated_at` is a wall clock reading, so a byte comparison against the
-    committed file would fail every time. Stripping it from both sides keeps
-    the check meaningful: everything that is a function of the specification
-    still has to match exactly.
-
-    Args:
-      text: Serialized JSON document.
-
-    Returns:
-      Serialized JSON with `config.NON_DETERMINISTIC_FIELDS` removed, or the
-      input unchanged if it does not parse.
-
-    """
-    try:
-        document = json.loads(text)
-    except json.JSONDecodeError:
-        return text
-    if isinstance(document, dict):
-        for field in config.NON_DETERMINISTIC_FIELDS:
-            document.pop(field, None)
-    return catalog.serialize(document)
-
-
 def _check(
     paths_and_documents: list[tuple[Path, dict]],
     stale: list[Path],
     spec_root: Path,
 ) -> int:
     """Compare regenerated documents against what is on disk.
+
+    The comparison is byte for byte. Every field the tool writes is a
+    function of the specification, so a file that differs in any way --
+    including formatting, or a field an older version wrote -- is out of date.
 
     Args:
       paths_and_documents: Destination paths paired with fresh documents.
@@ -167,10 +144,9 @@ def _check(
     """
     problems = []
     for path, document in paths_and_documents:
-        expected = _comparable(catalog.serialize(document))
         if not path.exists():
             problems.append((path, "missing"))
-        elif _comparable(path.read_text(encoding="utf-8")) != expected:
+        elif path.read_text(encoding="utf-8") != catalog.serialize(document):
             problems.append((path, "out of date"))
     problems.extend((path, "no longer generated") for path in stale)
 

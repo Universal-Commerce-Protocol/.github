@@ -22,7 +22,7 @@ name: Reusable Requirements Catalog Check
 #
 # Callers choose when it runs with `paths:` on their own trigger, since a
 # reusable workflow cannot filter paths itself. Callers should pin both the
-# `uses:` line and `central_ref` to the same commit of this repository, so
+# `uses:` line and `extractor_ref` to the same commit of this repository, so
 # the workflow and the extractor it runs change only when the caller opts in.
 
 on:
@@ -33,11 +33,11 @@ on:
         type: string
         default: ".github"
         description: "Name of the central organization tools repository"
-      central_ref:
+      extractor_ref:
         required: false
         type: string
         default: "main"
-        description: "Ref of the central repository to run the extractor from. Pin to the same commit as the `uses:` line."
+        description: "Commit of the central tools repository (`central_repo`, this organization's `.github`) to run the extractor from. It is a ref of that repository, not of the calling repository. Pin it to the same SHA as the `uses:` line."
       spec_root:
         required: false
         type: string
@@ -66,7 +66,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ github.repository_owner }}/${{ inputs.central_repo }}
-          ref: ${{ inputs.central_ref }}
+          ref: ${{ inputs.extractor_ref }}
           path: .github-central
           token: ${{ secrets.ORG_READ_TOKEN || github.token }}
           persist-credentials: false

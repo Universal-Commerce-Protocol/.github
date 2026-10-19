@@ -112,14 +112,14 @@ jobs:
   requirements-check:
     uses: Universal-Commerce-Protocol/.github/.github/workflows/reusable-requirements-check.yml@<commit-sha>
     with:
-      central_ref: <commit-sha>
+      extractor_ref: <commit-sha>
 ```
 
-| Input          | Default   | Description                                              |
-| :------------- | :-------- | :------------------------------------------------------- |
-| `central_repo` | `.github` | Name of the central tools repository.                    |
-| `central_ref`  | `main`    | Ref to run the extractor from. Pin to the `uses:` SHA.   |
-| `spec_root`    | `.`       | Directory, relative to the caller, holding `mkdocs.yml`. |
+| Input           | Default   | Description                                                                                                      |
+| :-------------- | :-------- | :--------------------------------------------------------------------------------------------------------------- |
+| `central_repo`  | `.github` | Name of the central tools repository.                                                                            |
+| `extractor_ref` | `main`    | Commit of the central tools repository, not of the caller, to run the extractor from. Pin it to the `uses:` SHA. |
+| `spec_root`     | `.`       | Directory, relative to the caller, holding `mkdocs.yml`.                                                         |
 
 ---
 

@@ -247,7 +247,6 @@ ACTOR_LEXICON = {
 }
 
 # Confidence assigned by each resolution strategy.
-ACTOR_CONFIDENCE_ANNOTATION = 1.0  # explicit <!-- ucp:actor=... --> override
 ACTOR_CONFIDENCE_INLINE = 0.9  # lexicon match within the clause
 ACTOR_CONFIDENCE_COMPOUND_PARENT = 0.8  # inherited from a colon-list stem
 ACTOR_CONFIDENCE_SECTION = 0.5  # inferred from the heading breadcrumb

@@ -95,14 +95,6 @@ class TestExtractActor(unittest.TestCase):
             ("business", config.ACTOR_CONFIDENCE_SECTION),
         )
 
-    def test_explicit_annotation_wins(self):
-        """An author's override beats every inferred signal."""
-        clause = _clause("<!-- ucp:actor=host --> The platform **MUST** reply.")
-        self.assertEqual(
-            metadata.extract_actor(clause),
-            ("host", config.ACTOR_CONFIDENCE_ANNOTATION),
-        )
-
     def test_party_after_an_annotation_keyword_is_not_used(self):
         """An annotation keyword anchors the subject search just as MUST does."""
         clause = _clause(

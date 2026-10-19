@@ -53,13 +53,6 @@ import re
 from requirements_extractor import classifier, config, parser
 from requirements_extractor.models import Clause, ExtractionReport
 
-# An author's explicit override, e.g. <!-- ucp:actor=business -->. None appear
-# in the corpus today; the hook exists because it is the remedy an author
-# reaches for when the report flags a clause as unresolved or low confidence.
-ACTOR_ANNOTATION_RE = re.compile(
-    r"<!--\s*ucp:actor\s*=\s*([a-z_]+)\s*-->", re.IGNORECASE
-)
-
 # Surface form -> canonical actor, longest surface first so that "payment
 # handler" is not shadowed by "handler" and "embedded checkout" is not
 # shadowed by a bare party name.
@@ -145,7 +138,6 @@ def extract_actor(clause: Clause) -> tuple[str | None, float]:
 
     Strategies are tried strongest first and the first answer wins:
 
-      1.0  an explicit ``<!-- ucp:actor=... -->`` annotation
       0.9  the last lexicon match before the keyword, which is the subject
       0.8  a colon-list stem that names the party, e.g. "**Host
            responsibilities**:", where the obligation itself is a bare
@@ -161,10 +153,6 @@ def extract_actor(clause: Clause) -> tuple[str | None, float]:
       or (None, 0.0).
 
     """
-    annotation = ACTOR_ANNOTATION_RE.search(clause.text)
-    if annotation:
-        return annotation.group(1).lower(), config.ACTOR_CONFIDENCE_ANNOTATION
-
     masked = parser.mask_code_spans(clause.text)
 
     inline = _last_match_before(masked, keyword_position(clause))

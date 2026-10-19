@@ -51,7 +51,7 @@ from pathlib import Path
 import re
 
 from requirements_extractor import classifier, config, parser
-from requirements_extractor.models import Clause, ExtractionReport
+from requirements_extractor.models import BlockType, Clause, ExtractionReport
 
 # Surface form -> canonical actor, longest surface first so that "payment
 # handler" is not shadowed by "handler" and "embedded checkout" is not
@@ -64,6 +64,13 @@ _SURFACE_RE = {
     surface: re.compile(r"\b" + re.escape(surface) + r"\b", re.IGNORECASE)
     for surface in _SURFACES
 }
+
+# The possessive ending after a party's name, as in "the buyer's", with a
+# straight or a typographic apostrophe.
+_POSSESSIVE_RE = re.compile(r"['\u2019]s\b")
+
+# Emphasis and code markers around a table header, as in "**Platform**".
+_HEADER_MARKUP_RE = re.compile(r"[*_`]")
 
 _CODE_SPAN_RE = re.compile(r"`([^`]*)`")
 
@@ -100,28 +107,60 @@ def keyword_position(clause: Clause) -> int:
     return len(clause.text)
 
 
-def _last_match_before(text: str, cutoff: int) -> str | None:
-    """Return the canonical actor of the last lexicon match before `cutoff`."""
-    best_actor: str | None = None
-    best_start = -1
+def _lexicon_matches(text: str, end: int) -> list[tuple[int, int, str]]:
+    """Return every party named in `text[:end]`, as (start, stop, actor).
+
+    A name inside a longer one is not a mention of its own: "authorization
+    server" names the authorization server, not a server. Surfaces are tried
+    longest first, so the longer name is kept and a shorter one overlapping
+    it is dropped.
+    """
+    found: list[tuple[int, int, str]] = []
     for surface in _SURFACES:
-        for match in _SURFACE_RE[surface].finditer(text, 0, cutoff):
-            if match.start() > best_start:
-                best_start = match.start()
-                best_actor = _SURFACE_TO_ACTOR[surface]
-    return best_actor
+        for match in _SURFACE_RE[surface].finditer(text, 0, end):
+            if not any(
+                match.start() < stop and start < match.end() for start, stop, _ in found
+            ):
+                found.append((match.start(), match.end(), _SURFACE_TO_ACTOR[surface]))
+    return found
+
+
+def _last_match_before(text: str, cutoff: int) -> str | None:
+    """Return the canonical actor of the last lexicon match before `cutoff`.
+
+    A possessive counts only when no party is named plainly. In "the
+    Embedded Checkout can use the buyer's system preference ... and
+    **SHOULD** listen for changes", "the buyer's" says whose preference it
+    is, and the Embedded Checkout is the subject. In "The handler's trust
+    policy **MUST** authorize ...", the possessive is the only name, and it
+    is the handler's policy the rule binds.
+    """
+    matches = _lexicon_matches(text, cutoff)
+    plain = [match for match in matches if not _POSSESSIVE_RE.match(text, match[1])]
+    candidates = plain or matches
+    return max(candidates)[2] if candidates else None
 
 
 def _first_match_within(text: str, limit: int) -> str | None:
-    """Return the canonical actor of the earliest match within `limit`."""
-    best_actor: str | None = None
-    best_start = len(text) + 1
-    for surface in _SURFACES:
-        match = _SURFACE_RE[surface].search(text)
-        if match and match.start() < min(best_start, limit):
-            best_start = match.start()
-            best_actor = _SURFACE_TO_ACTOR[surface]
-    return best_actor
+    """Return the canonical actor of the earliest match starting within `limit`."""
+    matches = [match for match in _lexicon_matches(text, len(text)) if match[0] < limit]
+    return min(matches)[2] if matches else None
+
+
+def _header_actor(context: str) -> str | None:
+    """Return the party a table cell's row or column header names, if any.
+
+    The parser gives a cell the context "<row label> | <column header>". In
+    an obligation matrix one of them is a party -- "Platform | Create" -- and
+    the cell holds only a keyword. A header counts only when it is a party's
+    name and nothing more: "**Buyer notification**" labels a topic, and the
+    buyer it mentions is not who the cell obliges.
+    """
+    for header in context.split(" | "):
+        name = _HEADER_MARKUP_RE.sub("", header).strip().lower()
+        if name in _SURFACE_TO_ACTOR:
+            return _SURFACE_TO_ACTOR[name]
+    return None
 
 
 def _mentions_actor_after(text: str, cutoff: int) -> str | None:
@@ -139,10 +178,12 @@ def extract_actor(clause: Clause) -> tuple[str | None, float]:
     Strategies are tried strongest first and the first answer wins:
 
       0.9  the last lexicon match before the keyword, which is the subject
+      0.8  for a table cell, a row or column header that is a party's name,
+           such as the "Platform" row of an obligation matrix
       0.8  a colon-list stem that names the party, e.g. "**Host
            responsibilities**:", where the obligation itself is a bare
            fragment such as "**MUST** validate that ..."
-      0.5  a party named in the heading breadcrumb
+      0.5  a party named in the heading breadcrumb, deepest heading first
       0.0  unresolved
 
     Args:
@@ -159,6 +200,11 @@ def extract_actor(clause: Clause) -> tuple[str | None, float]:
     if inline:
         return inline, config.ACTOR_CONFIDENCE_INLINE
 
+    if clause.source.block_type is BlockType.TABLE_CELL and clause.compound_parent:
+        header = _header_actor(clause.compound_parent)
+        if header:
+            return header, config.ACTOR_CONFIDENCE_COMPOUND_PARENT
+
     if clause.compound_parent and config.STEM_OBLIGATION_LABEL_RE.search(
         clause.compound_parent
     ):
@@ -169,8 +215,11 @@ def extract_actor(clause: Clause) -> tuple[str | None, float]:
         if stem:
             return stem, config.ACTOR_CONFIDENCE_COMPOUND_PARENT
 
-    if clause.source.section:
-        section = _first_match_within(clause.source.section, len(clause.source.section))
+    # The innermost heading is the most specific. In "Fulfillment Extension >
+    # Rendering > Business Responsibilities" it names the party, while the
+    # outermost only names the page the section is on.
+    for heading in reversed((clause.source.section or "").split(" > ")):
+        section = _first_match_within(heading, len(heading))
         if section:
             return section, config.ACTOR_CONFIDENCE_SECTION
 

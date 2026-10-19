@@ -233,9 +233,24 @@ RFC2119_BOILERPLATE_KEYWORD_THRESHOLD = 4
 #
 # "embedder" resolves to `host`: in the embedded protocol the party doing the
 # embedding is the host, and the spec uses the two words interchangeably.
+#
+# "server" resolves to `business`, which serves the API in the REST and MCP
+# bindings ("When provided, the server **MUST** ..."), and "MCP client" to
+# `platform`. A bare "client" is deliberately absent: across the spec it is
+# as often part of another term -- an "HTTP client hint", a "Client ID
+# Metadata Document", the "public clients" a business serves -- and would
+# claim those clauses for the platform. A name inside a longer one is never
+# read on its own, so "authorization server" stays `auth_server`.
 ACTOR_LEXICON = {
-    "business": ("business", "businesses", "merchant", "merchants"),
-    "platform": ("platform", "platforms"),
+    "business": (
+        "business",
+        "businesses",
+        "merchant",
+        "merchants",
+        "server",
+        "servers",
+    ),
+    "platform": ("platform", "platforms", "mcp client", "mcp clients"),
     "agent": ("agent", "agents"),
     "handler": ("payment handler", "payment handlers", "handler", "handlers"),
     "buyer": ("buyer", "buyers", "user", "users"),

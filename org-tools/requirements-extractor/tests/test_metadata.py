@@ -30,6 +30,7 @@ def _clause(
     text: str,
     section: str = "Checkout Capability > Test",
     compound_parent: str | None = None,
+    block_type: BlockType = BlockType.PARAGRAPH,
 ) -> Clause:
     """Build a classified obligation for the checkout core document."""
     return Clause(
@@ -39,7 +40,7 @@ def _clause(
             line_start=1,
             line_end=1,
             section=section,
-            block_type=BlockType.PARAGRAPH,
+            block_type=block_type,
         ),
         document_order=1,
         level=Level.MUST,
@@ -108,6 +109,85 @@ class TestExtractActor(unittest.TestCase):
         """With both kinds present, the obligation keyword is the anchor."""
         text = "A REQUIRED field is set, so the platform **MUST** send it."
         self.assertEqual(metadata.keyword_position(_clause(text)), text.index("**MUST"))
+
+    def test_possessive_gives_way_to_a_party_named_plainly(self):
+        """'the buyer's preference' says whose it is; it is not the subject."""
+        clause = _clause(
+            "When no scheme is given, the Embedded Checkout can use the buyer's "
+            "system preference, and **SHOULD** listen for changes."
+        )
+        self.assertEqual(
+            metadata.extract_actor(clause),
+            ("embedded_checkout", config.ACTOR_CONFIDENCE_INLINE),
+        )
+
+    def test_possessive_alone_still_names_the_party(self):
+        """With nothing else named, the possessive is who the rule binds."""
+        clause = _clause(
+            "The handler\u2019s trust policy **MUST** authorize the origin."
+        )
+        self.assertEqual(
+            metadata.extract_actor(clause), ("handler", config.ACTOR_CONFIDENCE_INLINE)
+        )
+
+    def test_name_inside_a_longer_name_is_not_a_mention(self):
+        """An authorization server is not also a server."""
+        clause = _clause(
+            "The business's authorization server **MUST** validate the assertion."
+        )
+        self.assertEqual(
+            metadata.extract_actor(clause),
+            ("auth_server", config.ACTOR_CONFIDENCE_INLINE),
+        )
+
+    def test_server_and_mcp_client_name_parties(self):
+        """In the bindings the server is the business and an MCP client the platform."""
+        server = _clause("When provided, the server **MUST** echo the header.")
+        client = _clause("MCP clients **MUST** include a `meta` object.")
+        self.assertEqual(metadata.extract_actor(server)[0], "business")
+        self.assertEqual(metadata.extract_actor(client)[0], "platform")
+
+    def test_bare_client_is_not_a_party(self):
+        """'client' alone is too often part of another term to name a party."""
+        clause = _clause(
+            "The Embedded Checkout can read the HTTP client hint and **SHOULD** "
+            "apply it."
+        )
+        self.assertEqual(metadata.extract_actor(clause)[0], "embedded_checkout")
+
+    def test_matrix_cell_takes_its_party_from_a_header(self):
+        """A keyword-only cell binds the party its row or column names."""
+        for context in ("**Platform** | Create", "Create | Platform"):
+            clause = _clause(
+                "**MUST**", compound_parent=context, block_type=BlockType.TABLE_CELL
+            )
+            self.assertEqual(
+                metadata.extract_actor(clause),
+                ("platform", config.ACTOR_CONFIDENCE_COMPOUND_PARENT),
+                context,
+            )
+
+    def test_header_that_only_mentions_a_party_is_not_used(self):
+        """A descriptive row label names a topic, not who is obliged."""
+        clause = _clause(
+            "**MUST**",
+            compound_parent="**Buyer notification** | Description",
+            block_type=BlockType.TABLE_CELL,
+        )
+        self.assertEqual(
+            metadata.extract_actor(clause), (None, config.ACTOR_CONFIDENCE_NONE)
+        )
+
+    def test_deepest_heading_names_the_party(self):
+        """An inner heading naming a party beats an outer one."""
+        clause = _clause(
+            "**MUST** distinguish this option from its siblings.",
+            section="Fulfillment Extension > Rendering > Business Responsibilities",
+        )
+        self.assertEqual(
+            metadata.extract_actor(clause),
+            ("business", config.ACTOR_CONFIDENCE_SECTION),
+        )
 
 
 class TestReferencedFields(unittest.TestCase):

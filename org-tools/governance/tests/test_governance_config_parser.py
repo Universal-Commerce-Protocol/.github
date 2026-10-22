@@ -433,6 +433,20 @@ class TestGovernanceConfigValidator(unittest.TestCase):
         self.assertEqual(errors[0].file_path, "unmatched_file.txt")
         self.assertIn("does not match any governance rule", errors[0].message)
 
+    def test_ucp_rules_agent_markdown_globs(self):
+        """Test that AGENT*.md files in ucp-rules.yml match infra_and_tooling instead of fallback."""
+        rules_path = Path(__file__).resolve().parent.parent / "rules" / "ucp-rules.yml"
+        config = GovernanceConfigParser().parse_file(str(rules_path))
+        reqs = config.get_applicable_requirements(
+            ["AGENTS.md", "AGENT_CONTRIBUTOR.md", "AGENT_IMPLEMENTER.md"]
+        )
+        for filename, file_reqs in reqs.items():
+            self.assertEqual(
+                len(file_reqs), 1, f"Unexpected requirements for {filename}"
+            )
+            self.assertEqual(file_reqs[0].min_team, Team("devops-maintainers", 1))
+            self.assertEqual(file_reqs[0].min_approvals, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

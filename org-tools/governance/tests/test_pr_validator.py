@@ -1010,6 +1010,286 @@ class TestPullRequestValidator(unittest.TestCase):
         self.assertEqual(status.assigned_count, 0)  # Author comments do not count
         self.assertEqual(status.approvers, ["maint1"])
 
+    def _normative_config(self, requires=None, normative_escalation=True):
+        """Build a config with a single 'docs/specification/**' rule for normative escalation tests."""
+        spec_rule = GovernanceRule(
+            name="Documentation Specification",
+            patterns=["docs/specification/**"],
+            requires_all=requires
+            or [
+                RuleRequirement(min_approvals=2, min_team=self.hierarchy["maintainers"])
+            ],
+            normative_escalation=normative_escalation,
+        )
+        general_docs_rule = GovernanceRule(
+            name="General Docs",
+            patterns=["docs/**", "README.md", "AGENTS.md"],
+            excluded_patterns=["docs/specification/**"],
+            requires_all=[
+                RuleRequirement(min_approvals=1, min_team=self.hierarchy["devops"])
+            ],
+        )
+        return GovernanceConfig(
+            teams=self.hierarchy,
+            rules=[spec_rule, general_docs_rule],
+            fallback=self.fallback,
+            proxy_reviewers=self.proxy_reviewers,
+        )
+
+    def test_normative_clause_escalates_domain_markdown_to_domain_l3(self):
+        """Test that touching normative clauses in an opted-in domain doc escalates L2 requirement to that domain's L3 Tech Council."""
+        validator = PullRequestValidator(self._normative_config(), self.memberships)
+
+        file_path = "docs/specification/shopping/checkout.md"
+        base_md = "# Checkout\n\nThis document describes the checkout flow.\n"
+        head_md = (
+            "# Checkout\n\n"
+            "This document describes the checkout flow.\n"
+            "The server **MUST** return a valid session ID and **SHOULD** include totals.\n"
+        )
+
+        # 2 L2 maintainer approvals (maint1, maint2) are insufficient after L3 escalation
+        pr_l2_only = PullRequest.create(
+            number=10,
+            author="author1",
+            is_draft=False,
+            changed_files=[file_path],
+            reviews=[
+                Review(user="maint1", state=ReviewState.APPROVED),
+                Review(user="maint2", state=ReviewState.APPROVED),
+            ],
+            file_contents={file_path: (base_md, head_md)},
+        )
+        res_fail = validator.validate(pr_l2_only)
+        self.assertFalse(res_fail.is_mergeable)
+        self.assertEqual(res_fail.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
+        self.assertEqual(len(res_fail.requirement_statuses), 1)
+        req_status = res_fail.requirement_statuses[0]
+        self.assertEqual(
+            req_status.requirement.min_team,
+            self.hierarchy["shopping-tech-council"],
+        )
+        self.assertEqual(req_status.requirement.min_approvals, 2)
+        self.assertIn("`MUST`", req_status.requirement.escalation_reason)
+        self.assertIn("`SHOULD`", req_status.requirement.escalation_reason)
+        self.assertIn(file_path, req_status.requirement.escalation_reason)
+        self.assertEqual(
+            res_fail.file_statuses[0].escalation_reason,
+            req_status.requirement.escalation_reason,
+        )
+
+        # 2 L3+ approvals satisfy the escalated requirement
+        pr_l3_ok = PullRequest.create(
+            number=10,
+            author="author1",
+            is_draft=False,
+            changed_files=[file_path],
+            reviews=[
+                Review(user="tc-member1", state=ReviewState.APPROVED),
+                Review(user="tc-member2", state=ReviewState.APPROVED),
+            ],
+            file_contents={file_path: (base_md, head_md)},
+        )
+        res_ok = validator.validate(pr_l3_ok)
+        self.assertTrue(res_ok.is_mergeable)
+        self.assertEqual(res_ok.mergeable_reason, MergeableReason.RULES_SATISFIED)
+
+    def test_normative_clause_escalates_general_markdown_to_generic_l3(self):
+        """Test that touching normative clauses in an opted-in cross-domain doc escalates to generic L3 Technical Council."""
+        validator = PullRequestValidator(
+            self._normative_config(
+                requires=[
+                    RuleRequirement(
+                        min_approvals=1, min_team=self.hierarchy["maintainers"]
+                    )
+                ]
+            ),
+            self.memberships,
+        )
+        file_path = "docs/specification/overview.md"
+        patch_diff = (
+            "@@ -1,2 +1,3 @@\n"
+            " # Overview\n"
+            "+Implementations MUST support UTF-8 encoding.\n"
+        )
+
+        # Rule requires 1 maintainer (L2); normative edit escalates to L3 technical-council
+        pr_fail = PullRequest.create(
+            number=11,
+            author="author1",
+            is_draft=False,
+            changed_files=[file_path],
+            reviews=[Review(user="maint1", state=ReviewState.APPROVED)],
+            file_patches={file_path: patch_diff},
+        )
+        res_fail = validator.validate(pr_fail)
+        self.assertFalse(res_fail.is_mergeable)
+        req_status = res_fail.requirement_statuses[0]
+        self.assertEqual(req_status.requirement.min_team.name, "technical-council")
+        self.assertEqual(req_status.requirement.min_team.level, 3)
+        self.assertEqual(req_status.requirement.min_approvals, 1)
+        self.assertIn("`MUST`", req_status.requirement.escalation_reason)
+
+        # Any L3 Tech Council member (e.g., food-tc-member1) satisfies the escalated requirement
+        pr_ok = PullRequest.create(
+            number=11,
+            author="author1",
+            is_draft=False,
+            changed_files=[file_path],
+            reviews=[Review(user="food-tc-member1", state=ReviewState.APPROVED)],
+            file_patches={file_path: patch_diff},
+        )
+        res_ok = validator.validate(pr_ok)
+        self.assertTrue(res_ok.is_mergeable)
+
+    def test_normative_clause_escalation_only_applies_to_opted_in_rules(self):
+        """Test that Markdown files matched only by rules without 'normative_escalation' are never escalated."""
+        validator = PullRequestValidator(self._normative_config(), self.memberships)
+        base_md = "# Guide\n\nOverview.\n"
+        head_md = "# Guide\n\nAgents **MUST** run the linter before committing.\n"
+
+        for file_path in (
+            "README.md",
+            "AGENTS.md",
+            "docs/guides/getting-started.md",
+            "CHANGELOG.md",  # Falls back to fallback requirements
+        ):
+            with self.subTest(file_path=file_path):
+                pr = PullRequest.create(
+                    number=14,
+                    author="author1",
+                    is_draft=False,
+                    changed_files=[file_path],
+                    reviews=[Review(user="maint1", state=ReviewState.APPROVED)],
+                    file_contents={file_path: (base_md, head_md)},
+                )
+                res = validator.validate(pr)
+                self.assertTrue(res.is_mergeable)
+                self.assertIsNone(
+                    res.requirement_statuses[0].requirement.escalation_reason
+                )
+                self.assertIsNone(res.file_statuses[0].escalation_reason)
+
+    def test_normative_clause_escalation_disabled_without_opt_in(self):
+        """Test that the same spec file is not escalated when its rule does not opt in."""
+        validator = PullRequestValidator(
+            self._normative_config(normative_escalation=False), self.memberships
+        )
+        file_path = "docs/specification/overview.md"
+        pr = PullRequest.create(
+            number=15,
+            author="author1",
+            is_draft=False,
+            changed_files=[file_path],
+            reviews=[
+                Review(user="maint1", state=ReviewState.APPROVED),
+                Review(user="maint2", state=ReviewState.APPROVED),
+            ],
+            file_contents={file_path: ("# Overview\n", "Clients **MUST** retry.\n")},
+        )
+        res = validator.validate(pr)
+        self.assertTrue(res.is_mergeable)
+        self.assertEqual(
+            res.requirement_statuses[0].requirement.min_team,
+            self.hierarchy["maintainers"],
+        )
+
+    def test_normative_check_fails_closed_when_content_unavailable(self):
+        """Test that an opted-in Markdown file with no contents and no patch is escalated to L3."""
+        validator = PullRequestValidator(self._normative_config(), self.memberships)
+        file_path = "docs/specification/overview.md"
+        pr = PullRequest.create(
+            number=16,
+            author="author1",
+            is_draft=False,
+            changed_files=[file_path, "docs/guides/intro.md"],
+            reviews=[
+                Review(user="maint1", state=ReviewState.APPROVED),
+                Review(user="maint2", state=ReviewState.APPROVED),
+            ],
+        )
+        res = validator.validate(pr)
+        self.assertFalse(res.is_mergeable)
+        self.assertEqual(res.error, ValidationErrorReason.INSUFFICIENT_APPROVALS)
+
+        statuses_by_file = {fs.file_path: fs for fs in res.file_statuses}
+        spec_status = statuses_by_file[file_path]
+        self.assertIn("could not be analyzed", spec_status.escalation_reason)
+        self.assertIn(file_path, spec_status.escalation_reason)
+        spec_req = spec_status.requirement_statuses[0].requirement
+        self.assertEqual(spec_req.min_team.name, "technical-council")
+        self.assertEqual(spec_req.min_approvals, 2)
+
+        # Files outside opted-in rules are not escalated even without content
+        self.assertIsNone(statuses_by_file["docs/guides/intro.md"].escalation_reason)
+
+    def test_non_normative_markdown_edit_does_not_escalate(self):
+        """Test that editing non-normative prose in an opted-in Markdown document keeps L2 requirement."""
+        validator = PullRequestValidator(self._normative_config(), self.memberships)
+        file_path = "docs/specification/overview.md"
+        base_md = "# Overview\n\nThe server **MUST** use TLS 1.3.\n\nTypo in intro.\n"
+        head_md = (
+            "# Overview\n\nThe server **MUST** use TLS 1.3.\n\nFixed typo in intro.\n"
+        )
+
+        pr = PullRequest.create(
+            number=12,
+            author="author1",
+            is_draft=False,
+            changed_files=[file_path],
+            reviews=[
+                Review(user="maint1", state=ReviewState.APPROVED),
+                Review(user="maint2", state=ReviewState.APPROVED),
+            ],
+            file_contents={file_path: (base_md, head_md)},
+        )
+        res = validator.validate(pr)
+        self.assertTrue(res.is_mergeable)
+        self.assertEqual(
+            res.requirement_statuses[0].requirement.min_team,
+            self.hierarchy["maintainers"],
+        )
+        self.assertIsNone(res.requirement_statuses[0].requirement.escalation_reason)
+        self.assertIsNone(res.file_statuses[0].escalation_reason)
+
+    def test_l4_requirement_not_downgraded_on_normative_change(self):
+        """Test that files already requiring L4 Governance Council remain at L4 when normative clauses change."""
+        validator = PullRequestValidator(
+            self._normative_config(
+                requires=[
+                    RuleRequirement(
+                        min_approvals=2, team=self.hierarchy["governance-council"]
+                    )
+                ]
+            ),
+            self.memberships,
+        )
+
+        file_path = "docs/specification/reference.md"
+        pr = PullRequest.create(
+            number=13,
+            author="author1",
+            is_draft=False,
+            changed_files=[file_path],
+            reviews=[
+                Review(user="tc-member1", state=ReviewState.APPROVED),
+                Review(user="tc-member2", state=ReviewState.APPROVED),
+            ],
+            file_contents={
+                file_path: (
+                    "# Reference\n",
+                    "# Reference\n\nClients **MUST** authenticate.\n",
+                )
+            },
+        )
+        res = validator.validate(pr)
+        self.assertFalse(res.is_mergeable)
+        self.assertEqual(
+            res.requirement_statuses[0].requirement.team,
+            self.hierarchy["governance-council"],
+        )
+        self.assertIsNone(res.requirement_statuses[0].requirement.escalation_reason)
+
 
 class TestFetchTeamMemberships(unittest.TestCase):
     """Tests for GitHubClient.fetch_team_memberships method."""
@@ -1130,6 +1410,124 @@ class TestFetchTeamMemberships(unittest.TestCase):
             memberships.members_by_team,
             {Team("shopping-tech-council", 3): set()},
         )
+
+    def test_fetch_pull_request_populates_markdown_contents_and_patches(self):
+        """Test fetch_pull_request fetches patches and base/head Markdown contents."""
+        mock_g = MagicMock()
+        mock_repo = MagicMock()
+        mock_pr = MagicMock()
+        mock_g.get_repo.return_value = mock_repo
+        mock_repo.get_pull.return_value = mock_pr
+
+        mock_pr.number = 42
+        mock_pr.user.login = "Alice"
+        mock_pr.draft = False
+        mock_pr.base.sha = "base-sha-123"
+        mock_pr.head.sha = "head-sha-456"
+
+        md_file = MagicMock()
+        md_file.filename = "docs/spec.md"
+        md_file.status = "modified"
+        md_file.previous_filename = None
+        md_file.patch = "@@ -1 +1 @@\n-old\n+The server **MUST** work."
+
+        py_file = MagicMock()
+        py_file.filename = "src/app.py"
+        py_file.status = "modified"
+        py_file.previous_filename = None
+        py_file.patch = "@@ -1 +1 @@\n-x = 1\n+x = 2"
+
+        mock_pr.get_files.return_value = [md_file, py_file]
+        mock_pr.get_reviews.return_value = []
+        mock_pr.get_review_requests.return_value = ([], [])
+
+        def get_contents_side_effect(path, ref=None):
+            content_obj = MagicMock()
+            if path == "docs/spec.md" and ref == "base-sha-123":
+                content_obj.decoded_content = b"old\n"
+                return content_obj
+            if path == "docs/spec.md" and ref == "head-sha-456":
+                content_obj.decoded_content = b"The server **MUST** work.\n"
+                return content_obj
+            raise MockGithubException(status=404, data={"message": "Not Found"})
+
+        mock_repo.get_contents.side_effect = get_contents_side_effect
+
+        github_client = GitHubClient(mock_g)
+        pr_checked = github_client.fetch_pull_request(
+            "Universal-Commerce-Protocol/ucp",
+            42,
+            normative_check=lambda path: path.endswith(".md"),
+        )
+
+        self.assertEqual(pr_checked.changed_files, ["docs/spec.md", "src/app.py"])
+        # Patches and contents are only collected for files accepted by normative_check
+        self.assertEqual(list(pr_checked.file_patches), ["docs/spec.md"])
+        self.assertEqual(
+            pr_checked.file_contents,
+            {"docs/spec.md": ("old\n", "The server **MUST** work.\n")},
+        )
+
+        # Without normative_check, no Markdown contents or patches are fetched
+        mock_repo.get_contents.reset_mock()
+        pr_unchecked = github_client.fetch_pull_request(
+            "Universal-Commerce-Protocol/samples", 42
+        )
+        self.assertEqual(pr_unchecked.changed_files, ["docs/spec.md", "src/app.py"])
+        self.assertEqual(pr_unchecked.file_patches, {})
+        self.assertEqual(pr_unchecked.file_contents, {})
+        mock_repo.get_contents.assert_not_called()
+
+    def test_fetch_pull_request_omits_partial_contents(self):
+        """Test that a modified file whose base or head fetch fails has no recorded contents."""
+        mock_g = MagicMock()
+        mock_repo = MagicMock()
+        mock_pr = MagicMock()
+        mock_g.get_repo.return_value = mock_repo
+        mock_repo.get_pull.return_value = mock_pr
+
+        mock_pr.number = 43
+        mock_pr.user.login = "Alice"
+        mock_pr.draft = False
+        mock_pr.base.sha = "base-sha"
+        mock_pr.head.sha = "head-sha"
+
+        modified = MagicMock()
+        modified.filename = "docs/modified.md"
+        modified.status = "modified"
+        modified.previous_filename = None
+        modified.patch = None
+
+        added = MagicMock()
+        added.filename = "docs/added.md"
+        added.status = "added"
+        added.previous_filename = None
+        added.patch = None
+
+        mock_pr.get_files.return_value = [modified, added]
+        mock_pr.get_reviews.return_value = []
+        mock_pr.get_review_requests.return_value = ([], [])
+
+        def get_contents_side_effect(path, ref=None):
+            if ref == "head-sha":
+                content_obj = MagicMock()
+                content_obj.decoded_content = b"Clients **MUST** retry.\n"
+                return content_obj
+            # Base fetches fail (e.g., file too large for the contents API)
+            raise MockGithubException(status=403, data={"message": "Too large"})
+
+        mock_repo.get_contents.side_effect = get_contents_side_effect
+
+        pr = GitHubClient(mock_g).fetch_pull_request(
+            "Universal-Commerce-Protocol/ucp", 43, normative_check=lambda _: True
+        )
+
+        # The modified file's base is missing, so it must not be treated as newly added
+        self.assertNotIn("docs/modified.md", pr.file_contents)
+        self.assertEqual(
+            pr.file_contents["docs/added.md"], (None, "Clients **MUST** retry.\n")
+        )
+        self.assertEqual(pr.file_patches, {})
 
 
 class TestPRValidatorMain(unittest.TestCase):

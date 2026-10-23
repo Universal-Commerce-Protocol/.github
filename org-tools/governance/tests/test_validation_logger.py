@@ -477,6 +477,77 @@ class TestValidationLogger(unittest.TestCase):
         ) + HELP_SUFFIX
         self.assertEqual(expected, written_content)
 
+    @patch("builtins.open", new_callable=unittest.mock.mock_open)
+    def test_write_summary_with_normative_escalation_reason(self, mock_open):
+        """Test write_summary outputs escalation reason in both Global Summary and File Breakdown."""
+        min_team = Team(name="technical-council", level=3)
+        reason = (
+            "Normative RFC 2119 clauses (`MUST`, `SHOULD`) were added, removed, "
+            "or modified in `docs/specification/overview.md` (escalated from "
+            "'maintainers' (Level 2) to Level 3 Technical Council)."
+        )
+        req = RuleRequirement(
+            min_approvals=2, min_team=min_team, escalation_reason=reason
+        )
+        status = RequirementStatus(
+            requirement=req,
+            approved_count=0,
+            assigned_count=0,
+            is_satisfied=False,
+        )
+        file_status = FileValidationStatus(
+            file_path="docs/specification/overview.md",
+            requirement_statuses=[status],
+            is_satisfied=False,
+            escalation_reason=reason,
+        )
+        res = ValidationResult(
+            is_mergeable=False,
+            error=ValidationErrorReason.INSUFFICIENT_APPROVALS,
+            requirement_statuses=[status],
+            file_statuses=[file_status],
+        )
+        logger = ValidationLogger(res)
+        logger.write_summary("dummy.txt")
+
+        handle = mock_open()
+        written_content = "".join(call.args[0] for call in handle.write.call_args_list)
+
+        expected = (
+            "# ⚖️ Governance Gate Validation Report\n"
+            "\n"
+            "## 🔴 FAILURE: Insufficient approvals.\n"
+            "---\n"
+            "\n"
+            "### 🌍 1. GLOBAL PR SUMMARY\n"
+            "\n"
+            "Merged requirements across all changed files:\n"
+            "\n"
+            "* **2 approvals** from any Technical Council (Level 3) or higher in the UCP governance hierarchy\n"
+            f"  * **Reason:** ⚠️ {reason}\n"
+            "  * **Met:** 🔴 No (0/2 approved)\n"
+            "  * **Pending:** Needs 2 approvals from any Technical Council (Level 3) or higher in the UCP governance hierarchy "
+            "(0 eligible reviewers assigned). Waiting for 2 more reviewer(s) to be assigned from "
+            "any Technical Council (Level 3) or higher in the UCP governance hierarchy.\n"
+            "\n"
+            "\n"
+            "---\n"
+            "\n"
+            "### 📂 2. FILE-BY-FILE BREAKDOWN\n"
+            "\n"
+            "* **File:** `docs/specification/overview.md`\n"
+            "  * **Status:** 🔴 UNSATISFIED\n"
+            f"  * **Escalation:** ⚠️ {reason}\n"
+            "  * **Requirements:**\n"
+            "    * **2 approvals** from any Technical Council (Level 3) or higher in the UCP governance hierarchy\n"
+            f"      * **Reason:** ⚠️ {reason}\n"
+            "      * **Met:** 🔴 No (0/2 approved)\n"
+            "      * **Pending:** Needs 2 approvals from any Technical Council (Level 3) or higher in the UCP governance hierarchy "
+            "(0 eligible reviewers assigned). Waiting for 2 more reviewer(s) to be assigned from "
+            "any Technical Council (Level 3) or higher in the UCP governance hierarchy.\n"
+        ) + HELP_SUFFIX
+        self.assertEqual(expected, written_content)
+
 
 if __name__ == "__main__":
     unittest.main()

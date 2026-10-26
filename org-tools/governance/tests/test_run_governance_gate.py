@@ -307,6 +307,7 @@ class TestRunGovernanceGate(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             summary_file = tmp / "summary.txt"
+            step_summary = tmp / "step_summary.md"
             validator_script = tmp / "pr_validator.py"
             validator_script.write_text("# stub\n", encoding="utf-8")
 
@@ -316,7 +317,7 @@ class TestRunGovernanceGate(unittest.TestCase):
                 {"number": 12, "head": {"sha": SAMPLE_SHA}},
                 {},
             ]
-            env = self._base_env()
+            env = self._base_env(step_summary=str(step_summary))
             env["EVENT_WORKFLOW_RUN_PR_NUMBER"] = "12"
             env["EVENT_WORKFLOW_RUN_HEAD_SHA"] = SAMPLE_SHA
 
@@ -330,6 +331,10 @@ class TestRunGovernanceGate(unittest.TestCase):
 
             self.assertEqual(rc, 2)
             self.assertIn("Validator Execution Failed", stderr.getvalue())
+            self.assertIn(
+                "ERROR: pr_validator.py exited with code 2 without producing summary.txt.",
+                step_summary.read_text(encoding="utf-8"),
+            )
             post_call = mock_api.call_args_list[2]
             self.assertEqual(post_call.args[0], "POST")
             self.assertEqual(post_call.kwargs["payload"]["state"], "error")
@@ -337,6 +342,73 @@ class TestRunGovernanceGate(unittest.TestCase):
                 post_call.kwargs["payload"]["description"],
                 "Governance validator execution failed",
             )
+
+    @patch.object(run_governance_gate, "_github_api_json")
+    @patch.object(subprocess, "run")
+    def test_validator_runtime_exception_with_error_summary_posts_error_and_writes_job_summary(
+        self,
+        mock_subproc: unittest.mock.MagicMock,
+        mock_api: unittest.mock.MagicMock,
+    ) -> None:
+        """Runtime exceptions writing ERROR: to summary.txt post error status and write job summary."""
+        for validator_rc in (2, 1):
+            with self.subTest(validator_rc=validator_rc):
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    tmp = Path(tmpdir)
+                    summary_file = tmp / "summary.txt"
+                    step_summary = tmp / "step_summary.md"
+                    validator_script = tmp / "pr_validator.py"
+                    validator_script.write_text("# stub\n", encoding="utf-8")
+
+                    def fake_validator(
+                        cmd: list[str],
+                        check: bool = False,
+                        rc: int = validator_rc,
+                        out: Path = summary_file,
+                    ) -> subprocess.CompletedProcess[str]:
+                        out.write_text(
+                            "ERROR: Failed to fetch organization 'Universal-Commerce-Protocol': 401 Bad credentials",
+                            encoding="utf-8",
+                        )
+                        return subprocess.CompletedProcess(cmd, rc)
+
+                    mock_subproc.reset_mock()
+                    mock_api.reset_mock()
+                    mock_subproc.side_effect = fake_validator
+                    mock_api.side_effect = [
+                        {"number": 84, "head": {"sha": SAMPLE_SHA}},
+                        {"number": 84, "head": {"sha": SAMPLE_SHA}},
+                        {},
+                    ]
+
+                    env = self._base_env(step_summary=str(step_summary))
+                    env["INPUT_PR_NUMBER"] = "84"
+                    env["INPUT_COMMIT_SHA"] = SAMPLE_SHA
+
+                    stderr = io.StringIO()
+                    with patch("sys.stderr", stderr):
+                        rc = run_governance_gate.run_gate(
+                            env=env,
+                            validator_script=validator_script,
+                            summary_file=summary_file,
+                        )
+
+                    self.assertEqual(rc, validator_rc)
+                    self.assertIn(
+                        "::error title=Validator Execution Failed::ERROR: Failed to fetch organization",
+                        stderr.getvalue(),
+                    )
+                    self.assertEqual(
+                        step_summary.read_text(encoding="utf-8"),
+                        "ERROR: Failed to fetch organization 'Universal-Commerce-Protocol': 401 Bad credentials\n",
+                    )
+                    post_call = mock_api.call_args_list[2]
+                    self.assertEqual(post_call.args[0], "POST")
+                    self.assertEqual(post_call.kwargs["payload"]["state"], "error")
+                    self.assertEqual(
+                        post_call.kwargs["payload"]["description"],
+                        "Governance validator execution failed",
+                    )
 
     @patch.object(urllib.request, "urlopen")
     def test_github_api_json_includes_http_error_body(

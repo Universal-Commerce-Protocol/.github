@@ -449,7 +449,8 @@ def main() -> None:
                 f.write(error_msg)
         except Exception:
             pass
-        sys.exit(1)
+        # Exit 2 to distinguish runtime/config errors from unsatisfied rules (exit 1).
+        sys.exit(2)
 
 
 if __name__ == "__main__":

@@ -248,21 +248,42 @@ def escape_workflow_annotation(text: str) -> str:
     return text.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
 
 
+def _append_step_summary(step_summary_path: str | None, text: str) -> None:
+    """Append text to GITHUB_STEP_SUMMARY if configured."""
+    if not step_summary_path or not text:
+        return
+    with Path(step_summary_path).open("a", encoding="utf-8") as handle:
+        handle.write(text)
+        if not text.endswith("\n"):
+            handle.write("\n")
+
+
+def _is_validator_execution_error(
+    eval_exit_code: int,
+    summary_text: str | None,
+) -> bool:
+    """Return True when a non-zero validator exit indicates a runtime error."""
+    if eval_exit_code == 0:
+        return False
+    if eval_exit_code != 1 or summary_text is None:
+        return True
+    stripped = summary_text.lstrip()
+    return not stripped or stripped.startswith("ERROR:")
+
+
 def publish_summary_and_annotation(
     eval_exit_code: int,
     summary_file: Path,
     step_summary_path: str | None,
+    summary_text: str | None = None,
 ) -> None:
     """Append summary.txt to GITHUB_STEP_SUMMARY and emit a workflow annotation."""
-    if not summary_file.is_file():
-        return
+    if summary_text is None:
+        if not summary_file.is_file():
+            return
+        summary_text = summary_file.read_text(encoding="utf-8")
 
-    summary_text = summary_file.read_text(encoding="utf-8")
-    if step_summary_path:
-        with Path(step_summary_path).open("a", encoding="utf-8") as handle:
-            handle.write(summary_text)
-            if summary_text and not summary_text.endswith("\n"):
-                handle.write("\n")
+    _append_step_summary(step_summary_path, summary_text)
 
     escaped = escape_workflow_annotation(summary_text)
     if eval_exit_code == 0:
@@ -423,10 +444,30 @@ def run_gate(
         )
         return 0
 
-    if eval_exit_code != 0 and not summary_path.is_file():
+    step_summary_path = _clean_env(environ.get("GITHUB_STEP_SUMMARY")) or None
+    summary_text = (
+        summary_path.read_text(encoding="utf-8") if summary_path.is_file() else None
+    )
+
+    if _is_validator_execution_error(eval_exit_code, summary_text):
+        has_summary_detail = bool(summary_text and summary_text.strip())
+        error_detail = (
+            summary_text.strip()
+            if has_summary_detail and summary_text is not None
+            else (
+                f"pr_validator.py exited with code {eval_exit_code} "
+                f"without producing {summary_path.name}."
+            )
+        )
+        _append_step_summary(
+            step_summary_path,
+            summary_text
+            if has_summary_detail and summary_text is not None
+            else f"ERROR: {error_detail}",
+        )
+        escaped_error = escape_workflow_annotation(error_detail)
         print(
-            f"::error title=Validator Execution Failed::pr_validator.py exited "
-            f"with code {eval_exit_code} without producing {summary_path.name}.",
+            f"::error title=Validator Execution Failed::{escaped_error}",
             file=sys.stderr,
         )
         post_commit_status(
@@ -439,12 +480,13 @@ def run_gate(
             state="error",
             description="Governance validator execution failed",
         )
-        return eval_exit_code
+        return eval_exit_code if eval_exit_code > 0 else 1
 
     publish_summary_and_annotation(
         eval_exit_code=eval_exit_code,
         summary_file=summary_path,
-        step_summary_path=_clean_env(environ.get("GITHUB_STEP_SUMMARY")) or None,
+        step_summary_path=step_summary_path,
+        summary_text=summary_text,
     )
 
     post_commit_status(

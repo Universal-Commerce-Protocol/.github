@@ -34,147 +34,40 @@ on:
         required: true
         description: "Org-level read token for team membership checks"
 
+permissions: {}
+
 jobs:
   evaluate:
     name: Approvals
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      statuses: write # Post the Governance / Approvals commit status
     steps:
-      # 1. Check out the caller repository (the PR code)
-      - name: Check out PR code
-        uses: actions/checkout@v7
-
-      # 2. Check out the central governance scripts from the central repository
       - name: Check out central governance scripts
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ github.repository_owner }}/.github
           path: .github-central
           token: ${{ secrets.ORG_READ_TOKEN }}
+          persist-credentials: false
 
-      # 3. Set up uv using the standard action
       - name: Set up uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
-      # 4. Run governance gate check and capture the exit code
-      - name: Evaluate Required Approvals
-        id: validator
-        run: |
-          set +e
-
-          # Resolve PR number (input vs event fallback)
-          echo "Debug: inputs.pr-number is '${{ inputs.pr-number }}'"
-          echo "Debug: github.event.pull_request.number is '${{ github.event.pull_request.number }}'"
-
-          PR_NUMBER="${{ inputs.pr-number }}"
-          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ] || [ "$PR_NUMBER" = "0" ]; then
-            PR_NUMBER="${{ github.event.pull_request.number }}"
-          fi
-
-          echo "Debug: Resolved PR_NUMBER is '$PR_NUMBER'"
-
-          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ] || [ "$PR_NUMBER" = "0" ]; then
-            # Try to resolve from commit SHA using gh CLI
-            COMMIT_SHA="${{ inputs.commit-sha }}"
-            if [ -z "$COMMIT_SHA" ] || [ "$COMMIT_SHA" = "null" ]; then
-              COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
-            fi
-            if [ -z "$COMMIT_SHA" ] || [ "$COMMIT_SHA" = "null" ]; then
-              COMMIT_SHA="${{ github.event.workflow_run.head_sha }}"
-            fi
-
-            if [ -n "$COMMIT_SHA" ] && [ "$COMMIT_SHA" != "null" ]; then
-              echo "Attempting to resolve PR number for SHA $COMMIT_SHA..."
-              export GH_TOKEN="${{ secrets.ORG_READ_TOKEN }}"
-              PR_NUMBER=$(gh pr list --repo "${{ github.repository }}" --search "$COMMIT_SHA" --state all --json number --jq '.[0].number' 2>/dev/null)
-              echo "Resolved PR_NUMBER from gh CLI: '$PR_NUMBER'"
-            fi
-          fi
-
-          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ] || [ "$PR_NUMBER" = "0" ]; then
-            echo "::error::PR number could not be resolved."
-            exit 1
-          fi
-
-          RULES_FILE_ARG=""
-          if [ -n "${{ inputs.rules-file }}" ]; then
-            RULES_FILE_ARG="--rules-file ${{ inputs.rules-file }}"
-          fi
-
-          uv run .github-central/org-tools/governance/scripts/pr_validator.py \
-            --token "${{ secrets.ORG_READ_TOKEN }}" \
-            --org "${{ github.repository_owner }}" \
-            --repo "${{ github.repository }}" \
-            --pr "$PR_NUMBER" \
-            $RULES_FILE_ARG
-
-
-          EVAL_EXIT_CODE=$?
-          set -e
-
-          # Save the exit code to the GitHub step outputs
-          echo "exit_code=$EVAL_EXIT_CODE" >> "$GITHUB_OUTPUT"
-
-          # --- NEW: Create the Job Summary and Annotation ---
-          if [ -f summary.txt ]; then
-            # 1. Write the rich Markdown report directly to the GitHub Job Summary page
-            cat summary.txt >> "$GITHUB_STEP_SUMMARY"
-
-            # 2. Properly escape newlines (%0A) and carriage returns (%0D)
-            # to prevent truncation in the inline workflow annotations
-            SUMMARY_TEXT=$(cat summary.txt | tr -d '\r' | sed ':a;N;$!ba;s/\n/%0A/g')
-
-            # 3. Post it as an annotation in the UI
-            if [ "$EVAL_EXIT_CODE" -eq 0 ]; then
-              echo "::notice title=Approval Status::$SUMMARY_TEXT"
-            else
-              echo "::error title=Missing Approvals::$SUMMARY_TEXT"
-            fi
-          fi
-          # ----------------------------------
-
-          exit 0
-
-      # 5. Post the static Commit Status to the GitHub API with a clickable log link
-      - name: Post Static Status Check
-        uses: actions/github-script@v9
-        with:
-          script: |
-            // Read the exit code from the previous step
-            const exitCode = parseInt('${{ steps.validator.outputs.exit_code }}', 10);
-
-            // Map the exit code to a GitHub status state
-            const state = (exitCode === 0) ? 'success' : 'failure';
-            const description = (exitCode === 0) ? 'Governance approvals met' : 'Pending required approvals';
-
-            // Construct the exact URL to the current GitHub Actions workflow run logs
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-
-            // Resolve SHA (input vs event fallback)
-            let sha = '${{ inputs.commit-sha }}';
-            console.log(`Debug: inputs.commit-sha is '${sha}'`);
-            console.log(`Debug: payload.pull_request.head.sha is '${context.payload.pull_request ? context.payload.pull_request.head.sha : 'undefined'}'`);
-            console.log(`Debug: payload.workflow_run.head_sha is '${context.payload.workflow_run ? context.payload.workflow_run.head_sha : 'undefined'}'`);
-
-            if (!sha || sha === 'null') {
-              sha = context.payload.pull_request ? context.payload.pull_request.head.sha : null;
-            }
-            if ((!sha || sha === 'null') && context.payload.workflow_run) {
-              sha = context.payload.workflow_run.head_sha;
-            }
-            console.log(`Debug: Resolved sha is '${sha}'`);
-
-            if (!sha || sha === 'null') {
-              core.setFailed('SHA could not be resolved.');
-              return;
-            }
-
-            // Post the status to the specific commit hash
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: sha,
-              state: state,
-              context: 'Governance / Approvals',
-              description: description,
-              target_url: runUrl  // <-- This makes the status check clickable
-            });
+      - name: Evaluate governance approvals and post commit status
+        env:
+          ORG_READ_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
+          STATUS_TOKEN: ${{ github.token }}
+          GITHUB_ORG: ${{ github.repository_owner }}
+          GITHUB_REPO: ${{ github.repository }}
+          INPUT_PR_NUMBER: ${{ inputs.pr-number }}
+          EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          INPUT_COMMIT_SHA: ${{ inputs.commit-sha }}
+          EVENT_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          INPUT_RULES_FILE: ${{ inputs.rules-file }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: python3 .github-central/org-tools/governance/scripts/run_governance_gate.py

@@ -37,6 +37,16 @@ STATUS_CONTEXT = "Governance / Approvals"
 ORG_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
+OPEN_PRS_PER_PAGE = 100
+MAX_OPEN_PR_PAGES = 5
+
+
+class GitHubApiError(RuntimeError):
+    """Raised when a GitHub REST API request returns an HTTP error."""
+
+    def __init__(self, status_code: int, message: str) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 def _clean_env(value: str | None) -> str:
@@ -101,9 +111,37 @@ def _github_api_json(
         body_bytes = json.dumps(payload).encode("utf-8")
 
     req = urllib.request.Request(url, data=body_bytes, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
-        raw = resp.read().decode("utf-8")
-        return json.loads(raw) if raw else None
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
+            raw = resp.read().decode("utf-8")
+            return json.loads(raw) if raw else None
+    except urllib.error.HTTPError as exc:
+        try:
+            err_body = exc.read(512).decode("utf-8", errors="replace").strip()
+        finally:
+            exc.close()
+        detail = f": {err_body}" if err_body else ""
+        raise GitHubApiError(
+            exc.code,
+            f"GitHub API {method} {url} failed with HTTP {exc.code}{detail}",
+        ) from exc
+
+
+def _match_open_head_sha(pulls: object, commit_sha_lower: str) -> int | None:
+    """Return the PR number of an open pull request whose head SHA matches."""
+    if not isinstance(pulls, list):
+        return None
+    for pr in pulls:
+        if (
+            isinstance(pr, dict)
+            and pr.get("state") == "open"
+            and isinstance(pr.get("head"), dict)
+            and isinstance(pr["head"].get("sha"), str)
+            and pr["head"]["sha"].lower() == commit_sha_lower
+            and isinstance(pr.get("number"), int)
+        ):
+            return pr["number"]
+    return None
 
 
 def resolve_pr_number_from_sha(
@@ -114,31 +152,51 @@ def resolve_pr_number_from_sha(
 ) -> int | None:
     """Resolve the PR number associated with a commit SHA via GitHub REST API.
 
-    Queries the primary commit-to-pulls endpoint first (avoiding search index
-    lag on newly opened or synchronized fork PRs) and falls back to the search
-    endpoint if no pull request is returned.
+    Queries open pull requests directly first (covering both fork and same-repo
+    PRs without search index lag, since `/commits/{sha}/pulls` omits fork PRs),
+    then checks `/commits/{sha}/pulls`, and finally falls back to `/search/issues`
+    preferring open pull requests.
     """
+    commit_sha_lower = commit_sha.lower()
+
+    # 1. Scan open PRs ordered by most recently updated (covers fork PRs with zero index lag).
+    for page in range(1, MAX_OPEN_PR_PAGES + 1):
+        open_pulls_url = (
+            f"{api_url}/repos/{repo}/pulls"
+            f"?state=open&sort=updated&direction=desc&per_page={OPEN_PRS_PER_PAGE}&page={page}"
+        )
+        try:
+            page_pulls = _github_api_json("GET", open_pulls_url, token)
+        except (GitHubApiError, urllib.error.HTTPError) as exc:
+            status = getattr(exc, "status_code", getattr(exc, "code", "unknown"))
+            print(
+                f"Warning: open-pulls lookup returned HTTP {status}; falling back.",
+                file=sys.stderr,
+            )
+            break
+
+        matched = _match_open_head_sha(page_pulls, commit_sha_lower)
+        if matched is not None:
+            return matched
+        if not isinstance(page_pulls, list) or len(page_pulls) < OPEN_PRS_PER_PAGE:
+            break
+
+    # 2. Check commit-to-pulls (covers same-repo branches beyond the open-PR window).
     commits_pulls_url = f"{api_url}/repos/{repo}/commits/{commit_sha}/pulls"
     try:
         pulls = _github_api_json("GET", commits_pulls_url, token)
-    except urllib.error.HTTPError as exc:
+    except (GitHubApiError, urllib.error.HTTPError) as exc:
+        status = getattr(exc, "status_code", getattr(exc, "code", "unknown"))
         print(
-            f"Warning: commit-to-pulls lookup returned HTTP {exc.code}; falling back to search.",
+            f"Warning: commit-to-pulls lookup returned HTTP {status}; falling back to search.",
             file=sys.stderr,
         )
         pulls = []
 
     if isinstance(pulls, list) and pulls:
-        # Prefer an open PR whose current head matches commit_sha.
-        for pr in pulls:
-            if (
-                isinstance(pr, dict)
-                and pr.get("state") == "open"
-                and isinstance(pr.get("head"), dict)
-                and pr["head"].get("sha") == commit_sha
-                and isinstance(pr.get("number"), int)
-            ):
-                return pr["number"]
+        matched = _match_open_head_sha(pulls, commit_sha_lower)
+        if matched is not None:
+            return matched
         for pr in pulls:
             if (
                 isinstance(pr, dict)
@@ -150,15 +208,23 @@ def resolve_pr_number_from_sha(
             if isinstance(pr, dict) and isinstance(pr.get("number"), int):
                 return pr["number"]
 
+    # 3. Fall back to Search API, preferring open PRs over closed duplicates.
     query = urllib.parse.quote(f"repo:{repo} is:pr {commit_sha}")
-    search_url = f"{api_url}/search/issues?q={query}&per_page=5"
+    search_url = f"{api_url}/search/issues?q={query}&per_page=10"
     search_result = _github_api_json("GET", search_url, token)
     if isinstance(search_result, dict):
         items = search_result.get("items")
         if isinstance(items, list) and items:
-            first = items[0]
-            if isinstance(first, dict) and isinstance(first.get("number"), int):
-                return first["number"]
+            for item in items:
+                if (
+                    isinstance(item, dict)
+                    and item.get("state") == "open"
+                    and isinstance(item.get("number"), int)
+                ):
+                    return item["number"]
+            for item in items:
+                if isinstance(item, dict) and isinstance(item.get("number"), int):
+                    return item["number"]
     return None
 
 
@@ -211,18 +277,23 @@ def post_commit_status(
     repo: str,
     commit_sha: str,
     run_id: str,
-    eval_exit_code: int,
     status_token: str,
+    *,
+    eval_exit_code: int = 0,
+    state: str | None = None,
+    description: str | None = None,
 ) -> None:
     """Post the Governance / Approvals commit status check to GitHub."""
+    resolved_state = state or ("success" if eval_exit_code == 0 else "failure")
+    resolved_description = description or (
+        "Governance approvals met"
+        if resolved_state == "success"
+        else "Pending required approvals"
+    )
     payload: dict[str, Any] = {
-        "state": "success" if eval_exit_code == 0 else "failure",
+        "state": resolved_state,
         "context": STATUS_CONTEXT,
-        "description": (
-            "Governance approvals met"
-            if eval_exit_code == 0
-            else "Pending required approvals"
-        ),
+        "description": resolved_description,
     }
     if run_id:
         payload["target_url"] = f"{server_url}/{repo}/actions/runs/{run_id}"
@@ -259,21 +330,22 @@ def run_gate(
         print(f"::error::Invalid GitHub repository: {repo!r}", file=sys.stderr)
         return 1
 
-    api_url = _validate_https_base_url(
-        _clean_env(environ.get("GITHUB_API_URL")) or "https://api.github.com",
-        "GITHUB_API_URL",
-    )
-    server_url = _validate_https_base_url(
-        _clean_env(environ.get("GITHUB_SERVER_URL")) or "https://github.com",
-        "GITHUB_SERVER_URL",
-    )
     run_id = _clean_env(environ.get("GITHUB_RUN_ID"))
     rules_file = _clean_env(environ.get("INPUT_RULES_FILE"))
 
     try:
+        api_url = _validate_https_base_url(
+            _clean_env(environ.get("GITHUB_API_URL")) or "https://api.github.com",
+            "GITHUB_API_URL",
+        )
+        server_url = _validate_https_base_url(
+            _clean_env(environ.get("GITHUB_SERVER_URL")) or "https://github.com",
+            "GITHUB_SERVER_URL",
+        )
         pr_number = parse_pr_number(
             environ.get("INPUT_PR_NUMBER"),
             environ.get("EVENT_PR_NUMBER"),
+            environ.get("EVENT_WORKFLOW_RUN_PR_NUMBER"),
         )
         commit_sha = parse_commit_sha(
             environ.get("INPUT_COMMIT_SHA"),
@@ -294,12 +366,21 @@ def run_gate(
         print("::error::PR number could not be resolved.", file=sys.stderr)
         return 1
 
-    if commit_sha is None:
-        commit_sha = resolve_head_sha_from_pr(api_url, repo, pr_number, org_read_token)
-
-    if commit_sha is None:
+    # Verify the PR's live head SHA before running pr_validator.py so we never
+    # evaluate a newer commit and stamp its verdict onto a superseded SHA.
+    live_head_sha = resolve_head_sha_from_pr(api_url, repo, pr_number, org_read_token)
+    if live_head_sha is None:
         print("::error::Commit SHA could not be resolved.", file=sys.stderr)
         return 1
+
+    if commit_sha is None:
+        commit_sha = live_head_sha
+    elif live_head_sha.lower() != commit_sha.lower():
+        print(
+            f"::notice title=Superseded Commit::Skipping governance status for "
+            f"{commit_sha}; PR #{pr_number} is now at {live_head_sha}."
+        )
+        return 0
 
     script_path = (
         validator_script
@@ -329,6 +410,37 @@ def run_gate(
     proc = subprocess.run(cmd, check=False)
     eval_exit_code = proc.returncode
 
+    # Re-verify the PR head SHA after evaluation to prevent TOCTOU races if a
+    # force-push occurred while pr_validator.py was fetching PR files/reviews.
+    post_eval_head_sha = resolve_head_sha_from_pr(
+        api_url, repo, pr_number, org_read_token
+    )
+    if post_eval_head_sha is None or post_eval_head_sha.lower() != commit_sha.lower():
+        print(
+            f"::notice title=Superseded Commit::Skipping governance status for "
+            f"{commit_sha}; PR #{pr_number} head changed to {post_eval_head_sha!r} "
+            f"during evaluation."
+        )
+        return 0
+
+    if eval_exit_code != 0 and not summary_path.is_file():
+        print(
+            f"::error title=Validator Execution Failed::pr_validator.py exited "
+            f"with code {eval_exit_code} without producing {summary_path.name}.",
+            file=sys.stderr,
+        )
+        post_commit_status(
+            api_url=api_url,
+            server_url=server_url,
+            repo=repo,
+            commit_sha=commit_sha,
+            run_id=run_id,
+            status_token=status_token,
+            state="error",
+            description="Governance validator execution failed",
+        )
+        return eval_exit_code
+
     publish_summary_and_annotation(
         eval_exit_code=eval_exit_code,
         summary_file=summary_path,
@@ -341,8 +453,8 @@ def run_gate(
         repo=repo,
         commit_sha=commit_sha,
         run_id=run_id,
-        eval_exit_code=eval_exit_code,
         status_token=status_token,
+        eval_exit_code=eval_exit_code,
     )
     return 0
 

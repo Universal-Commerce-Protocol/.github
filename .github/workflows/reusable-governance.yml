@@ -54,6 +54,9 @@ jobs:
 
       - name: Set up uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          python-version: "3.12"
+          enable-cache: "false"
 
       - name: Evaluate governance approvals and post commit status
         env:
@@ -63,6 +66,7 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
           INPUT_PR_NUMBER: ${{ inputs.pr-number }}
           EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          EVENT_WORKFLOW_RUN_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
           INPUT_COMMIT_SHA: ${{ inputs.commit-sha }}
           EVENT_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           EVENT_WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}

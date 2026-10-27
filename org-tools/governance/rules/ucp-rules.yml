@@ -57,7 +57,7 @@ rules:
       - "mkdocs.yml"
       - ".gitignore"
       - ".linkignore"
-      - "AGENTS.md"
+      - "AGENT*.md"
       - "CLAUDE.md"
       - "pyproject.toml"
       - "uv.lock"

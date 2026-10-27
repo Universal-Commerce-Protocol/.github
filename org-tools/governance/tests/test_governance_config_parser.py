@@ -169,6 +169,39 @@ class TestGovernanceConfigParser(unittest.TestCase):
             parser._parse(["not", "a", "map"])
         self.assertIn("must be a YAML map", str(ctx.exception))
 
+    def test_parse_normative_escalation_flag(self):
+        """Test parsing of the optional per-rule 'normative_escalation' flag."""
+        parser = GovernanceConfigParser()
+        yaml_data = {
+            "team_hierarchy": {"devops": 1, "maintainers": 2},
+            "fallback": {"requires": [{"min_team": "maintainers", "min_approvals": 1}]},
+            "rules": [
+                {
+                    "name": "spec",
+                    "patterns": ["docs/specification/**"],
+                    "normative_escalation": True,
+                    "requires": [{"min_team": "maintainers", "min_approvals": 2}],
+                },
+                {
+                    "name": "docs",
+                    "patterns": ["docs/**"],
+                    "excludes": ["docs/specification/**"],
+                    "requires": [{"min_team": "devops", "min_approvals": 1}],
+                },
+            ],
+        }
+        config = parser._parse(yaml_data)
+        self.assertTrue(config.rules[0].normative_escalation)
+        self.assertFalse(config.rules[1].normative_escalation)
+        self.assertTrue(config.is_normative_escalation_file("docs/specification/a.md"))
+        self.assertFalse(config.is_normative_escalation_file("docs/guides/a.md"))
+        self.assertFalse(config.is_normative_escalation_file("README.md"))
+
+        yaml_data["rules"][0]["normative_escalation"] = "yes"
+        with self.assertRaises(ValueError) as ctx:
+            parser._parse(yaml_data)
+        self.assertIn("non-boolean 'normative_escalation'", str(ctx.exception))
+
     def test_min_approvals_validation(self):
         """Test validations for min_approvals values."""
         # 1. min_approvals missing/None

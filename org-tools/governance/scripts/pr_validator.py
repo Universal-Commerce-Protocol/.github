@@ -14,9 +14,12 @@
 #   limitations under the License.
 
 # /// script
+# requires-python = ">=3.11"
 # dependencies = [
 #   "PyGithub",
 #   "PyYAML",
+#   "markdown-it-py==3.0.0",
+#   "markdown==3.10.2",
 # ]
 # ///
 """Pull Request validator using governance rules and team memberships under the Venn Diagram model."""
@@ -24,14 +27,16 @@
 import argparse
 import os
 import sys
+from collections.abc import Callable
+from pathlib import Path
 
 from github import Auth, Github, GithubException
-
 from governance_config_parser import (
     GovernanceConfig,
     GovernanceConfigParser,
     RuleRequirement,
 )
+from normative_detector import detect_normative_changes, is_markdown_file
 from pr_models import (
     FileValidationStatus,
     MergeableReason,
@@ -39,6 +44,7 @@ from pr_models import (
     RequirementStatus,
     Review,
     ReviewState,
+    Team,
     TeamMemberships,
     User,
     ValidationErrorReason,
@@ -46,6 +52,29 @@ from pr_models import (
     merge_requirements,
 )
 from validation_logger import ValidationLogger
+
+NORMATIVE_ESCALATION_LEVEL = 3
+GENERIC_TECH_COUNCIL_TEAM = Team(
+    name="technical-council", level=NORMATIVE_ESCALATION_LEVEL
+)
+DOMAIN_TECH_COUNCIL_BY_SEGMENT: dict[str, str] = {
+    "shopping": "shopping-tech-council",
+    "food": "food-tech-council",
+    "lodging": "lodging-tech-council",
+    "payment": "payments-tech-council",
+    "payments": "payments-tech-council",
+}
+
+
+def requires_normative_check(config: GovernanceConfig, file_path: str) -> bool:
+    """Return True if a changed file must be checked for normative RFC 2119 clause changes.
+
+    Only Markdown files matched by a rule that opts in via
+    `normative_escalation: true` are checked.
+    """
+    return is_markdown_file(file_path) and config.is_normative_escalation_file(
+        file_path
+    )
 
 
 class GitHubClient:
@@ -87,17 +116,86 @@ class GitHubClient:
             members_by_team=members_by_team, teams=config.teams
         )
 
-    def fetch_pull_request(self, repo_name: str, pr_number: int) -> PullRequest:
+    def _fetch_file_content(
+        self, repo: object, path: str, ref: str | None
+    ) -> str | None:
+        """Fetch decoded UTF-8 file content from GitHub at a specific git ref."""
+        if not ref or not isinstance(ref, str):
+            return None
+        try:
+            content_file = repo.get_contents(path, ref=ref)
+            if isinstance(content_file, list):
+                return None
+            decoded = getattr(content_file, "decoded_content", None)
+            if isinstance(decoded, bytes):
+                return decoded.decode("utf-8", errors="replace")
+        except Exception:
+            # Callers treat missing content as "unable to analyze" and fail closed.
+            return None
+        return None
+
+    def _fetch_base_and_head_contents(
+        self, repo: object, pr_file: object, base_sha: str | None, head_sha: str | None
+    ) -> tuple[str | None, str | None] | None:
+        """Fetch (base, head) contents for a changed file.
+
+        Returns None unless every side that should exist (base unless the file was
+        added, head unless it was removed) was fetched successfully, so that a
+        partial fetch is never mistaken for an added or deleted document.
+        """
+        status = getattr(pr_file, "status", None)
+        prev_filename = getattr(pr_file, "previous_filename", None) or pr_file.filename
+
+        base_text: str | None = None
+        if status != "added":
+            base_text = self._fetch_file_content(repo, prev_filename, base_sha)
+            if base_text is None:
+                return None
+
+        head_text: str | None = None
+        if status != "removed":
+            head_text = self._fetch_file_content(repo, pr_file.filename, head_sha)
+            if head_text is None:
+                return None
+
+        return base_text, head_text
+
+    def fetch_pull_request(
+        self,
+        repo_name: str,
+        pr_number: int,
+        normative_check: Callable[[str], bool] | None = None,
+    ) -> PullRequest:
         """Fetch PR files, reviews, and requested reviewers from GitHub.
 
-        Maps them to the PullRequest dataclass.
+        Maps them to the PullRequest dataclass. For changed files accepted by
+        `normative_check`, also fetches the unified diff patch and the base/head
+        file contents used for normative RFC 2119 clause detection.
         """
         try:
             repo = self.g.get_repo(repo_name)
             pr = repo.get_pull(pr_number)
 
-            # Fetch changed files
-            changed_files = [f.filename for f in pr.get_files()]
+            pr_files = list(pr.get_files())
+            changed_files = [f.filename for f in pr_files]
+            file_patches: dict[str, str] = {}
+            file_contents: dict[str, tuple[str | None, str | None]] = {}
+
+            if normative_check is not None:
+                base_sha = getattr(getattr(pr, "base", None), "sha", None)
+                head_sha = getattr(getattr(pr, "head", None), "sha", None)
+
+                for f in pr_files:
+                    if not normative_check(f.filename):
+                        continue
+                    patch_val = getattr(f, "patch", None)
+                    if isinstance(patch_val, str):
+                        file_patches[f.filename] = patch_val
+                    contents = self._fetch_base_and_head_contents(
+                        repo, f, base_sha, head_sha
+                    )
+                    if contents is not None:
+                        file_contents[f.filename] = contents
 
             # Fetch reviews
             reviews = []
@@ -129,6 +227,8 @@ class GitHubClient:
                 reviews=reviews,
                 assigned_user_names=assigned_user_names,
                 assigned_team_names=assigned_team_names,
+                file_patches=file_patches,
+                file_contents=file_contents,
             )
         except GithubException as e:
             raise RuntimeError(f"Failed to fetch PR info from GitHub: {e}") from e
@@ -141,6 +241,105 @@ class PullRequestValidator:
         """Initialize the validator with config and memberships."""
         self.config = config
         self.memberships = memberships
+
+    def _resolve_l3_target_team(self, file_path: str) -> Team:
+        """Resolve the Level 3 Technical Council target team for a file path."""
+        segments = Path(file_path).as_posix().lower().split("/")
+        for segment in segments:
+            council_slug = DOMAIN_TECH_COUNCIL_BY_SEGMENT.get(segment)
+            if council_slug and council_slug in self.config.teams:
+                team = self.config.teams[council_slug]
+                if team.level >= NORMATIVE_ESCALATION_LEVEL:
+                    return team
+        return self.config.teams.get("technical-council", GENERIC_TECH_COUNCIL_TEAM)
+
+    @staticmethod
+    def _escalation_reason(file_path: str, cause: str, sources: list[str]) -> str:
+        """Build the human-readable reason for a Level 3 normative escalation."""
+        return (
+            f"{cause} in `{file_path}` (escalated from {', '.join(sources)} "
+            f"to Level 3 Technical Council)."
+        )
+
+    def _apply_normative_escalations(
+        self,
+        pr: PullRequest,
+        requirements_by_file: dict[str, list[RuleRequirement]],
+    ) -> tuple[dict[str, list[RuleRequirement]], dict[str, str]]:
+        """Escalate lower-level requirements to Level 3 for opted-in Markdown files that touch normative clauses.
+
+        Fails closed: if neither the base/head contents nor the diff patch of an
+        opted-in Markdown file are available, the file is escalated as if it
+        modified normative clauses.
+        """
+        updated_by_file: dict[str, list[RuleRequirement]] = {}
+        escalation_reasons_by_file: dict[str, str] = {}
+
+        for file_path, reqs in requirements_by_file.items():
+            if not requires_normative_check(self.config, file_path):
+                updated_by_file[file_path] = reqs
+                continue
+
+            contents = pr.file_contents.get(file_path)
+            patch = pr.file_patches.get(file_path)
+            if contents is None and not patch:
+                cause = (
+                    "Normative RFC 2119 clauses could not be analyzed because the "
+                    "file contents and diff were unavailable"
+                )
+            else:
+                base_content, head_content = contents or (None, None)
+                change_result = detect_normative_changes(
+                    file_path=file_path,
+                    base_content=base_content,
+                    head_content=head_content,
+                    patch=patch,
+                )
+                if not change_result.has_normative_changes:
+                    updated_by_file[file_path] = reqs
+                    continue
+                keywords = change_result.affected_keywords
+                kw_str = (
+                    f" ({', '.join(f'`{k}`' for k in keywords)})" if keywords else ""
+                )
+                cause = (
+                    f"Normative RFC 2119 clauses{kw_str} were added, removed, "
+                    f"or modified"
+                )
+
+            target_l3_team = self._resolve_l3_target_team(file_path)
+            new_reqs: list[RuleRequirement] = []
+            escalated_from_descriptions: list[str] = []
+
+            for req in reqs:
+                source_team = req.team or req.min_team
+                if (
+                    source_team is not None
+                    and source_team.level < NORMATIVE_ESCALATION_LEVEL
+                ):
+                    source_desc = f"'{source_team.name}' (Level {source_team.level})"
+                    if source_desc not in escalated_from_descriptions:
+                        escalated_from_descriptions.append(source_desc)
+                    new_reqs.append(
+                        RuleRequirement(
+                            min_approvals=req.min_approvals,
+                            min_team=target_l3_team,
+                            escalation_reason=self._escalation_reason(
+                                file_path, cause, [source_desc]
+                            ),
+                        )
+                    )
+                else:
+                    new_reqs.append(req)
+
+            updated_by_file[file_path] = merge_requirements(new_reqs)
+
+            if escalated_from_descriptions:
+                escalation_reasons_by_file[file_path] = self._escalation_reason(
+                    file_path, cause, escalated_from_descriptions
+                )
+
+        return updated_by_file, escalation_reasons_by_file
 
     def validate(self, pr: PullRequest) -> ValidationResult:
         """Validate a Pull Request against the governance rules."""
@@ -167,8 +366,11 @@ class PullRequestValidator:
                 mergeable_reason=MergeableReason.NO_CHANGED_FILES,
             )
 
-        # 5. Rule Matching
+        # 5. Rule Matching & Normative Clause L3 Escalation
         requirements_by_file = self.config.get_applicable_requirements(pr.changed_files)
+        requirements_by_file, escalation_reasons_by_file = (
+            self._apply_normative_escalations(pr, requirements_by_file)
+        )
         unmerged_requirements = []
         for reqs in requirements_by_file.values():
             unmerged_requirements.extend(reqs)
@@ -193,6 +395,7 @@ class PullRequestValidator:
             approver_usernames,
             assigned_usernames,
             author=pr.author,
+            escalation_reasons_by_file=escalation_reasons_by_file,
         )
 
         # 9. Changes Requested Check
@@ -265,6 +468,7 @@ class PullRequestValidator:
                         min_approvals=min_approvals,
                         team=req.team,
                         min_team=req.min_team,
+                        escalation_reason=req.escalation_reason,
                     )
                     require_total_approvals = req.min_approvals
 
@@ -351,9 +555,11 @@ class PullRequestValidator:
         approver_usernames: set[str],
         assigned_usernames: set[str],
         author: str | None = None,
+        escalation_reasons_by_file: dict[str, str] | None = None,
     ) -> list[FileValidationStatus]:
         """Evaluates and generates validation statuses for each changed file in the PR."""
         file_statuses = []
+        escalation_map = escalation_reasons_by_file or {}
         for file, file_requirements in requirements_by_file.items():
             file_req_statuses = self._evaluate_requirements(
                 file_requirements, approver_usernames, assigned_usernames, author=author
@@ -365,6 +571,7 @@ class PullRequestValidator:
                     file_path=file,
                     requirement_statuses=file_req_statuses,
                     is_satisfied=file_satisfied,
+                    escalation_reason=escalation_map.get(file),
                 )
             )
         return file_statuses
@@ -421,7 +628,11 @@ def run_validation(args: argparse.Namespace) -> ValidationResult:
 
     # 3. Fetch team memberships & PR details
     memberships = github_client.fetch_team_memberships(args.org, config)
-    pr = github_client.fetch_pull_request(args.repo, args.pr)
+    pr = github_client.fetch_pull_request(
+        args.repo,
+        args.pr,
+        normative_check=lambda path: requires_normative_check(config, path),
+    )
 
     # 4. Validate PR
     validator = PullRequestValidator(config, memberships)

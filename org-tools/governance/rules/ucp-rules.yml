@@ -31,6 +31,9 @@ rules:
   - name: "documentation_spec"
     patterns:
       - "docs/specification/**"
+    # Escalate Markdown edits that add, remove, or modify normative RFC 2119
+    # clauses to Level 3 (Technical Council).
+    normative_escalation: true
     requires:
       # Grants access to maintainers (L2), tech councils (L3) and
       # governance-council (L4)

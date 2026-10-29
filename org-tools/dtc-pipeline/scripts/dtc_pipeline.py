@@ -81,7 +81,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     scan_p = subparsers.add_parser(
         "scan-spotlight",
-        help="Run the Community Spotlight 3-gate + 100-point election scan (and optionally apply labels & sync Project v2).",
+        help="Run the Community Spotlight 3-gate + 100-point election scan (and optionally sync Project v2 without applying repo labels).",
     )
     scan_p.add_argument(
         "--org",
@@ -101,7 +101,7 @@ def build_parser() -> argparse.ArgumentParser:
     scan_p.add_argument(
         "--apply",
         action="store_true",
-        help="Apply the `community-spotlight` label and sync eligible items onto `--project-id` (defaults to read-only).",
+        help="Sync eligible items (`Track = Community Spotlight` and `Priority Score`) onto `--project-id` (no repo labels applied).",
     )
 
     provision_p = subparsers.add_parser(
@@ -193,19 +193,16 @@ def main(argv: list[str] | None = None) -> int:
         pids = [
             pid.strip() for pid in (args.project_id or "").split(",") if pid.strip()
         ]
-        if args.apply or pids:
+        if pids:
             applied = manager.apply_spotlight_scan(
                 res,
-                org=args.org,
-                repo=args.repo,
                 project_ids=pids,
                 apply=args.apply,
             )
-            mode = "Applied" if args.apply else "[DRY-RUN] Would apply"
+            mode = "Synced" if args.apply else "[DRY-RUN] Would sync"
             logger.info(
-                "%s `community-spotlight` label to %d items and synced %d Project items.",
+                "%s %d Community Spotlight items to Project v2 (no repo labels applied).",
                 mode,
-                len(applied["labeled"]),
                 len(applied["synced_projects"]),
             )
         return 0

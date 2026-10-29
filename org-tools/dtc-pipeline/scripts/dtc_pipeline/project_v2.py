@@ -546,54 +546,11 @@ class GitHubProjectV2Manager:
     def apply_spotlight_scan(
         self,
         scan_result: dict,
-        org: str = DEFAULT_ORG,
-        repo: str = DEFAULT_REPO,
         project_ids: list[str] | None = None,
         apply: bool = False,
     ) -> dict[str, list[dict]]:
-        """Applies `community-spotlight` label and syncs `Track` & `Priority Score` to Project v2."""
-        label_id: str | None = None
-        if apply:
-            lbl_data = self.graphql(
-                """
-                query($owner: String!, $name: String!) {
-                  repository(owner: $owner, name: $name) {
-                    label(name: "community-spotlight") { id }
-                  }
-                }
-                """,
-                {"owner": org, "name": repo},
-            )
-            label_id = ((lbl_data.get("repository") or {}).get("label") or {}).get("id")
-
-        labeled: list[dict] = []
+        """Syncs eligible Community Spotlight candidates (`Track` & `Priority Score`) to Project v2 without applying repo labels."""
         synced_projects: list[dict] = []
-
-        for cand, _geval, score in scan_result.get("eligible") or []:
-            has_label = "community-spotlight" in {lbl.lower() for lbl in cand.labels}
-            if not has_label and cand.node_id:
-                if apply and label_id:
-                    self.graphql(
-                        """
-                        mutation($labelableId: ID!, $labelIds: [ID!]!) {
-                          addLabelsToLabelable(input: {
-                            labelableId: $labelableId,
-                            labelIds: $labelIds
-                          }) {
-                            clientMutationId
-                          }
-                        }
-                        """,
-                        {"labelableId": cand.node_id, "labelIds": [label_id]},
-                    )
-                labeled.append(
-                    {
-                        "number": cand.number,
-                        "title": cand.title,
-                        "score": score.total,
-                        "applied": apply,
-                    }
-                )
 
         for pid in project_ids or []:
             proj_data = self.graphql(
@@ -749,7 +706,7 @@ class GitHubProjectV2Manager:
                     }
                 )
 
-        return {"labeled": labeled, "synced_projects": synced_projects}
+        return {"synced_projects": synced_projects}
 
     def sync_agenda_assignees(
         self,

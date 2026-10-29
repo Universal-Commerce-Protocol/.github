@@ -486,13 +486,11 @@ class TestDtcPipeline(unittest.TestCase):
             [{"assignableId": "PR_node_773", "assigneeIds": ["U_damaz91"]}],
         )
 
-    def test_apply_spotlight_scan_labels_and_syncs_project(self) -> None:
+    def test_apply_spotlight_scan_syncs_project_without_applying_labels(self) -> None:
         mutations: list[tuple[str, dict]] = []
 
         class StubManager(dp.GitHubProjectV2Manager):
             def graphql(self, query: str, variables: dict | None = None) -> dict:
-                if 'label(name: "community-spotlight")' in query:
-                    return {"repository": {"label": {"id": "LBL_cs"}}}
                 if "fields(first: 30)" in query:
                     return {
                         "node": {
@@ -529,9 +527,7 @@ class TestDtcPipeline(unittest.TestCase):
                     mutations.append(("add_item", variables))
                     return {"addProjectV2ItemById": {"item": {"id": "PVTI_811"}}}
                 if "addLabelsToLabelable" in query:
-                    assert variables is not None
-                    mutations.append(("add_label", variables))
-                    return {"addLabelsToLabelable": {"clientMutationId": None}}
+                    raise AssertionError("Should never apply repository labels")
                 if "updateProjectV2ItemFieldValue" in query:
                     assert variables is not None
                     mutations.append(("update_field", variables))
@@ -575,12 +571,10 @@ class TestDtcPipeline(unittest.TestCase):
             project_ids=["PVT_prod"],
             apply=True,
         )
-        self.assertEqual(len(applied["labeled"]), 1)
-        self.assertEqual(applied["labeled"][0]["number"], 811)
         self.assertEqual(len(applied["synced_projects"]), 1)
         self.assertEqual(
             [m[0] for m in mutations],
-            ["add_label", "add_item", "update_field", "update_field", "update_field"],
+            ["add_item", "update_field", "update_field", "update_field"],
         )
 
     def test_pending_cla_check_run_is_not_treated_as_passed(self) -> None:

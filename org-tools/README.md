@@ -8,6 +8,7 @@ This directory contains CLI utilities and configuration files for organization-w
 
 ```text
 org-tools/
+├── dtc-pipeline/            # DTC review pipeline & Community Spotlight engine (see dtc-pipeline/README.md)
 ├── governance/              # PR governance gate and approval verification (see governance/README.md)
 ├── label-sync/              # GitHub label synchronization utility (see label-sync/README.md)
 ├── requirements-extractor/  # Requirements catalog from specification prose (see requirements-extractor/README.md)
@@ -22,6 +23,7 @@ org-tools/
 - **[🛡️ Automated Governance Gate](governance/README.md)**: Enforces path-based repository ownership rules and PR approval thresholds.
 - **[📋 Requirements Extractor](requirements-extractor/README.md)**: Generates a machine-readable catalog of a specification's RFC 2119 requirements, and checks in CI that a committed catalog matches the specification.
 - **[🤖 Central PR Triage Tool](triage/README.md)**: Automatically applies the `status:needs-triage` label to eligible open, non-draft Pull Requests.
+- **[🗳️ DTC Review Pipeline & Community Spotlight Engine](dtc-pipeline/README.md)**: Provisions the unified 5-view `UCP DTC Review Pipeline` Project v2 board, auto-assigns TC members who drag items into `Next DTC Agenda`, and runs the 3-gate + 100-point Community Spotlight scan.
 
 ---
 
@@ -36,5 +38,6 @@ uv run --with markdown-it-py==3.0.0 --with markdown==3.10.2 \
 uv run python3 -m unittest discover -s org-tools/label-sync && \
 uv run python3 -m unittest discover -s org-tools/triage/tests && \
 uv run --with jsonschema==4.26.0 --with markdown-it-py==3.0.0 --with markdown==3.10.2 \
-  python3 -m unittest discover -s org-tools/requirements-extractor/tests
+  python3 -m unittest discover -s org-tools/requirements-extractor/tests && \
+uv run python3 -m unittest discover -s org-tools/dtc-pipeline/tests
 ```

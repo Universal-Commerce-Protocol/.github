@@ -1,0 +1,76 @@
+#   Copyright 2026 UCP Authors
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+name: DTC Review Pipeline
+
+on:
+  schedule:
+    # Sync Next DTC Agenda assignees every 15 minutes
+    - cron: "*/15 * * * *"
+  repository_dispatch:
+    types:
+      - projects_v2_item
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Command to execute (sync-agenda-assignees or scan-spotlight)"
+        required: false
+        type: choice
+        options:
+          - sync-agenda-assignees
+          - scan-spotlight
+        default: "sync-agenda-assignees"
+
+permissions:
+  contents: read # Check out org-tools/dtc-pipeline scripts
+
+jobs:
+  dtc-pipeline:
+    name: Run DTC Pipeline
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # Check out org-tools/dtc-pipeline scripts
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          python-version: "3.12"
+          enable-cache: "false"
+
+      - name: Execute DTC Pipeline Command
+        env:
+          ORG_TRIAGE_TOKEN: ${{ secrets.ORG_TRIAGE_TOKEN }}
+          DTC_PROJECT_ID: ${{ vars.DTC_PROJECT_ID }}
+          INPUT_MODE: ${{ inputs.mode }}
+          ORG_NAME: ${{ github.repository_owner }}
+        run: |
+          MODE="${INPUT_MODE:-sync-agenda-assignees}"
+          if [ "$MODE" = "scan-spotlight" ]; then
+            uv run python org-tools/dtc-pipeline/scripts/dtc_pipeline.py \
+              scan-spotlight \
+              --org "$ORG_NAME" \
+              --repo ucp
+          elif [ -n "$DTC_PROJECT_ID" ]; then
+            uv run python org-tools/dtc-pipeline/scripts/dtc_pipeline.py \
+              sync-agenda-assignees \
+              --project-id "$DTC_PROJECT_ID" \
+              --apply
+          else
+            echo "DTC_PROJECT_ID repository variable is not set; skipping sync-agenda-assignees."
+          fi

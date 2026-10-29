@@ -81,7 +81,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     scan_p = subparsers.add_parser(
         "scan-spotlight",
-        help="Run the Community Spotlight 3-gate + 100-point election scan in read-only mode (no labels applied).",
+        help="Run the Community Spotlight 3-gate + 100-point election scan (and optionally apply labels & sync Project v2).",
     )
     scan_p.add_argument(
         "--org",
@@ -92,6 +92,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--repo",
         default=DEFAULT_REPO,
         help="GitHub repository (default: ucp).",
+    )
+    scan_p.add_argument(
+        "--project-id",
+        default=os.getenv("DTC_PROJECT_ID", ""),
+        help="Optional GitHub Project v2 GraphQL node ID (or comma-separated IDs; defaults to DTC_PROJECT_ID env var).",
+    )
+    scan_p.add_argument(
+        "--apply",
+        action="store_true",
+        help="Apply the `community-spotlight` label and sync eligible items onto `--project-id` (defaults to read-only).",
     )
 
     provision_p = subparsers.add_parser(
@@ -180,6 +190,24 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "scan-spotlight":
         res = manager.scan_live_spotlight(org=args.org, repo=args.repo)
         log_spotlight_report(res, org=args.org, repo=args.repo)
+        pids = [
+            pid.strip() for pid in (args.project_id or "").split(",") if pid.strip()
+        ]
+        if args.apply or pids:
+            applied = manager.apply_spotlight_scan(
+                res,
+                org=args.org,
+                repo=args.repo,
+                project_ids=pids,
+                apply=args.apply,
+            )
+            mode = "Applied" if args.apply else "[DRY-RUN] Would apply"
+            logger.info(
+                "%s `community-spotlight` label to %d items and synced %d Project items.",
+                mode,
+                len(applied["labeled"]),
+                len(applied["synced_projects"]),
+            )
         return 0
 
     if args.command == "provision-project":

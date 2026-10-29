@@ -64,5 +64,6 @@ jobs:
         if: inputs.mode == 'scan-spotlight'
         env:
           ORG_TRIAGE_TOKEN: ${{ secrets.ORG_TRIAGE_TOKEN }}
+          DTC_PROJECT_ID: ${{ vars.DTC_PROJECT_ID }}
           ORG_NAME: ${{ github.repository_owner }}
-        run: uv run --frozen python org-tools/dtc-pipeline/scripts/dtc_pipeline.py scan-spotlight --org "$ORG_NAME" --repo ucp
+        run: uv run --frozen python org-tools/dtc-pipeline/scripts/dtc_pipeline.py scan-spotlight --org "$ORG_NAME" --repo ucp --apply

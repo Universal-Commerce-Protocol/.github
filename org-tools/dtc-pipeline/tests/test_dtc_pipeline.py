@@ -486,6 +486,103 @@ class TestDtcPipeline(unittest.TestCase):
             [{"assignableId": "PR_node_773", "assigneeIds": ["U_damaz91"]}],
         )
 
+    def test_apply_spotlight_scan_labels_and_syncs_project(self) -> None:
+        mutations: list[tuple[str, dict]] = []
+
+        class StubManager(dp.GitHubProjectV2Manager):
+            def graphql(self, query: str, variables: dict | None = None) -> dict:
+                if 'label(name: "community-spotlight")' in query:
+                    return {"repository": {"label": {"id": "LBL_cs"}}}
+                if "fields(first: 30)" in query:
+                    return {
+                        "node": {
+                            "fields": {
+                                "nodes": [
+                                    {
+                                        "id": "F_status",
+                                        "name": "Status",
+                                        "options": [
+                                            {
+                                                "id": "OPT_triage",
+                                                "name": "Triage / Unscheduled",
+                                            }
+                                        ],
+                                    },
+                                    {
+                                        "id": "F_track",
+                                        "name": "Track",
+                                        "options": [
+                                            {
+                                                "id": "OPT_cs",
+                                                "name": "Community Spotlight",
+                                            }
+                                        ],
+                                    },
+                                    {"id": "F_score", "name": "Priority Score"},
+                                ]
+                            },
+                            "items": {"nodes": []},
+                        }
+                    }
+                if "addProjectV2ItemById" in query:
+                    assert variables is not None
+                    mutations.append(("add_item", variables))
+                    return {"addProjectV2ItemById": {"item": {"id": "PVTI_811"}}}
+                if "addLabelsToLabelable" in query:
+                    assert variables is not None
+                    mutations.append(("add_label", variables))
+                    return {"addLabelsToLabelable": {"clientMutationId": None}}
+                if "updateProjectV2ItemFieldValue" in query:
+                    assert variables is not None
+                    mutations.append(("update_field", variables))
+                    return {
+                        "updateProjectV2ItemFieldValue": {
+                            "projectV2Item": {"id": "PVTI_811"}
+                        }
+                    }
+                return {}
+
+        cand = dp.ContributionCandidate(
+            number=811,
+            title="feat: add per-seller offer attribution",
+            url="https://github.com/Universal-Commerce-Protocol/ucp/pull/811",
+            is_pr=True,
+            created_at=self.now,
+            author=dp.AuthorMeta(login="proshoumma", company="Klarna"),
+            labels={"gov:needs-tc-review", "area:shopping"},
+            node_id="PR_node_811",
+        )
+        score = dp.PriorityScoreBreakdown(
+            readiness=40,
+            participant_points=10,
+            reaction_points=9,
+            wait_days=30,
+            wait_boost=30,
+            cooldown_penalty=0,
+        )
+        scan_result = {
+            "eligible": [
+                (
+                    cand,
+                    dp.GateEvaluation(True, True, True, True, ()),
+                    score,
+                )
+            ]
+        }
+        mgr = StubManager(token="fake")
+        applied = mgr.apply_spotlight_scan(
+            scan_result,
+            project_ids=["PVT_prod"],
+            apply=True,
+        )
+        self.assertEqual(len(applied["labeled"]), 1)
+        self.assertEqual(applied["labeled"][0]["number"], 811)
+        self.assertEqual(len(applied["synced_projects"]), 1)
+        self.assertEqual(
+            [m[0] for m in mutations],
+            ["add_label", "add_item", "update_field", "update_field", "update_field"],
+        )
+
     def test_pending_cla_check_run_is_not_treated_as_passed(self) -> None:
         from dtc_pipeline.spotlight import _parse_pr_checks
 

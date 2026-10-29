@@ -10,7 +10,8 @@ The system consists of the following key components:
 
 ```mermaid
 graph TD
-    A[reusable-governance.yml Workflow] --> B(pr_validator.py main)
+    A[reusable-governance.yml Workflow] --> G0(run_governance_gate.py)
+    G0 --> B(pr_validator.py main)
     subgraph pr_validator.py
         B
         E[PullRequestValidator]
@@ -39,6 +40,7 @@ graph TD
 - **`governance_config_parser.py`**: Helper module for loading rules and analyzing configurations.
   - `GovernanceConfigParser`: Parses YAML configuration files into typed python dataclasses (`Team`, `GovernanceRule`, `GovernanceConfig`, etc.).
   - `GovernanceConfigValidator`: Performs static analysis on the repository files to detect rule design flaws (overlapping rules or files falling into default fallbacks).
+- **`run_governance_gate.py`**: Workflow orchestration wrapper invoked by `reusable-governance.yml` that resolves PR/SHA context from environment variables, enforces head-SHA TOCTOU checks around `pr_validator.py`, publishes workflow summaries/annotations, and posts the `Governance / Approvals` commit status.
 
 ---
 

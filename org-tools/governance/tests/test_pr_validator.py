@@ -1533,6 +1533,7 @@ class TestFetchTeamMemberships(unittest.TestCase):
 class TestPRValidatorMain(unittest.TestCase):
     """Tests for the main function of pr_validator."""
 
+    @patch("builtins.open", unittest.mock.mock_open())
     @patch("pr_validator.sys.exit")
     @patch("pr_validator.print")
     @patch("pr_validator.os.path.exists")
@@ -1540,18 +1541,19 @@ class TestPRValidatorMain(unittest.TestCase):
     def test_main_missing_rules_file_fallback(
         self, mock_parse_args, mock_exists, mock_print, mock_exit
     ):
-        """Test main fails when resolved convention rules file does not exist."""
+        """Test main exits with code 2 when resolved convention rules file does not exist."""
         mock_args = MagicMock()
         mock_args.repo = "Universal-Commerce-Protocol/non-existent-repo"
         mock_args.rules_file = None
         mock_parse_args.return_value = mock_args
         mock_exists.return_value = False
-        mock_exit.side_effect = SystemExit(1)
+        mock_exit.side_effect = SystemExit(2)
 
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(SystemExit) as cm:
             main()
 
-        mock_exit.assert_called_once_with(1)
+        self.assertEqual(cm.exception.code, 2)
+        mock_exit.assert_called_once_with(2)
         mock_print.assert_any_call(
             "❌ ERROR: Governance rules file not found at '.github-central/org-tools/governance/rules/non-existent-repo-rules.yml'. Please ensure it exists or specify a custom path using --rules-file.",
             file=sys.stderr,

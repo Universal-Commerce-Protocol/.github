@@ -91,6 +91,7 @@ class ContributionCandidate:
     thumbs_up_count: int = 0
     rocket_count: int = 0
     milestone_title: str | None = None
+    node_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -411,6 +412,11 @@ def fetch_excluded_handles(
             """
             query($org: String!) {
               organization(login: $org) {
+                membersWithRole(first: 100) {
+                  nodes {
+                    login
+                  }
+                }
                 teams(first: 30) {
                   nodes {
                     slug
@@ -426,7 +432,11 @@ def fetch_excluded_handles(
             """,
             {"org": org},
         )
-        teams = data.get("organization", {}).get("teams", {}).get("nodes") or []
+        org_node = data.get("organization") or {}
+        for member in org_node.get("membersWithRole", {}).get("nodes") or []:
+            if member and member.get("login"):
+                handles.add(member["login"].lower())
+        teams = org_node.get("teams", {}).get("nodes") or []
         for team in teams:
             if not team:
                 continue
@@ -458,6 +468,7 @@ def _fetch_open_issues(
                 issues(states: OPEN, first: 50, after: $cursor, orderBy: {field: CREATED_AT, direction: DESC}) {
                   pageInfo { hasNextPage endCursor }
                   nodes {
+                    id
                     number
                     title
                     url
@@ -512,6 +523,7 @@ def _fetch_open_prs(
                 pullRequests(states: OPEN, first: 40, after: $cursor, orderBy: {field: CREATED_AT, direction: DESC}) {
                   pageInfo { hasNextPage endCursor }
                   nodes {
+                    id
                     number
                     title
                     url
@@ -553,6 +565,9 @@ def _fetch_open_prs(
                     commits(last: 1) {
                       nodes {
                         commit {
+                          author {
+                            email
+                          }
                           statusCheckRollup {
                             contexts(first: 40) {
                               nodes {
@@ -672,11 +687,17 @@ def _build_pr_candidate(
 ) -> ContributionCandidate:
     """Constructs a `ContributionCandidate` from a raw PR node, bundling any linked open Proposal Issue."""
     author_node = pr.get("author") or {}
+    commit_email = ""
+    commits_nodes = (pr.get("commits") or {}).get("nodes") or []
+    if commits_nodes and commits_nodes[-1].get("commit"):
+        commit_email = (commits_nodes[-1]["commit"].get("author") or {}).get(
+            "email"
+        ) or ""
     author = AuthorMeta(
         login=author_node.get("login") or "ghost",
         user_type=author_node.get("__typename") or "User",
         company=author_node.get("company") or "",
-        email=author_node.get("email") or "",
+        email=author_node.get("email") or commit_email,
     )
     labels = {
         lbl["name"]
@@ -747,6 +768,7 @@ def _build_pr_candidate(
         thumbs_up_count=thumbs,
         rocket_count=rockets,
         milestone_title=ms_title,
+        node_id=pr.get("id") or "",
     )
 
 
@@ -783,6 +805,7 @@ def _build_issue_candidate(inum: int, inode: dict) -> ContributionCandidate:
         thumbs_up_count=thumbs,
         rocket_count=rockets,
         milestone_title=(inode.get("milestone") or {}).get("title"),
+        node_id=inode.get("id") or "",
     )
 
 

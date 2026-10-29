@@ -543,6 +543,214 @@ class GitHubProjectV2Manager:
             maintainers_path=maintainers_path,
         )
 
+    def apply_spotlight_scan(
+        self,
+        scan_result: dict,
+        org: str = DEFAULT_ORG,
+        repo: str = DEFAULT_REPO,
+        project_ids: list[str] | None = None,
+        apply: bool = False,
+    ) -> dict[str, list[dict]]:
+        """Applies `community-spotlight` label and syncs `Track` & `Priority Score` to Project v2."""
+        label_id: str | None = None
+        if apply:
+            lbl_data = self.graphql(
+                """
+                query($owner: String!, $name: String!) {
+                  repository(owner: $owner, name: $name) {
+                    label(name: "community-spotlight") { id }
+                  }
+                }
+                """,
+                {"owner": org, "name": repo},
+            )
+            label_id = ((lbl_data.get("repository") or {}).get("label") or {}).get("id")
+
+        labeled: list[dict] = []
+        synced_projects: list[dict] = []
+
+        for cand, _geval, score in scan_result.get("eligible") or []:
+            has_label = "community-spotlight" in {lbl.lower() for lbl in cand.labels}
+            if not has_label and cand.node_id:
+                if apply and label_id:
+                    self.graphql(
+                        """
+                        mutation($labelableId: ID!, $labelIds: [ID!]!) {
+                          addLabelsToLabelable(input: {
+                            labelableId: $labelableId,
+                            labelIds: $labelIds
+                          }) {
+                            clientMutationId
+                          }
+                        }
+                        """,
+                        {"labelableId": cand.node_id, "labelIds": [label_id]},
+                    )
+                labeled.append(
+                    {
+                        "number": cand.number,
+                        "title": cand.title,
+                        "score": score.total,
+                        "applied": apply,
+                    }
+                )
+
+        for pid in project_ids or []:
+            proj_data = self.graphql(
+                """
+                query($projectId: ID!) {
+                  node(id: $projectId) {
+                    ... on ProjectV2 {
+                      fields(first: 30) {
+                        nodes {
+                          ... on ProjectV2FieldCommon { id name }
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options { id name }
+                          }
+                        }
+                      }
+                      items(first: 100) {
+                        nodes {
+                          id
+                          content {
+                            ... on Issue { id number }
+                            ... on PullRequest { id number }
+                          }
+                          statusVal: fieldValueByName(name: "Status") {
+                            ... on ProjectV2ItemFieldSingleSelectValue { name }
+                          }
+                          trackVal: fieldValueByName(name: "Track") {
+                            ... on ProjectV2ItemFieldSingleSelectValue { name }
+                          }
+                          scoreVal: fieldValueByName(name: "Priority Score") {
+                            ... on ProjectV2ItemFieldNumberValue { number }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                """,
+                {"projectId": pid},
+            )
+            pnode = proj_data.get("node") or {}
+            fields: dict[str, str] = {}
+            options: dict[str, dict[str, str]] = {}
+            for f in pnode.get("fields", {}).get("nodes") or []:
+                if not f or "name" not in f:
+                    continue
+                fields[f["name"]] = f["id"]
+                if "options" in f:
+                    options[f["name"]] = {o["name"]: o["id"] for o in f["options"]}
+
+            existing_items: dict[int, dict] = {}
+            for inode in pnode.get("items", {}).get("nodes") or []:
+                c = (inode or {}).get("content") or {}
+                if c.get("number") is not None:
+                    existing_items[c["number"]] = inode
+
+            for cand, _geval, score in scan_result.get("eligible") or []:
+                if not cand.node_id:
+                    continue
+                inode = existing_items.get(cand.number)
+                item_id = inode["id"] if inode else None
+                curr_status = ((inode or {}).get("statusVal") or {}).get("name")
+                curr_track = ((inode or {}).get("trackVal") or {}).get("name")
+                curr_score = ((inode or {}).get("scoreVal") or {}).get("number")
+
+                if apply:
+                    if not item_id:
+                        add_res = self.graphql(
+                            """
+                            mutation($projectId: ID!, $contentId: ID!) {
+                              addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
+                                item { id }
+                              }
+                            }
+                            """,
+                            {"projectId": pid, "contentId": cand.node_id},
+                        )
+                        item_id = add_res["addProjectV2ItemById"]["item"]["id"]
+
+                    if not curr_status and "Status" in fields:
+                        self.graphql(
+                            """
+                            mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optId: String!) {
+                              updateProjectV2ItemFieldValue(input: {
+                                projectId: $projectId,
+                                itemId: $itemId,
+                                fieldId: $fieldId,
+                                value: { singleSelectOptionId: $optId }
+                              }) {
+                                projectV2Item { id }
+                              }
+                            }
+                            """,
+                            {
+                                "projectId": pid,
+                                "itemId": item_id,
+                                "fieldId": fields["Status"],
+                                "optId": options["Status"]["Triage / Unscheduled"],
+                            },
+                        )
+
+                    if curr_track != "Community Spotlight" and "Track" in fields:
+                        self.graphql(
+                            """
+                            mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optId: String!) {
+                              updateProjectV2ItemFieldValue(input: {
+                                projectId: $projectId,
+                                itemId: $itemId,
+                                fieldId: $fieldId,
+                                value: { singleSelectOptionId: $optId }
+                              }) {
+                                projectV2Item { id }
+                              }
+                            }
+                            """,
+                            {
+                                "projectId": pid,
+                                "itemId": item_id,
+                                "fieldId": fields["Track"],
+                                "optId": options["Track"]["Community Spotlight"],
+                            },
+                        )
+
+                    if curr_score != float(score.total) and "Priority Score" in fields:
+                        self.graphql(
+                            """
+                            mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $num: Float!) {
+                              updateProjectV2ItemFieldValue(input: {
+                                projectId: $projectId,
+                                itemId: $itemId,
+                                fieldId: $fieldId,
+                                value: { number: $num }
+                              }) {
+                                projectV2Item { id }
+                              }
+                            }
+                            """,
+                            {
+                                "projectId": pid,
+                                "itemId": item_id,
+                                "fieldId": fields["Priority Score"],
+                                "num": float(score.total),
+                            },
+                        )
+
+                synced_projects.append(
+                    {
+                        "project_id": pid,
+                        "number": cand.number,
+                        "score": score.total,
+                        "applied": apply,
+                    }
+                )
+
+        return {"labeled": labeled, "synced_projects": synced_projects}
+
     def sync_agenda_assignees(
         self,
         project_id: str,

@@ -40,10 +40,6 @@
   color: "d876e3"
   description: Further information is requested
 
-- name: TC review
-  color: "88b91e"
-  description: Ready for TC review
-
 - name: Triage
   color: "f1d66a"
 

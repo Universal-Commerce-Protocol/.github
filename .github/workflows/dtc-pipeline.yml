@@ -53,24 +53,16 @@ jobs:
           python-version: "3.12"
           enable-cache: "false"
 
-      - name: Execute DTC Pipeline Command
+      - name: Sync Next DTC Agenda assignees
+        if: inputs.mode != 'scan-spotlight'
         env:
           ORG_TRIAGE_TOKEN: ${{ secrets.ORG_TRIAGE_TOKEN }}
           DTC_PROJECT_ID: ${{ vars.DTC_PROJECT_ID }}
-          INPUT_MODE: ${{ inputs.mode }}
+        run: uv run --frozen python org-tools/dtc-pipeline/scripts/dtc_pipeline.py sync-agenda-assignees --apply
+
+      - name: Run Community Spotlight scan
+        if: inputs.mode == 'scan-spotlight'
+        env:
+          ORG_TRIAGE_TOKEN: ${{ secrets.ORG_TRIAGE_TOKEN }}
           ORG_NAME: ${{ github.repository_owner }}
-        run: |
-          MODE="${INPUT_MODE:-sync-agenda-assignees}"
-          if [ "$MODE" = "scan-spotlight" ]; then
-            uv run python org-tools/dtc-pipeline/scripts/dtc_pipeline.py \
-              scan-spotlight \
-              --org "$ORG_NAME" \
-              --repo ucp
-          elif [ -n "$DTC_PROJECT_ID" ]; then
-            uv run python org-tools/dtc-pipeline/scripts/dtc_pipeline.py \
-              sync-agenda-assignees \
-              --project-id "$DTC_PROJECT_ID" \
-              --apply
-          else
-            echo "DTC_PROJECT_ID repository variable is not set; skipping sync-agenda-assignees."
-          fi
+        run: uv run --frozen python org-tools/dtc-pipeline/scripts/dtc_pipeline.py scan-spotlight --org "$ORG_NAME" --repo ucp

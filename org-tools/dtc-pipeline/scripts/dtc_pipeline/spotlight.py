@@ -28,22 +28,23 @@ from .config import (
     DEFAULT_MAINTAINERS_PATH,
     DEFAULT_ORG,
     DEFAULT_REPO,
+    DOMAIN_LABELS,
     EXCLUDED_EMAIL_DOMAINS,
     EXCLUDED_ISSUE_LABELS,
     EXCLUDED_ORG_TEAMS,
     HYGIENE_BLOCKED_ISSUE_LABELS,
     PROPOSAL_LABELS,
     PROPOSAL_PREFIX_RE,
-    VERTICAL_DOMAIN_LABELS,
+    infer_item_verticals,
     logger,
 )
 
 EXPLICIT_ISSUE_REF_RE = re.compile(
-    r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|issue|proposal|implements|addresses)\s*:?\s*(?:#|https://github\.com/Universal-Commerce-Protocol/ucp/issues/)(\d+)",
+    r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|issue|proposal|implements|addresses)\s*:?\s*(?:#|https://github\.com/[\w.-]+/[\w.-]+/issues/)(\d+)",
     re.IGNORECASE,
 )
 ANY_ISSUE_MENTION_RE = re.compile(
-    r"(?:#|https://github\.com/Universal-Commerce-Protocol/ucp/issues/)(\d+)",
+    r"(?:#|https://github\.com/[\w.-]+/[\w.-]+/issues/)(\d+)",
     re.IGNORECASE,
 )
 
@@ -238,11 +239,11 @@ def evaluate_gate2_scope(candidate: ContributionCandidate) -> tuple[bool, list[s
     if labels_lower & EXCLUDED_ISSUE_LABELS:
         return (False, ["Issue is labeled 'bug' or 'question' (non-proposal)."])
 
-    if not (labels_lower & VERTICAL_DOMAIN_LABELS):
+    if not (labels_lower & DOMAIN_LABELS):
         return (
             False,
             [
-                "Standalone Issue lacks a vertical 'area:<domain>' label (area:shopping, area:payments, area:food, area:lodging)."
+                "Standalone Issue lacks an 'area:<domain>' label (area:shopping, area:payments, area:food, area:lodging, area:common)."
             ],
         )
 
@@ -653,7 +654,7 @@ def _parse_pr_checks(pr: dict) -> tuple[bool, bool]:
         elif ctx.get("__typename") == "CheckRun":
             cname = (ctx.get("name") or "").lower()
             concl = (ctx.get("conclusion") or "").upper()
-            if "cla" in cname and concl:
+            if "cla" in cname:
                 cla_passed = concl in ("SUCCESS", "NEUTRAL", "SKIPPED")
             elif "governance" not in cname and concl in (
                 "FAILURE",
@@ -860,11 +861,17 @@ def log_spotlight_report(res: dict, org: str, repo: str) -> None:
         counts["passed_gate1_and_2"],
         counts["passed_all_3_eligible"],
     )
-    for domain in ("area:shopping", "area:payments", "area:food", "area:lodging"):
+    vertical_to_domain = (
+        ("Shopping", "area:shopping"),
+        ("Payments", "area:payments"),
+        ("Food", "area:food"),
+        ("Lodging", "area:lodging"),
+    )
+    for vertical, domain in vertical_to_domain:
         items = [
             (cand, score)
             for cand, _geval, score in res["eligible"]
-            if domain in {lbl.lower() for lbl in cand.labels}
+            if vertical in infer_item_verticals(cand.labels)
         ]
         logger.info("--- %s (%d eligible) ---", domain, len(items))
         for idx, (cand, score) in enumerate(items, start=1):

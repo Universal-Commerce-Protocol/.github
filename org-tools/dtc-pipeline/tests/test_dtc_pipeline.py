@@ -129,6 +129,17 @@ class TestDtcPipeline(unittest.TestCase):
         )
         self.assertTrue(dp.evaluate_gate2_scope(prop_issue)[0])
 
+        common_issue = dp.ContributionCandidate(
+            number=842,
+            title="[RFC]: Shared envelope pagination cursor",
+            url="https://github.com/Universal-Commerce-Protocol/ucp/issues/842",
+            is_pr=False,
+            created_at=self.now,
+            author=dp.AuthorMeta(login="extdev"),
+            labels={"area:common", "rfc"},
+        )
+        self.assertTrue(dp.evaluate_gate2_scope(common_issue)[0])
+
     def test_gate3_hygiene_and_blocked_exclusion(self) -> None:
         dirty_pr = dp.ContributionCandidate(
             number=700,
@@ -243,6 +254,26 @@ class TestDtcPipeline(unittest.TestCase):
         self.assertEqual(len(opts), 6)
         self.assertNotIn("Ready / Framed", opts)
         self.assertIn("Next DTC Agenda", opts)
+
+        matching_existing = [
+            {"id": f"existing_{idx}", "name": name, "color": color, "description": desc}
+            for idx, (name, color, desc) in enumerate(dp.PROJECT_STATUS_OPTIONS)
+        ]
+        mutations_called = False
+
+        class NoOpMutationManager(dp.GitHubProjectV2Manager):
+            def graphql(self, query: str, variables: dict | None = None) -> dict:
+                nonlocal mutations_called
+                if "updateProjectV2Field" in query:
+                    mutations_called = True
+                return {}
+
+        noop_mgr = NoOpMutationManager(token="fake")
+        preserved = noop_mgr._ensure_status_field(
+            "f_status", existing_options=matching_existing
+        )
+        self.assertFalse(mutations_called)
+        self.assertEqual(preserved["Next DTC Agenda"], "existing_1")
 
     def test_spotlight_score_is_milestone_blind(self) -> None:
         base_pr = dp.ContributionCandidate(
@@ -454,6 +485,34 @@ class TestDtcPipeline(unittest.TestCase):
             mutations,
             [{"assignableId": "PR_node_773", "assigneeIds": ["U_damaz91"]}],
         )
+
+    def test_pending_cla_check_run_is_not_treated_as_passed(self) -> None:
+        from dtc_pipeline.spotlight import _parse_pr_checks
+
+        pr_pending_cla = {
+            "commits": {
+                "nodes": [
+                    {
+                        "commit": {
+                            "statusCheckRollup": {
+                                "contexts": {
+                                    "nodes": [
+                                        {
+                                            "__typename": "CheckRun",
+                                            "name": "cla/google",
+                                            "conclusion": None,
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+        cla_passed, ci_passed = _parse_pr_checks(pr_pending_cla)
+        self.assertFalse(cla_passed)
+        self.assertTrue(ci_passed)
 
 
 if __name__ == "__main__":

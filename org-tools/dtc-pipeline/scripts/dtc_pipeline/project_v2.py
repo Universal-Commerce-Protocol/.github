@@ -69,7 +69,12 @@ class GitHubProjectV2Manager:
                         continue
                     raise RuntimeError(f"GraphQL errors: {err_str}")
                 return result.get("data", {})
-            except (urllib.error.HTTPError, urllib.error.URLError):
+            except urllib.error.HTTPError as exc:
+                if exc.code in (429, 500, 502, 503, 504) and attempt < 3:
+                    time.sleep(1.0 * (attempt + 1))
+                    continue
+                raise
+            except urllib.error.URLError:
                 if attempt < 3:
                     time.sleep(1.0 * (attempt + 1))
                     continue
@@ -106,8 +111,35 @@ class GitHubProjectV2Manager:
             {"projectId": project_id},
         )
 
-    def _ensure_status_field(self, status_field_id: str) -> dict[str, str]:
+    @staticmethod
+    def _options_match(
+        existing_options: list[dict] | None,
+        target_options: tuple[tuple[str, str, str], ...],
+    ) -> bool:
+        """Returns True if `existing_options` already match `target_options` `(name, color, description)`."""
+        if not existing_options or len(existing_options) != len(target_options):
+            return False
+        return [
+            (
+                opt.get("name"),
+                opt.get("color"),
+                opt.get("description") or "",
+            )
+            for opt in existing_options
+        ] == list(target_options)
+
+    def _ensure_status_field(
+        self,
+        status_field_id: str,
+        existing_options: list[dict] | None = None,
+    ) -> dict[str, str]:
         """Configures the 6-column `Status` options (including `Next DTC Agenda`) on `status_field_id`."""
+        if self._options_match(existing_options, PROJECT_STATUS_OPTIONS):
+            return {
+                opt["name"]: opt["id"]
+                for opt in (existing_options or [])
+                if opt.get("name") and opt.get("id")
+            }
         res = self.graphql(
             """
             mutation($fieldId: ID!, $options: [ProjectV2SingleSelectFieldOptionInput!]!) {
@@ -141,27 +173,30 @@ class GitHubProjectV2Manager:
         self,
         project_id: str,
         existing_fields: dict[str, str],
+        existing_options_by_field: dict[str, list[dict]] | None = None,
     ) -> None:
         track_options = [
             {"name": name, "color": color, "description": desc}
             for name, color, desc in PROJECT_TRACK_OPTIONS
         ]
         if "Track" in existing_fields:
-            self.graphql(
-                """
-                mutation($fieldId: ID!, $options: [ProjectV2SingleSelectFieldOptionInput!]!) {
-                  updateProjectV2Field(input: {
-                    fieldId: $fieldId,
-                    singleSelectOptions: $options
-                  }) {
-                    projectV2Field {
-                      ... on ProjectV2SingleSelectField { id }
+            existing_track_opts = (existing_options_by_field or {}).get("Track")
+            if not self._options_match(existing_track_opts, PROJECT_TRACK_OPTIONS):
+                self.graphql(
+                    """
+                    mutation($fieldId: ID!, $options: [ProjectV2SingleSelectFieldOptionInput!]!) {
+                      updateProjectV2Field(input: {
+                        fieldId: $fieldId,
+                        singleSelectOptions: $options
+                      }) {
+                        projectV2Field {
+                          ... on ProjectV2SingleSelectField { id }
+                        }
+                      }
                     }
-                  }
-                }
-                """,
-                {"fieldId": existing_fields["Track"], "options": track_options},
-            )
+                    """,
+                    {"fieldId": existing_fields["Track"], "options": track_options},
+                )
         else:
             self.graphql(
                 """
@@ -273,6 +308,11 @@ class GitHubProjectV2Manager:
                   fields(first: 40) {
                     nodes {
                       ... on ProjectV2FieldCommon { id name }
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                        options { id name color description }
+                      }
                     }
                   }
                 }
@@ -281,17 +321,30 @@ class GitHubProjectV2Manager:
             """,
             {"projectId": project_id},
         )
-        existing_fields = {
-            node["name"]: node["id"]
+        field_nodes = [
+            node
             for node in (
                 fields_data.get("node", {}).get("fields", {}).get("nodes") or []
             )
             if node and node.get("name") and node.get("id")
+        ]
+        existing_fields = {node["name"]: node["id"] for node in field_nodes}
+        existing_options_by_field = {
+            node["name"]: node["options"]
+            for node in field_nodes
+            if isinstance(node.get("options"), list)
         }
 
         if "Status" in existing_fields:
-            self._ensure_status_field(existing_fields["Status"])
-        self._ensure_track_and_score_fields(project_id, existing_fields)
+            self._ensure_status_field(
+                existing_fields["Status"],
+                existing_options=existing_options_by_field.get("Status"),
+            )
+        self._ensure_track_and_score_fields(
+            project_id,
+            existing_fields,
+            existing_options_by_field=existing_options_by_field,
+        )
         self.configure_project_views(project_id)
         return project
 

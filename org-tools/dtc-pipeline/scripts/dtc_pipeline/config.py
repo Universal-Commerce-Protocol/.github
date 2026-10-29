@@ -173,15 +173,6 @@ PROJECT_STATUS_OPTIONS = (
     ),
 )
 
-POST_MEETING_STATUSES = frozenset(
-    {
-        "Approved",
-        "Follow-up / Revisions",
-        "Redirected / Declined",
-        "Closed / Merged",
-    }
-)
-
 PROJECT_TRACK_OPTIONS = (
     (
         "General Track",

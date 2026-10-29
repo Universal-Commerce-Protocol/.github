@@ -42,7 +42,6 @@ from dtc_pipeline.config import (  # noqa: E402,F401
     EXCLUDED_ISSUE_LABELS,
     EXCLUDED_ORG_TEAMS,
     HYGIENE_BLOCKED_ISSUE_LABELS,
-    POST_MEETING_STATUSES,
     PROJECT_STATUS_OPTIONS,
     PROJECT_TRACK_OPTIONS,
     PROJECT_VERTICAL_DOMAINS,
@@ -141,8 +140,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     assignees_p.add_argument(
         "--project-id",
-        required=True,
-        help="GitHub Project v2 GraphQL node ID (or comma-separated IDs).",
+        default=os.getenv("DTC_PROJECT_ID", ""),
+        help="GitHub Project v2 GraphQL node ID (or comma-separated IDs; defaults to DTC_PROJECT_ID env var).",
     )
     assignees_p.add_argument(
         "--apply",
@@ -216,6 +215,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "sync-agenda-assignees":
+        if not project_ids:
+            logger.info(
+                "No project ID provided (--project-id or DTC_PROJECT_ID); skipping sync-agenda-assignees."
+            )
+            return 0
         for pid in project_ids:
             res = manager.sync_agenda_assignees(pid, apply=args.apply)
             for item in res["assigned"]:

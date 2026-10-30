@@ -24,7 +24,7 @@ design of the protocol for Shopping Domain.
 <!-- cSpell:ignore Amit Handa Anurag Sinha Daniel Wyckoff Drew Olson -->
 <!-- cSpell:ignore Gil Greenberg Greg Smith Ilya Grigorik Imran Hoosain -->
 <!-- cSpell:ignore James Andersen Jing Li Jordan Williams Lee Richmond -->
-<!-- cSpell:ignore Maxime Najim Patrick Jordan Prasad Wangikar Scot DeDeo -->
+<!-- cSpell:ignore Maxime Najim Patrick Jordan Reid Kairalla Scot DeDeo -->
 <!-- cSpell:ignore Twum Djin Uddhav Kambli -->
 
 | Name            | Company    |
@@ -43,7 +43,7 @@ design of the protocol for Shopping Domain.
 | Lee Richmond    | Shopify    |
 | Maxime Najim    | Target     |
 | Patrick Jordan  | Microsoft  |
-| Prasad Wangikar | Stripe     |
+| Reid Kairalla   | Stripe     |
 | Scot DeDeo      | Salesforce |
 | Uddhav Kambli   | Wayfair    |
 

@@ -480,6 +480,31 @@ class TestGovernanceConfigValidator(unittest.TestCase):
             self.assertEqual(file_reqs[0].min_team, Team("devops-maintainers", 1))
             self.assertEqual(file_reqs[0].min_approvals, 2)
 
+    def test_conformance_rules_suite_directory_globs(self):
+        """Test that RFC #520 suite directories match infra_and_tooling, not fallback."""
+        rules_path = (
+            Path(__file__).resolve().parent.parent / "rules" / "conformance-rules.yml"
+        )
+        config = GovernanceConfigParser().parse_file(str(rules_path))
+        reqs = config.get_applicable_requirements(
+            [
+                "framework/base_test.py",
+                "framework/__init__.py",
+                "platforms/google.yaml",
+                "shopping/checkout_lifecycle_test.py",
+                "shopping/test_data/flower_shop/products.csv",
+                "common/webhook_test.py",
+                "core/discovery_test.py",
+                "runner.py",
+            ]
+        )
+        for filename, file_reqs in reqs.items():
+            self.assertEqual(
+                len(file_reqs), 1, f"Unexpected requirements for {filename}"
+            )
+            self.assertEqual(file_reqs[0].min_team, Team("devops-maintainers", 1))
+            self.assertEqual(file_reqs[0].min_approvals, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

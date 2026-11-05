@@ -25,7 +25,12 @@ rules:
       - ".pre-commit-config.yaml"
       - "README.md"
       - "*.py"
+      - "common/**"
+      - "core/**"
+      - "framework/**"
+      - "platforms/**"
       - "pyproject.toml"
+      - "shopping/**"
       - "shopping-agent-test.json"
       - "test_data/**"
     requires:

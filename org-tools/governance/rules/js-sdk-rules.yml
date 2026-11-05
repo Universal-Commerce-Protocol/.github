@@ -35,6 +35,7 @@ rules:
       - "tsconfig.esm.json"
       - "tsconfig.json"
       - "tsconfig.types.json"
+      - "ucp-lock.json"
     requires:
       # Grants access to devops (L1), maintainers (L2), tech councils (L3),
       # and governance-council (L4)

@@ -56,3 +56,13 @@
 - name: gov:approved
   color: "C2E0C6"
   description: Triggers the final code ownership checks
+
+- name: gov:tc-meeting
+  color: "88B91E"
+  description: Nominated for synchronous discussion at an upcoming weekly DTC meeting
+  aliases:
+    - "TC review"
+
+- name: community-spotlight
+  color: "FBCA04"
+  description: Eligible external community contribution tracked in the DTC Community Spotlight pool

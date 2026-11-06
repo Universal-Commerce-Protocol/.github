@@ -119,7 +119,7 @@ design of the protocol for Payments Domain.
 
 <!-- cSpell:ignore Archana Malhotra Daniel Wyckoff Drew Olson Ed Siok -->
 <!-- cSpell:ignore Fabrice Cheng Ilya Grigorik Jose Mendez Nick Chen -->
-<!-- cSpell:ignore Prasad Wangikar Prateek Dudeja Rose Wiegley Simon Farrow -->
+<!-- cSpell:ignore Prateek Dudeja Reid Kairalla Rose Wiegley Simon Farrow -->
 <!-- cSpell:ignore Steven Chen Vita Valeikaite -->
 
 | Name             | Company           |
@@ -131,7 +131,7 @@ design of the protocol for Payments Domain.
 | Fabrice Cheng    | Coinbase          |
 | Ilya Grigorik\*  | Shopify           |
 | Jose Mendez      | Adyen NV          |
-| Prasad Wangikar  | Stripe            |
+| Reid Kairalla    | Stripe            |
 | Prateek Dudeja   | Google            |
 | Rose Wiegley     | Shopify           |
 | Simon Farrow     | Global Payments   |

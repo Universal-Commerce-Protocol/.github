@@ -156,3 +156,19 @@ the protocol.
 | Twum Djin     | Stripe        |
 | Open          | to be elected |
 | Open          | to be elected |
+
+## Domain Working Groups
+
+Domain Working Groups (DWG) are responsible for focused design work in specific
+areas of the protocol. Each DWG is chartered by the Governing Council and
+sponsored by one or more Domain Tech Councils (DTC), which review and approve
+its artifacts per [GOVERNANCE.md](GOVERNANCE.md#domain-working-groups-dwg).
+
+<!-- cSpell:ignore James Andersen Vinod Kumar Greg Smith Alex Jansen -->
+
+- **Bulk Product Discovery** | Active | **Sponsoring DTC:** Shopping |
+  Standardize bulk product feeds so businesses can publish, and platforms
+  consume, full catalogs at scale | **Chairs:** James Andersen (Meta), Vinod
+  Kumar (Meta), Greg Smith (Google), Alex Jansen (Google) |
+  [Charter](https://github.com/Universal-Commerce-Protocol/ucp/issues/682) |
+  [Participants & minutes](https://github.com/Universal-Commerce-Protocol/meeting-minutes/tree/main/tc/shopping/dwg/bulk-product-discovery#participants)

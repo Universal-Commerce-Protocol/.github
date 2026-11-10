@@ -47,7 +47,7 @@ design of the protocol for Shopping Domain.
 | Scot DeDeo      | Salesforce |
 | Uddhav Kambli   | Wayfair    |
 
-_\* Standing Governing Council (GC) member participating per [GOVERNANCE.md](GOVERNANCE.md#governing-council-gc) rules._
+_\* Standing Governing Council (GC) member participating per [GOVERNANCE.md](GOVERNANCE.md) rules._
 
 ## Food Tech Council
 

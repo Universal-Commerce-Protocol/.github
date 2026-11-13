@@ -495,6 +495,8 @@ class TestGovernanceConfigValidator(unittest.TestCase):
                 "shopping/test_data/flower_shop/products.csv",
                 "common/webhook_test.py",
                 "core/discovery_test.py",
+                "tests/__init__.py",
+                "tests/remote_target_test.py",
                 "runner.py",
             ]
         )

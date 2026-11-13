@@ -33,6 +33,7 @@ rules:
       - "shopping/**"
       - "shopping-agent-test.json"
       - "test_data/**"
+      - "tests/**"
     requires:
       # Grants access to devops (L1), maintainers (L2), tech councils (L3),
       # and governance-council (L4)

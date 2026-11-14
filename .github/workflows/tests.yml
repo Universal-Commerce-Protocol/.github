@@ -54,3 +54,6 @@ jobs:
           uv run --with jsonschema==4.26.0 --with markdown-it-py==3.0.0
           --with markdown==3.10.2
           python -m unittest discover -s org-tools/requirements-extractor/tests
+
+      - name: Run dtc-pipeline tests
+        run: uv run --frozen python -m unittest discover -s org-tools/dtc-pipeline/tests

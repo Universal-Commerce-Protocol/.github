@@ -24,10 +24,12 @@ import urllib.request
 from .config import (
     DEFAULT_MAINTAINERS_PATH,
     DEFAULT_ORG,
+    DEFAULT_PROJECT_TITLE,
     DEFAULT_REPO,
     PROJECT_STATUS_OPTIONS,
     PROJECT_TRACK_OPTIONS,
     PROJECT_VERTICAL_DOMAINS,
+    SPOTLIGHT_POOL_FILTER,
 )
 from .spotlight import (
     AuthorMeta,
@@ -234,12 +236,94 @@ class GitHubProjectV2Manager:
                 {"projectId": project_id},
             )
 
+    def configure_project_collaborators(
+        self,
+        project_id: str,
+        org: str = DEFAULT_ORG,
+        admin_teams: list[str] | tuple[str, ...] = (),
+        writer_teams: list[str] | tuple[str, ...] = (),
+    ) -> list[dict[str, str]]:
+        """Grants `ADMIN`/`WRITER` roles and links organization teams to `project_id`."""
+        wanted_admins = {slug.strip().lower() for slug in admin_teams if slug.strip()}
+        wanted_writers = {
+            slug.strip().lower() for slug in writer_teams if slug.strip()
+        } - wanted_admins
+        if not (wanted_admins or wanted_writers):
+            return []
+
+        org_data = self.graphql(
+            """
+            query($org: String!) {
+              organization(login: $org) {
+                teams(first: 50) {
+                  nodes { id slug }
+                }
+              }
+            }
+            """,
+            {"org": org},
+        )
+        team_ids_by_slug = {
+            t["slug"].lower(): t["id"]
+            for t in (
+                (org_data.get("organization") or {}).get("teams", {}).get("nodes") or []
+            )
+            if t and t.get("slug") and t.get("id")
+        }
+
+        collaborators: list[dict[str, str]] = []
+        configured: list[dict[str, str]] = []
+        for slug in sorted(wanted_admins):
+            tid = team_ids_by_slug.get(slug)
+            if tid:
+                collaborators.append({"teamId": tid, "role": "ADMIN"})
+                configured.append({"slug": slug, "team_id": tid, "role": "ADMIN"})
+        for slug in sorted(wanted_writers):
+            tid = team_ids_by_slug.get(slug)
+            if tid:
+                collaborators.append({"teamId": tid, "role": "WRITER"})
+                configured.append({"slug": slug, "team_id": tid, "role": "WRITER"})
+
+        if not collaborators:
+            return []
+
+        self.graphql(
+            """
+            mutation($projectId: ID!, $collaborators: [ProjectV2Collaborator!]!) {
+              updateProjectV2Collaborators(input: {
+                projectId: $projectId,
+                collaborators: $collaborators
+              }) {
+                collaborators { totalCount }
+              }
+            }
+            """,
+            {"projectId": project_id, "collaborators": collaborators},
+        )
+        for entry in configured:
+            self.graphql(
+                """
+                mutation($projectId: ID!, $teamId: ID!) {
+                  linkProjectV2ToTeam(input: {
+                    projectId: $projectId,
+                    teamId: $teamId
+                  }) {
+                    team { id }
+                  }
+                }
+                """,
+                {"projectId": project_id, "teamId": entry["team_id"]},
+            )
+        return configured
+
     def create_dtc_project(
         self,
         owner_login: str,
-        title: str = "UCP DTC Review Pipeline",
+        title: str = DEFAULT_PROJECT_TITLE,
         public: bool = False,
         template_project_id: str | None = None,
+        admin_teams: list[str] | tuple[str, ...] = (),
+        writer_teams: list[str] | tuple[str, ...] = (),
     ) -> dict[str, str]:
         """Creates or clones a GitHub Project v2 board and configures UCP DTC fields and 5 views."""
         owner_id = self.get_owner_id(owner_login)
@@ -346,6 +430,13 @@ class GitHubProjectV2Manager:
             existing_options_by_field=existing_options_by_field,
         )
         self.configure_project_views(project_id)
+        if admin_teams or writer_teams:
+            self.configure_project_collaborators(
+                project_id,
+                org=owner_login,
+                admin_teams=admin_teams,
+                writer_teams=writer_teams,
+            )
         return project
 
     def _upsert_board_view(
@@ -358,7 +449,8 @@ class GitHubProjectV2Manager:
     ) -> dict:
         if view_name in views_by_name:
             vid = views_by_name[view_name]["id"]
-            target_filter = views_by_name[view_name].get("filter") or domain_filter
+        elif "View 1" in views_by_name:
+            vid = views_by_name.pop("View 1")["id"]
         else:
             vid = self.graphql(
                 """
@@ -379,7 +471,6 @@ class GitHubProjectV2Manager:
                     "visibleFieldIds": visible_fields,
                 },
             )["createProjectV2View"]["projectV2View"]["id"]
-            target_filter = domain_filter
 
         return self.graphql(
             """
@@ -398,7 +489,7 @@ class GitHubProjectV2Manager:
             {
                 "viewId": vid,
                 "name": view_name,
-                "filter": target_filter,
+                "filter": domain_filter,
                 "visibleFieldIds": visible_fields,
             },
         )["updateProjectV2View"]["projectV2View"]
@@ -441,9 +532,10 @@ class GitHubProjectV2Manager:
             )["createProjectV2View"]["projectV2View"]["id"]
         return self.graphql(
             """
-            mutation($viewId: ID!, $filter: String!, $visibleFieldIds: [ID!]!) {
+            mutation($viewId: ID!, $name: String!, $filter: String!, $visibleFieldIds: [ID!]!) {
               updateProjectV2View(input: {
                 viewId: $viewId,
+                name: $name,
                 layout: TABLE_LAYOUT,
                 filter: $filter,
                 configuration: { visibleFieldIds: $visibleFieldIds }
@@ -454,10 +546,8 @@ class GitHubProjectV2Manager:
             """,
             {
                 "viewId": cs_id,
-                "filter": (
-                    views_by_name.get("Community Spotlight Pool", {}).get("filter")
-                    or "label:community-spotlight"
-                ),
+                "name": "Community Spotlight Pool",
+                "filter": SPOTLIGHT_POOL_FILTER,
                 "visibleFieldIds": spotlight_fields,
             },
         )["updateProjectV2View"]["projectV2View"]
@@ -553,60 +643,70 @@ class GitHubProjectV2Manager:
         synced_projects: list[dict] = []
 
         for pid in project_ids or []:
-            proj_data = self.graphql(
-                """
-                query($projectId: ID!) {
-                  node(id: $projectId) {
-                    ... on ProjectV2 {
-                      fields(first: 30) {
-                        nodes {
-                          ... on ProjectV2FieldCommon { id name }
-                          ... on ProjectV2SingleSelectField {
-                            id
-                            name
-                            options { id name }
+            fields: dict[str, str] = {}
+            options: dict[str, dict[str, str]] = {}
+            existing_items: dict[int, dict] = {}
+            cursor: str | None = None
+            while True:
+                proj_data = self.graphql(
+                    """
+                    query($projectId: ID!, $cursor: String) {
+                      node(id: $projectId) {
+                        ... on ProjectV2 {
+                          fields(first: 30) {
+                            nodes {
+                              ... on ProjectV2FieldCommon { id name }
+                              ... on ProjectV2SingleSelectField {
+                                id
+                                name
+                                options { id name }
+                              }
+                            }
                           }
-                        }
-                      }
-                      items(first: 100) {
-                        nodes {
-                          id
-                          content {
-                            ... on Issue { id number }
-                            ... on PullRequest { id number }
-                          }
-                          statusVal: fieldValueByName(name: "Status") {
-                            ... on ProjectV2ItemFieldSingleSelectValue { name }
-                          }
-                          trackVal: fieldValueByName(name: "Track") {
-                            ... on ProjectV2ItemFieldSingleSelectValue { name }
-                          }
-                          scoreVal: fieldValueByName(name: "Priority Score") {
-                            ... on ProjectV2ItemFieldNumberValue { number }
+                          items(first: 100, after: $cursor) {
+                            pageInfo { hasNextPage endCursor }
+                            nodes {
+                              id
+                              content {
+                                ... on Issue { id number }
+                                ... on PullRequest { id number }
+                              }
+                              statusVal: fieldValueByName(name: "Status") {
+                                ... on ProjectV2ItemFieldSingleSelectValue { name }
+                              }
+                              trackVal: fieldValueByName(name: "Track") {
+                                ... on ProjectV2ItemFieldSingleSelectValue { name }
+                              }
+                              scoreVal: fieldValueByName(name: "Priority Score") {
+                                ... on ProjectV2ItemFieldNumberValue { number }
+                              }
+                            }
                           }
                         }
                       }
                     }
-                  }
-                }
-                """,
-                {"projectId": pid},
-            )
-            pnode = proj_data.get("node") or {}
-            fields: dict[str, str] = {}
-            options: dict[str, dict[str, str]] = {}
-            for f in pnode.get("fields", {}).get("nodes") or []:
-                if not f or "name" not in f:
-                    continue
-                fields[f["name"]] = f["id"]
-                if "options" in f:
-                    options[f["name"]] = {o["name"]: o["id"] for o in f["options"]}
-
-            existing_items: dict[int, dict] = {}
-            for inode in pnode.get("items", {}).get("nodes") or []:
-                c = (inode or {}).get("content") or {}
-                if c.get("number") is not None:
-                    existing_items[c["number"]] = inode
+                    """,
+                    {"projectId": pid, "cursor": cursor},
+                )
+                pnode = proj_data.get("node") or {}
+                if not fields:
+                    for f in pnode.get("fields", {}).get("nodes") or []:
+                        if not f or "name" not in f:
+                            continue
+                        fields[f["name"]] = f["id"]
+                        if "options" in f:
+                            options[f["name"]] = {
+                                o["name"]: o["id"] for o in f["options"]
+                            }
+                items_conn = pnode.get("items") or {}
+                for inode in items_conn.get("nodes") or []:
+                    c = (inode or {}).get("content") or {}
+                    if c.get("number") is not None:
+                        existing_items[c["number"]] = inode
+                page_info = items_conn.get("pageInfo") or {}
+                if not page_info.get("hasNextPage"):
+                    break
+                cursor = page_info.get("endCursor")
 
             for cand, _geval, score in scan_result.get("eligible") or []:
                 if not cand.node_id:
@@ -616,6 +716,13 @@ class GitHubProjectV2Manager:
                 curr_status = ((inode or {}).get("statusVal") or {}).get("name")
                 curr_track = ((inode or {}).get("trackVal") or {}).get("name")
                 curr_score = ((inode or {}).get("scoreVal") or {}).get("number")
+                cand_labels_lower = {lbl.lower() for lbl in cand.labels}
+                target_track = (
+                    "General Track"
+                    if curr_track == "General Track"
+                    or "gov:tc-meeting" in cand_labels_lower
+                    else "Community Spotlight"
+                )
 
                 if apply:
                     if not item_id:
@@ -653,7 +760,11 @@ class GitHubProjectV2Manager:
                             },
                         )
 
-                    if curr_track != "Community Spotlight" and "Track" in fields:
+                    if (
+                        curr_track != target_track
+                        and "Track" in fields
+                        and target_track in options.get("Track", {})
+                    ):
                         self.graphql(
                             """
                             mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optId: String!) {
@@ -671,7 +782,7 @@ class GitHubProjectV2Manager:
                                 "projectId": pid,
                                 "itemId": item_id,
                                 "fieldId": fields["Track"],
-                                "optId": options["Track"]["Community Spotlight"],
+                                "optId": options["Track"][target_track],
                             },
                         )
 
@@ -708,13 +819,35 @@ class GitHubProjectV2Manager:
 
         return {"synced_projects": synced_projects}
 
+    @staticmethod
+    def _resolve_status_mover(
+        project_id: str,
+        content: dict,
+        status_value: dict,
+        target_status: str = "Next DTC Agenda",
+    ) -> dict:
+        """Resolves the user who moved an item to `target_status`, preferring `ProjectV2ItemStatusChangedEvent`."""
+        events = ((content.get("timelineItems") or {}).get("nodes")) or []
+        for ev in reversed(events):
+            if not ev or ev.get("status") != target_status or ev.get("wasAutomated"):
+                continue
+            ev_proj = ev.get("project") or {}
+            if ev_proj.get("id") and ev_proj["id"] != project_id:
+                continue
+            actor = ev.get("actor") or {}
+            if actor.get("login") and actor.get("id"):
+                return actor
+        return status_value.get("creator") or {}
+
     def sync_agenda_assignees(
         self,
         project_id: str,
         apply: bool = False,
     ) -> dict[str, list[dict]]:
-        """Auto-assigns the TC member who dragged an item into `Next DTC Agenda` via `statusValue.creator`."""
+        """Auto-assigns TC movers on `Next DTC Agenda` and stamps `General Track` on `gov:tc-meeting` items."""
         items: list[dict] = []
+        track_field_id: str | None = None
+        general_track_opt_id: str | None = None
         cursor: str | None = None
         while True:
             data = self.graphql(
@@ -722,6 +855,15 @@ class GitHubProjectV2Manager:
                 query($projectId: ID!, $cursor: String) {
                   node(id: $projectId) {
                     ... on ProjectV2 {
+                      fields(first: 30) {
+                        nodes {
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options { id name }
+                          }
+                        }
+                      }
                       items(first: 100, after: $cursor) {
                         pageInfo { hasNextPage endCursor }
                         nodes {
@@ -732,14 +874,49 @@ class GitHubProjectV2Manager:
                               id
                               number
                               title
+                              state
+                              labels(first: 20) { nodes { name } }
                               assignees(first: 20) { nodes { login } }
+                              timelineItems(last: 10, itemTypes: [PROJECT_V2_ITEM_STATUS_CHANGED_EVENT]) {
+                                nodes {
+                                  ... on ProjectV2ItemStatusChangedEvent {
+                                    status
+                                    wasAutomated
+                                    project { id }
+                                    actor {
+                                      __typename
+                                      login
+                                      ... on User { id login }
+                                    }
+                                  }
+                                }
+                              }
                             }
                             ... on PullRequest {
                               id
                               number
                               title
+                              state
+                              labels(first: 20) { nodes { name } }
                               assignees(first: 20) { nodes { login } }
+                              timelineItems(last: 10, itemTypes: [PROJECT_V2_ITEM_STATUS_CHANGED_EVENT]) {
+                                nodes {
+                                  ... on ProjectV2ItemStatusChangedEvent {
+                                    status
+                                    wasAutomated
+                                    project { id }
+                                    actor {
+                                      __typename
+                                      login
+                                      ... on User { id login }
+                                    }
+                                  }
+                                }
+                              }
                             }
+                          }
+                          trackValue: fieldValueByName(name: "Track") {
+                            ... on ProjectV2ItemFieldSingleSelectValue { name }
                           }
                           statusValue: fieldValueByName(name: "Status") {
                             ... on ProjectV2ItemFieldSingleSelectValue {
@@ -760,7 +937,15 @@ class GitHubProjectV2Manager:
                 """,
                 {"projectId": project_id, "cursor": cursor},
             )
-            conn = (data.get("node") or {}).get("items") or {}
+            pnode = data.get("node") or {}
+            if track_field_id is None:
+                for fnode in (pnode.get("fields") or {}).get("nodes") or []:
+                    if fnode and fnode.get("name") == "Track":
+                        track_field_id = fnode.get("id")
+                        for opt in fnode.get("options") or []:
+                            if opt and opt.get("name") == "General Track":
+                                general_track_opt_id = opt.get("id")
+            conn = pnode.get("items") or {}
             for node in conn.get("nodes") or []:
                 if node:
                     items.append(node)
@@ -771,16 +956,62 @@ class GitHubProjectV2Manager:
 
         assigned: list[dict] = []
         already_assigned: list[dict] = []
+        synced_tracks: list[dict] = []
         for item in items:
-            sv = item.get("statusValue") or {}
-            if sv.get("name") != "Next DTC Agenda":
-                continue
             content = item.get("content") or {}
             content_id = content.get("id")
             number = content.get("number")
             if not content_id or number is None:
                 continue
-            creator = sv.get("creator") or {}
+
+            item_labels = {
+                (lbl.get("name") or "").strip().lower()
+                for lbl in ((content.get("labels") or {}).get("nodes") or [])
+                if lbl and lbl.get("name")
+            }
+            curr_track = ((item.get("trackValue") or {}).get("name") or "").strip()
+            item_state = (content.get("state") or "OPEN").upper()
+            if (
+                not curr_track
+                and item_state == "OPEN"
+                and "gov:tc-meeting" in item_labels
+                and track_field_id
+                and general_track_opt_id
+            ):
+                if apply:
+                    self.graphql(
+                        """
+                        mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optId: String!) {
+                          updateProjectV2ItemFieldValue(input: {
+                            projectId: $projectId,
+                            itemId: $itemId,
+                            fieldId: $fieldId,
+                            value: { singleSelectOptionId: $optId }
+                          }) {
+                            projectV2Item { id }
+                          }
+                        }
+                        """,
+                        {
+                            "projectId": project_id,
+                            "itemId": item["id"],
+                            "fieldId": track_field_id,
+                            "optId": general_track_opt_id,
+                        },
+                    )
+                synced_tracks.append(
+                    {
+                        "number": number,
+                        "title": content.get("title") or "",
+                        "track": "General Track",
+                        "applied": apply,
+                    }
+                )
+
+            sv = item.get("statusValue") or {}
+            if sv.get("name") != "Next DTC Agenda":
+                continue
+            creator = self._resolve_status_mover(project_id, content, sv)
             creator_login = (creator.get("login") or "").strip()
             creator_id = creator.get("id")
             creator_type = creator.get("__typename") or "User"
@@ -826,4 +1057,5 @@ class GitHubProjectV2Manager:
         return {
             "assigned": assigned,
             "already_assigned": already_assigned,
+            "synced_tracks": synced_tracks,
         }

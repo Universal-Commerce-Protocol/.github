@@ -16,8 +16,10 @@ name: DTC Review Pipeline
 
 on:
   schedule:
-    # Sync Next DTC Agenda assignees every 15 minutes
+    # Sync Next DTC Agenda assignees and General Track field every 15 minutes
     - cron: "*/15 * * * *"
+    # Refresh Community Spotlight scores and pool daily at 06:00 UTC
+    - cron: "0 6 * * *"
   repository_dispatch:
     types:
       - projects_v2_item
@@ -53,15 +55,15 @@ jobs:
           python-version: "3.12"
           enable-cache: "false"
 
-      - name: Sync Next DTC Agenda assignees
-        if: inputs.mode != 'scan-spotlight'
+      - name: Sync Next DTC Agenda assignees and General Track
+        if: inputs.mode != 'scan-spotlight' && github.event.schedule != '0 6 * * *'
         env:
           ORG_TRIAGE_TOKEN: ${{ secrets.ORG_TRIAGE_TOKEN }}
           DTC_PROJECT_ID: ${{ vars.DTC_PROJECT_ID }}
         run: uv run --frozen python org-tools/dtc-pipeline/scripts/dtc_pipeline.py sync-agenda-assignees --apply
 
       - name: Run Community Spotlight scan
-        if: inputs.mode == 'scan-spotlight'
+        if: inputs.mode == 'scan-spotlight' || github.event.schedule == '0 6 * * *'
         env:
           ORG_TRIAGE_TOKEN: ${{ secrets.ORG_TRIAGE_TOKEN }}
           DTC_PROJECT_ID: ${{ vars.DTC_PROJECT_ID }}

@@ -1,54 +1,70 @@
-# UCP DTC Review Pipeline & Community Spotlight Engine
+# DTC Review Pipeline & Community Spotlight Engine
 
-Implements the governance workflow for surfacing and resolving Issues and Pull Requests in weekly Domain Technical Council (DTC) meetings across `Universal-Commerce-Protocol/ucp`:
+Implements the governance workflow for surfacing and resolving Issues and Pull Requests in weekly Domain Technical Council meetings across `Universal-Commerce-Protocol/ucp`.
 
-1. **General DTC Escalation & Native `Next DTC Agenda` Column Gate**
-   - Embeds the framing check directly into Column 2 (**`Next DTC Agenda`**, Orange, with column subtitle _"`⚠️ Confirm Framing Comment (or self-contained body) is in place before moving here.`"_) — 100% native in GitHub Projects UI with zero custom badge fields, comment scraping, webhooks, or bot noise on PR threads.
-2. **Unified 5-View GitHub Project v2 Architecture (`UCP DTC Review Pipeline`)**
-   - Provisions and configures a **single Kanban Board per vertical** (`Shopping TC`, `Payments TC`, `Food TC`, `Lodging TC`) with a **6-column `Status` workflow** (handling triage, next-meeting agenda slotting, and post-meeting resolution outcomes in one board view with zero custom date or Iteration fields):
-     1. `Triage / Unscheduled` (Gray — set automatically by GitHub Projects' built-in _Item added to project_ workflow)
-     2. `Next DTC Agenda` (Orange — `⚠️ Confirm Framing Comment (or self-contained body) is in place before moving here.`; queued for the upcoming weekly meeting, capped at 5–7 items via GitHub Projects' native Board Column Limit)
-     3. `Approved` (Green — approved by DTC; `gov:tc-meeting` removed and circle-back comment posted once `meeting-minutes` merges)
-     4. `Follow-up / Revisions` (Purple — discussed in DTC; direction approved with revisions or follow-up requested)
-     5. `Redirected / Declined` (Red — redirected to a Domain Working Group / self-hosted extension or declined)
-     6. `Closed / Merged` (Gray — set automatically by GitHub Projects' built-in _Item closed_ and _Pull request merged_ workflows)
-   - Configures 5 views total: the 4 per-vertical Kanban boards (`Shopping TC`, `Payments TC`, `Food TC`, `Lodging TC`, grouped by `Status`) plus the cross-vertical `Community Spotlight Pool` Table view, surfacing `Track` (`General Track` | `Community Spotlight`), `Priority Score` (`NUMBER`), and the native repository `Milestone` field across all 5 views.
-   - Orders General Track `T - 24h` agenda slotting by Release Train Milestone urgency (`Active Milestone` [breaking `!` changes first due to the 2-week public notice window, then `area:common` items requiring GC sign-off] $\rightarrow$ `Next Milestone` $\rightarrow$ `No Milestone`), while keeping the 100-point Community Spotlight heuristic strictly Milestone-blind so external contributors are never penalized for lacking internal Milestone sponsorship.
-3. **Dedicated Community Contribution Track ("Community Spotlight")**
-   - **Gate 1 (Non-DTC Corporate Affiliation):** Queries the GitHub Org Teams API (`@shopping-tech-council`, `@payments-tech-council`, `@food-tech-council`, `@lodging-tech-council`, `@governance-council`, `@maintainers`), parses `MAINTAINERS.md` for excluded member companies, inspects GitHub user `company` and email domains, and excludes bots.
-   - **Gate 2 (DTC Governance Scope Check):** Bundles linked Proposal Issues and PRs; matches PRs carrying `gov:needs-tc-review` or `gov:tc-meeting` (applied by `.github/org-tools/governance`), plus standalone proposal issues carrying `area:<domain>` and proposal prefixes/labels.
-   - **Gate 3 (Baseline Readiness & Hygiene Gate):** Enforces non-draft state, clean merge state (`mergeable_state != "dirty"`), passing `cla/google` and validation CI checks, structured proposal issue headers (`enhancement-proposal.yml` / `feature-request.yml`), and excludes items carrying `status:blocked`, `status:stale`, or `wontfix`.
-   - **100-Point Deterministic Priority Formula:**
-     $$\text{Priority Score (0–100)} = \text{Readiness (0–40)} + \text{Capped Traction (0–30)} + \text{Wait-Time Boost (0–30)} - \text{Cooldown (0 or 30)}$$
+## Project Board Architecture (`DTC Review Pipeline`)
+
+The pipeline manages a single public organization-level GitHub Project v2 board (**`DTC Review Pipeline`**) with 5 views, 6 `Status` columns, and 2 custom fields (`Track` and `Priority Score`).
+
+### Views
+
+| View                           | Layout           | Filter                            | Sort / Column Limit                                  |
+| :----------------------------- | :--------------- | :-------------------------------- | :--------------------------------------------------- |
+| **`Shopping TC`**              | Board (`Status`) | `label:area:shopping,area:common` | Created (newest first); `Next DTC Agenda` limit: `7` |
+| **`Payments TC`**              | Board (`Status`) | `label:area:payments`             | Created (newest first); `Next DTC Agenda` limit: `7` |
+| **`Food TC`**                  | Board (`Status`) | `label:area:food`                 | Created (newest first); `Next DTC Agenda` limit: `7` |
+| **`Lodging TC`**               | Board (`Status`) | `label:area:lodging`              | Created (newest first); `Next DTC Agenda` limit: `7` |
+| **`Community Spotlight Pool`** | Table            | `track:"Community Spotlight"`     | `Priority Score` (descending)                        |
+
+### `Status` Columns
+
+| Column                      | Color  | Purpose                                                                                                                  |
+| :-------------------------- | :----- | :----------------------------------------------------------------------------------------------------------------------- |
+| **`Triage / Unscheduled`**  | Gray   | Default intake state set by GitHub Projects' built-in _Item added to project_ workflow.                                  |
+| **`Next DTC Agenda`**       | Orange | Queued for the upcoming meeting (`⚠️ Confirm Framing Comment (or self-contained body) is in place before moving here.`). |
+| **`Approved`**              | Green  | Approved in the meeting; `gov:tc-meeting` removed and circle-back comment posted once `meeting-minutes` merges.          |
+| **`Follow-up / Revisions`** | Purple | Direction approved with revisions or follow-up requested.                                                                |
+| **`Redirected / Declined`** | Red    | Redirected to a Domain Working Group / self-hosted extension or declined.                                                |
+| **`Closed / Merged`**       | Gray   | Automatically set by GitHub Projects' built-in _Item closed_ and _Pull request merged_ workflows.                        |
+
+### Built-in Workflows & Permissions
+
+- **Built-in Project Workflows:**
+  - _Auto-add to project_: `is:issue,pr is:open label:gov:tc-meeting,community-spotlight`
+  - _Item added to project_: sets `Status = Triage / Unscheduled`
+  - _Item closed_ & _Pull request merged_: sets `Status = Closed / Merged`
+  - _Auto-archive items_: enabled
+- **Team Access:** Organization base role `Read`; `@devops-maintainers` granted `Admin`; Domain Technical Council teams (`@shopping-tech-council`, `@payments-tech-council`, `@food-tech-council`, `@lodging-tech-council`) granted `Write`.
+- **Scheduled Sync (`.github/workflows/dtc-pipeline.yml`):**
+  - Every 15 minutes: `sync-agenda-assignees --apply` resolves the Technical Council member who moved each card into `Next DTC Agenda` via `ProjectV2ItemStatusChangedEvent` timeline history, assigns them to the Issue or Pull Request, and stamps `Track = General Track` on open `gov:tc-meeting` items.
+  - Daily at 06:00 UTC: `scan-spotlight --apply` refreshes Community Spotlight eligibility and syncs `Track = Community Spotlight` and `Priority Score` onto the Project board without applying repository labels on `ucp`.
+
+## Community Spotlight Selection
+
+1. **Gate 1 (External Affiliation):** Excludes members of UCP governance and maintainer teams (`@*-tech-council`, `@governance-council`, `@maintainers`, organization members), companies listed in `MAINTAINERS.md`, matching corporate email domains, and bot accounts.
+2. **Gate 2 (Governance Scope):** Bundles linked Proposal Issues and Pull Requests; matches Pull Requests carrying `gov:needs-tc-review` or `gov:tc-meeting`, plus standalone proposal issues carrying `area:<domain>` and a proposal prefix or label.
+3. **Gate 3 (Baseline Readiness & Hygiene):** Requires non-draft Pull Requests without merge conflicts, passing contributor license agreement (`cla/google`) and validation checks, or structured proposal issue bodies (`>= 400` characters with template headers), and excludes `status:blocked`, `status:stale`, and `wontfix`.
+4. **100-Point Priority Formula (Milestone-Blind):**
+
+$$\text{Priority Score (0–100)} = \text{Readiness (0–40)} + \text{Capped Traction (0–30)} + \text{Wait-Time Boost (0–30)} - \text{Cooldown (0 or 30)}$$
 
 ## Usage
 
-### Run Unit Tests
-
 ```bash
+# Run unit tests
 uv run python -m unittest discover -s org-tools/dtc-pipeline/tests -v
-```
 
-### Run Community Spotlight Scan (Read-Only)
-
-```bash
+# Run Community Spotlight scan (read-only preview, or --apply to sync Project v2)
 uv run python org-tools/dtc-pipeline/scripts/dtc_pipeline.py scan-spotlight --org Universal-Commerce-Protocol --repo ucp
-```
 
-### Provision or Clone a GitHub Project v2 Board
+# Provision or clone a GitHub Project v2 board
+uv run python org-tools/dtc-pipeline/scripts/dtc_pipeline.py provision-project \
+  --owner Universal-Commerce-Protocol --title "DTC Review Pipeline" --public \
+  --admin-teams devops-maintainers --writer-teams shopping-tech-council
 
-```bash
-uv run python org-tools/dtc-pipeline/scripts/dtc_pipeline.py provision-project --owner Universal-Commerce-Protocol --title "UCP DTC Review Pipeline" --public
-```
-
-### Configure the 5 Project Views
-
-```bash
+# Restore canonical 5-view filters and visible fields
 uv run python org-tools/dtc-pipeline/scripts/dtc_pipeline.py configure-views --project-id PVT_...
-```
 
-### Auto-Assign TC Member Who Moved Items to `Next DTC Agenda`
-
-```bash
+# Sync Next DTC Agenda assignees and General Track field
 uv run python org-tools/dtc-pipeline/scripts/dtc_pipeline.py sync-agenda-assignees --project-id PVT_... --apply
 ```

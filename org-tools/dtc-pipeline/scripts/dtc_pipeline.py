@@ -36,17 +36,21 @@ from dtc_pipeline.config import (  # noqa: E402,F401
     DEFAULT_EXCLUDED_COMPANIES,
     DEFAULT_MAINTAINERS_PATH,
     DEFAULT_ORG,
+    DEFAULT_PROJECT_TITLE,
     DEFAULT_REPO,
     DOMAIN_LABELS,
     EXCLUDED_EMAIL_DOMAINS,
     EXCLUDED_ISSUE_LABELS,
     EXCLUDED_ORG_TEAMS,
     HYGIENE_BLOCKED_ISSUE_LABELS,
+    PROJECT_ADMIN_TEAMS,
     PROJECT_STATUS_OPTIONS,
     PROJECT_TRACK_OPTIONS,
     PROJECT_VERTICAL_DOMAINS,
+    PROJECT_WRITER_TEAMS,
     PROPOSAL_LABELS,
     PROPOSAL_PREFIX_RE,
+    SPOTLIGHT_POOL_FILTER,
     VERTICAL_DOMAIN_LABELS,
     infer_item_verticals,
     logger,
@@ -115,8 +119,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     provision_p.add_argument(
         "--title",
-        default="UCP DTC Review Pipeline",
-        help="Project title.",
+        default=DEFAULT_PROJECT_TITLE,
+        help="Project title (default: DTC Review Pipeline).",
     )
     provision_p.add_argument(
         "--public",
@@ -133,6 +137,16 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         help="Optional existing Project v2 node ID to delete before provisioning.",
     )
+    provision_p.add_argument(
+        "--admin-teams",
+        default="",
+        help="Optional comma-separated org team slugs to grant ADMIN access (e.g. devops-maintainers).",
+    )
+    provision_p.add_argument(
+        "--writer-teams",
+        default="",
+        help="Optional comma-separated org team slugs to grant WRITER access (e.g. shopping-tech-council).",
+    )
 
     views_p = subparsers.add_parser(
         "configure-views",
@@ -143,10 +157,25 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="GitHub Project v2 GraphQL node ID (or comma-separated IDs).",
     )
+    views_p.add_argument(
+        "--org",
+        default=DEFAULT_ORG,
+        help="GitHub organization when syncing team collaborators (default: Universal-Commerce-Protocol).",
+    )
+    views_p.add_argument(
+        "--admin-teams",
+        default="",
+        help="Optional comma-separated org team slugs to grant ADMIN access.",
+    )
+    views_p.add_argument(
+        "--writer-teams",
+        default="",
+        help="Optional comma-separated org team slugs to grant WRITER access.",
+    )
 
     assignees_p = subparsers.add_parser(
         "sync-agenda-assignees",
-        help="Auto-assign the TC member who dragged an item into Next DTC Agenda (`statusValue.creator`).",
+        help="Auto-assign TC movers on Next DTC Agenda and stamp General Track on gov:tc-meeting items.",
     )
     assignees_p.add_argument(
         "--project-id",
@@ -211,11 +240,15 @@ def main(argv: list[str] | None = None) -> int:
         if args.replace_project_id:
             manager.delete_project(args.replace_project_id)
             logger.info("Deleted old Project (%s).", args.replace_project_id)
+        admin_teams = [t.strip() for t in args.admin_teams.split(",") if t.strip()]
+        writer_teams = [t.strip() for t in args.writer_teams.split(",") if t.strip()]
         project = manager.create_dtc_project(
             owner_login=args.owner,
             title=args.title,
             public=args.public,
             template_project_id=args.template_project_id or None,
+            admin_teams=admin_teams,
+            writer_teams=writer_teams,
         )
         logger.info(
             "Created Project #%s: %s (%s)",
@@ -227,6 +260,8 @@ def main(argv: list[str] | None = None) -> int:
 
     project_ids = [pid.strip() for pid in args.project_id.split(",") if pid.strip()]
     if args.command == "configure-views":
+        admin_teams = [t.strip() for t in args.admin_teams.split(",") if t.strip()]
+        writer_teams = [t.strip() for t in args.writer_teams.split(",") if t.strip()]
         for pid in project_ids:
             for v in manager.configure_project_views(pid):
                 logger.info(
@@ -237,6 +272,20 @@ def main(argv: list[str] | None = None) -> int:
                     v.get("layout"),
                     v.get("filter"),
                 )
+            if admin_teams or writer_teams:
+                for collab in manager.configure_project_collaborators(
+                    pid,
+                    org=args.org,
+                    admin_teams=admin_teams,
+                    writer_teams=writer_teams,
+                ):
+                    logger.info(
+                        "[%s] Granted %s access to @%s/%s",
+                        pid,
+                        collab["role"],
+                        args.org,
+                        collab["slug"],
+                    )
         return 0
 
     if args.command == "sync-agenda-assignees":
@@ -247,6 +296,16 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         for pid in project_ids:
             res = manager.sync_agenda_assignees(pid, apply=args.apply)
+            for item in res.get("synced_tracks", []):
+                mode = "Stamped" if args.apply else "[DRY-RUN] Would stamp"
+                logger.info(
+                    "[%s] %s Track='%s' on #%s (%s)",
+                    pid,
+                    mode,
+                    item["track"],
+                    item["number"],
+                    item["title"],
+                )
             for item in res["assigned"]:
                 mode = "Assigned" if args.apply else "[DRY-RUN] Would assign"
                 logger.info(

@@ -25,7 +25,17 @@ logger = logging.getLogger("dtc_pipeline")
 
 DEFAULT_ORG = "Universal-Commerce-Protocol"
 DEFAULT_REPO = "ucp"
+DEFAULT_PROJECT_TITLE = "DTC Review Pipeline"
 DEFAULT_MAINTAINERS_PATH = str(Path(__file__).resolve().parents[4] / "MAINTAINERS.md")
+
+SPOTLIGHT_POOL_FILTER = 'track:"Community Spotlight"'
+PROJECT_ADMIN_TEAMS = ("devops-maintainers",)
+PROJECT_WRITER_TEAMS = (
+    "shopping-tech-council",
+    "payments-tech-council",
+    "food-tech-council",
+    "lodging-tech-council",
+)
 
 DOMAIN_LABELS = frozenset(
     {

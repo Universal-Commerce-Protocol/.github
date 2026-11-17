@@ -302,6 +302,8 @@ class TestDtcPipeline(unittest.TestCase):
         )
 
     def test_configure_project_views_five_views_single_board_per_vertical(self) -> None:
+        self.assertEqual(dp.DEFAULT_PROJECT_TITLE, "DTC Review Pipeline")
+        self.assertEqual(dp.SPOTLIGHT_POOL_FILTER, 'track:"Community Spotlight"')
         calls: list[tuple[str, dict | None]] = []
 
         class StubManager(dp.GitHubProjectV2Manager):
@@ -325,16 +327,16 @@ class TestDtcPipeline(unittest.TestCase):
                                     {
                                         "id": "v1",
                                         "number": 1,
-                                        "name": "Shopping TC",
-                                        "layout": "BOARD_LAYOUT",
-                                        "filter": "label:area:shopping,area:common",
+                                        "name": "View 1",
+                                        "layout": "TABLE_LAYOUT",
+                                        "filter": "",
                                     },
                                     {
                                         "id": "v2",
                                         "number": 2,
                                         "name": "Payments TC",
                                         "layout": "BOARD_LAYOUT",
-                                        "filter": "label:area:payments",
+                                        "filter": "stale:filter",
                                     },
                                     {
                                         "id": "v3",
@@ -386,29 +388,124 @@ class TestDtcPipeline(unittest.TestCase):
         configured = mgr.configure_project_views("PVT_test")
         self.assertEqual(len(configured), 5)
 
+        create_calls = [q for q, _ in calls if "createProjectV2View" in q]
+        self.assertEqual(len(create_calls), 0)
+
         update_vars = [
             v for q, v in calls if "updateProjectV2View" in q and v is not None
         ]
         self.assertEqual(len(update_vars), 5)
+        by_name = {v["name"]: v for v in update_vars}
+        self.assertEqual(by_name["Shopping TC"]["viewId"], "v1")
+        self.assertEqual(
+            by_name["Shopping TC"]["filter"], "label:area:shopping,area:common"
+        )
+        self.assertEqual(by_name["Payments TC"]["filter"], "label:area:payments")
+        self.assertEqual(
+            by_name["Community Spotlight Pool"]["filter"],
+            'track:"Community Spotlight"',
+        )
         for v in update_vars:
             self.assertIn("f_ms", v["visibleFieldIds"])
             self.assertNotIn("f_labels", v["visibleFieldIds"])
 
+    def test_configure_project_collaborators_links_admin_and_writer_teams(self) -> None:
+        calls: list[tuple[str, dict]] = []
+
+        class StubManager(dp.GitHubProjectV2Manager):
+            def graphql(self, query: str, variables: dict | None = None) -> dict:
+                assert variables is not None
+                if "organization(login: $org)" in query:
+                    return {
+                        "organization": {
+                            "teams": {
+                                "nodes": [
+                                    {"id": "T_devops", "slug": "devops-maintainers"},
+                                    {
+                                        "id": "T_shopping",
+                                        "slug": "shopping-tech-council",
+                                    },
+                                ]
+                            }
+                        }
+                    }
+                if "updateProjectV2Collaborators" in query:
+                    calls.append(("collaborators", variables))
+                    return {
+                        "updateProjectV2Collaborators": {
+                            "collaborators": {"totalCount": 2}
+                        }
+                    }
+                if "linkProjectV2ToTeam" in query:
+                    calls.append(("link_team", variables))
+                    return {
+                        "linkProjectV2ToTeam": {"team": {"id": variables["teamId"]}}
+                    }
+                return {}
+
+        mgr = StubManager(token="fake")
+        res = mgr.configure_project_collaborators(
+            "PVT_prod",
+            org="Universal-Commerce-Protocol",
+            admin_teams=["devops-maintainers"],
+            writer_teams=["shopping-tech-council"],
+        )
+        self.assertEqual(
+            res,
+            [
+                {"slug": "devops-maintainers", "team_id": "T_devops", "role": "ADMIN"},
+                {
+                    "slug": "shopping-tech-council",
+                    "team_id": "T_shopping",
+                    "role": "WRITER",
+                },
+            ],
+        )
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(
+            calls[0][1]["collaborators"],
+            [
+                {"teamId": "T_devops", "role": "ADMIN"},
+                {"teamId": "T_shopping", "role": "WRITER"},
+            ],
+        )
+
     def test_sync_agenda_assignees_auto_assigns_mover_to_next_dtc_agenda(self) -> None:
-        mutations: list[dict] = []
+        assignee_mutations: list[dict] = []
+        field_mutations: list[dict] = []
 
         class StubManager(dp.GitHubProjectV2Manager):
             def graphql(self, query: str, variables: dict | None = None) -> dict:
                 if "addAssigneesToAssignable" in query:
                     assert variables is not None
-                    mutations.append(variables)
+                    assignee_mutations.append(variables)
                     return {
                         "addAssigneesToAssignable": {
                             "assignable": {"__typename": "PullRequest"}
                         }
                     }
+                if "updateProjectV2ItemFieldValue" in query:
+                    assert variables is not None
+                    field_mutations.append(variables)
+                    return {
+                        "updateProjectV2ItemFieldValue": {
+                            "projectV2Item": {"id": variables["itemId"]}
+                        }
+                    }
                 return {
                     "node": {
+                        "fields": {
+                            "nodes": [
+                                {
+                                    "id": "F_track",
+                                    "name": "Track",
+                                    "options": [
+                                        {"id": "OPT_gt", "name": "General Track"},
+                                        {"id": "OPT_cs", "name": "Community Spotlight"},
+                                    ],
+                                }
+                            ]
+                        },
                         "items": {
                             "pageInfo": {"hasNextPage": False, "endCursor": None},
                             "nodes": [
@@ -416,18 +513,45 @@ class TestDtcPipeline(unittest.TestCase):
                                     "id": "item_1",
                                     "content": {
                                         "__typename": "PullRequest",
-                                        "id": "PR_node_773",
-                                        "number": 773,
-                                        "title": "Offer extension",
+                                        "id": "PR_node_1052",
+                                        "number": 1052,
+                                        "title": "Cart conversion inputs",
+                                        "state": "OPEN",
+                                        "labels": {
+                                            "nodes": [{"name": "gov:tc-meeting"}]
+                                        },
                                         "assignees": {"nodes": []},
+                                        "timelineItems": {
+                                            "nodes": [
+                                                {
+                                                    "status": "Triage / Unscheduled",
+                                                    "wasAutomated": True,
+                                                    "project": {"id": "PVT_test"},
+                                                    "actor": {
+                                                        "__typename": "Bot",
+                                                        "login": "github-project-automation",
+                                                    },
+                                                },
+                                                {
+                                                    "status": "Next DTC Agenda",
+                                                    "wasAutomated": False,
+                                                    "project": {"id": "PVT_test"},
+                                                    "actor": {
+                                                        "__typename": "User",
+                                                        "id": "U_damaz91",
+                                                        "login": "damaz91",
+                                                    },
+                                                },
+                                            ]
+                                        },
                                     },
+                                    "trackValue": None,
                                     "statusValue": {
                                         "name": "Next DTC Agenda",
-                                        "updatedAt": "2026-10-29T10:00:00Z",
+                                        "updatedAt": "2026-11-10T19:41:01Z",
                                         "creator": {
-                                            "__typename": "User",
-                                            "id": "U_damaz91",
-                                            "login": "damaz91",
+                                            "__typename": "Bot",
+                                            "login": "github-project-automation",
                                         },
                                     },
                                 },
@@ -438,8 +562,11 @@ class TestDtcPipeline(unittest.TestCase):
                                         "id": "I_node_738",
                                         "number": 738,
                                         "title": "Already assigned",
+                                        "state": "OPEN",
+                                        "labels": {"nodes": []},
                                         "assignees": {"nodes": [{"login": "gsmith85"}]},
                                     },
+                                    "trackValue": {"name": "General Track"},
                                     "statusValue": {
                                         "name": "Next DTC Agenda",
                                         "updatedAt": "2026-10-29T10:05:00Z",
@@ -457,8 +584,11 @@ class TestDtcPipeline(unittest.TestCase):
                                         "id": "PR_node_691",
                                         "number": 691,
                                         "title": "In Triage",
+                                        "state": "OPEN",
+                                        "labels": {"nodes": []},
                                         "assignees": {"nodes": []},
                                     },
+                                    "trackValue": {"name": "Community Spotlight"},
                                     "statusValue": {
                                         "name": "Triage / Unscheduled",
                                         "updatedAt": "2026-10-29T10:00:00Z",
@@ -470,20 +600,33 @@ class TestDtcPipeline(unittest.TestCase):
                                     },
                                 },
                             ],
-                        }
+                        },
                     }
                 }
 
         mgr = StubManager(token="fake")
         res = mgr.sync_agenda_assignees("PVT_test", apply=True)
         self.assertEqual(len(res["assigned"]), 1)
-        self.assertEqual(res["assigned"][0]["number"], 773)
+        self.assertEqual(res["assigned"][0]["number"], 1052)
         self.assertEqual(res["assigned"][0]["assignee"], "damaz91")
         self.assertEqual(len(res["already_assigned"]), 1)
         self.assertEqual(res["already_assigned"][0]["number"], 738)
+        self.assertEqual(len(res["synced_tracks"]), 1)
+        self.assertEqual(res["synced_tracks"][0]["number"], 1052)
         self.assertEqual(
-            mutations,
-            [{"assignableId": "PR_node_773", "assigneeIds": ["U_damaz91"]}],
+            assignee_mutations,
+            [{"assignableId": "PR_node_1052", "assigneeIds": ["U_damaz91"]}],
+        )
+        self.assertEqual(
+            field_mutations,
+            [
+                {
+                    "projectId": "PVT_test",
+                    "itemId": "item_1",
+                    "fieldId": "F_track",
+                    "optId": "OPT_gt",
+                }
+            ],
         )
 
     def test_apply_spotlight_scan_syncs_project_without_applying_labels(self) -> None:
@@ -511,15 +654,33 @@ class TestDtcPipeline(unittest.TestCase):
                                         "name": "Track",
                                         "options": [
                                             {
+                                                "id": "OPT_gt",
+                                                "name": "General Track",
+                                            },
+                                            {
                                                 "id": "OPT_cs",
                                                 "name": "Community Spotlight",
-                                            }
+                                            },
                                         ],
                                     },
                                     {"id": "F_score", "name": "Priority Score"},
                                 ]
                             },
-                            "items": {"nodes": []},
+                            "items": {
+                                "pageInfo": {"hasNextPage": False, "endCursor": None},
+                                "nodes": [
+                                    {
+                                        "id": "PVTI_1052",
+                                        "content": {
+                                            "id": "PR_node_1052",
+                                            "number": 1052,
+                                        },
+                                        "statusVal": {"name": "Next DTC Agenda"},
+                                        "trackVal": {"name": "General Track"},
+                                        "scoreVal": {"number": 21},
+                                    }
+                                ],
+                            },
                         }
                     }
                 if "addProjectV2ItemById" in query:
@@ -533,7 +694,7 @@ class TestDtcPipeline(unittest.TestCase):
                     mutations.append(("update_field", variables))
                     return {
                         "updateProjectV2ItemFieldValue": {
-                            "projectV2Item": {"id": "PVTI_811"}
+                            "projectV2Item": {"id": variables["itemId"]}
                         }
                     }
                 return {}
@@ -548,6 +709,16 @@ class TestDtcPipeline(unittest.TestCase):
             labels={"gov:needs-tc-review", "area:shopping"},
             node_id="PR_node_811",
         )
+        tc_nominated_cand = dp.ContributionCandidate(
+            number=1052,
+            title="feat!: clarify cart-to-checkout conversion inputs",
+            url="https://github.com/Universal-Commerce-Protocol/ucp/pull/1052",
+            is_pr=True,
+            created_at=self.now,
+            author=dp.AuthorMeta(login="matthutchinson"),
+            labels={"gov:tc-meeting", "gov:needs-tc-review", "area:shopping"},
+            node_id="PR_node_1052",
+        )
         score = dp.PriorityScoreBreakdown(
             readiness=40,
             participant_points=10,
@@ -556,13 +727,26 @@ class TestDtcPipeline(unittest.TestCase):
             wait_boost=30,
             cooldown_penalty=0,
         )
+        tc_score = dp.PriorityScoreBreakdown(
+            readiness=40,
+            participant_points=5,
+            reaction_points=0,
+            wait_days=6,
+            wait_boost=6,
+            cooldown_penalty=30,
+        )
         scan_result = {
             "eligible": [
                 (
                     cand,
                     dp.GateEvaluation(True, True, True, True, ()),
                     score,
-                )
+                ),
+                (
+                    tc_nominated_cand,
+                    dp.GateEvaluation(True, True, True, True, ()),
+                    tc_score,
+                ),
             ]
         }
         mgr = StubManager(token="fake")
@@ -571,7 +755,7 @@ class TestDtcPipeline(unittest.TestCase):
             project_ids=["PVT_prod"],
             apply=True,
         )
-        self.assertEqual(len(applied["synced_projects"]), 1)
+        self.assertEqual(len(applied["synced_projects"]), 2)
         self.assertEqual(
             [m[0] for m in mutations],
             ["add_item", "update_field", "update_field", "update_field"],

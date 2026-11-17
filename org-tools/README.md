@@ -23,7 +23,7 @@ org-tools/
 - **[🛡️ Automated Governance Gate](governance/README.md)**: Enforces path-based repository ownership rules and PR approval thresholds.
 - **[📋 Requirements Extractor](requirements-extractor/README.md)**: Generates a machine-readable catalog of a specification's RFC 2119 requirements, and checks in CI that a committed catalog matches the specification.
 - **[🤖 Central PR Triage Tool](triage/README.md)**: Automatically applies the `status:needs-triage` label to eligible open, non-draft Pull Requests.
-- **[🗳️ DTC Review Pipeline & Community Spotlight Engine](dtc-pipeline/README.md)**: Provisions the unified 5-view `UCP DTC Review Pipeline` Project v2 board, auto-assigns TC members who drag items into `Next DTC Agenda`, and runs the 3-gate + 100-point Community Spotlight scan.
+- **[🗳️ DTC Review Pipeline & Community Spotlight Engine](dtc-pipeline/README.md)**: Provisions the unified 5-view `DTC Review Pipeline` Project v2 board, auto-assigns Technical Council members who move items into `Next DTC Agenda`, and runs the 3-gate + 100-point Community Spotlight scan.
 
 ---
 

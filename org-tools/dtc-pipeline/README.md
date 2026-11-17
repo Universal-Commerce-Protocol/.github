@@ -18,14 +18,14 @@ The pipeline manages a single public organization-level GitHub Project v2 board 
 
 ### `Status` Columns
 
-| Column                      | Color  | Purpose                                                                                                                  |
-| :-------------------------- | :----- | :----------------------------------------------------------------------------------------------------------------------- |
-| **`Triage / Unscheduled`**  | Gray   | Default intake state set by GitHub Projects' built-in _Item added to project_ workflow.                                  |
-| **`Next DTC Agenda`**       | Orange | Queued for the upcoming meeting (`⚠️ Confirm Framing Comment (or self-contained body) is in place before moving here.`). |
-| **`Approved`**              | Green  | Approved in the meeting; `gov:tc-meeting` removed and circle-back comment posted once `meeting-minutes` merges.          |
-| **`Follow-up / Revisions`** | Purple | Direction approved with revisions or follow-up requested.                                                                |
-| **`Redirected / Declined`** | Red    | Redirected to a Domain Working Group / self-hosted extension or declined.                                                |
-| **`Closed / Merged`**       | Gray   | Automatically set by GitHub Projects' built-in _Item closed_ and _Pull request merged_ workflows.                        |
+| Column                      | Color  | Purpose                                                                                                         |
+| :-------------------------- | :----- | :-------------------------------------------------------------------------------------------------------------- |
+| **`Triage / Unscheduled`**  | Gray   | Default intake state set by GitHub Projects' built-in _Item added to project_ workflow.                         |
+| **`Next DTC Agenda`**       | Orange | Queued for discussion at the upcoming meeting.                                                                  |
+| **`Approved`**              | Green  | Approved in the meeting; `gov:tc-meeting` removed and circle-back comment posted once `meeting-minutes` merges. |
+| **`Follow-up / Revisions`** | Purple | Direction approved with revisions or follow-up requested.                                                       |
+| **`Redirected / Declined`** | Red    | Redirected to a Domain Working Group / self-hosted extension or declined.                                       |
+| **`Closed / Merged`**       | Gray   | Automatically set by GitHub Projects' built-in _Item closed_ and _Pull request merged_ workflows.               |
 
 ### Built-in Workflows & Permissions
 

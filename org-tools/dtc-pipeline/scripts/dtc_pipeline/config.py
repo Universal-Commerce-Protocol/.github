@@ -159,7 +159,7 @@ PROJECT_STATUS_OPTIONS = (
     (
         "Next DTC Agenda",
         "ORANGE",
-        "⚠️ Confirm Framing Comment (or self-contained body) is in place before moving here.",
+        "",
     ),
     (
         "Approved",

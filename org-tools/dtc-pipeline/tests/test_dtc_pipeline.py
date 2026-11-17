@@ -231,7 +231,7 @@ class TestDtcPipeline(unittest.TestCase):
         )
         self.assertEqual(dp.PROJECT_STATUS_OPTIONS[1][0], "Next DTC Agenda")
         self.assertEqual(dp.PROJECT_STATUS_OPTIONS[1][1], "ORANGE")
-        self.assertIn("⚠️ Confirm Framing", dp.PROJECT_STATUS_OPTIONS[1][2])
+        self.assertEqual(dp.PROJECT_STATUS_OPTIONS[1][2], "")
 
         class StubManager(dp.GitHubProjectV2Manager):
             def graphql(self, query: str, variables: dict | None = None) -> dict:

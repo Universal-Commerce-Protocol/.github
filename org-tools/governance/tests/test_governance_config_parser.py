@@ -169,6 +169,39 @@ class TestGovernanceConfigParser(unittest.TestCase):
             parser._parse(["not", "a", "map"])
         self.assertIn("must be a YAML map", str(ctx.exception))
 
+    def test_parse_normative_escalation_flag(self):
+        """Test parsing of the optional per-rule 'normative_escalation' flag."""
+        parser = GovernanceConfigParser()
+        yaml_data = {
+            "team_hierarchy": {"devops": 1, "maintainers": 2},
+            "fallback": {"requires": [{"min_team": "maintainers", "min_approvals": 1}]},
+            "rules": [
+                {
+                    "name": "spec",
+                    "patterns": ["docs/specification/**"],
+                    "normative_escalation": True,
+                    "requires": [{"min_team": "maintainers", "min_approvals": 2}],
+                },
+                {
+                    "name": "docs",
+                    "patterns": ["docs/**"],
+                    "excludes": ["docs/specification/**"],
+                    "requires": [{"min_team": "devops", "min_approvals": 1}],
+                },
+            ],
+        }
+        config = parser._parse(yaml_data)
+        self.assertTrue(config.rules[0].normative_escalation)
+        self.assertFalse(config.rules[1].normative_escalation)
+        self.assertTrue(config.is_normative_escalation_file("docs/specification/a.md"))
+        self.assertFalse(config.is_normative_escalation_file("docs/guides/a.md"))
+        self.assertFalse(config.is_normative_escalation_file("README.md"))
+
+        yaml_data["rules"][0]["normative_escalation"] = "yes"
+        with self.assertRaises(ValueError) as ctx:
+            parser._parse(yaml_data)
+        self.assertIn("non-boolean 'normative_escalation'", str(ctx.exception))
+
     def test_min_approvals_validation(self):
         """Test validations for min_approvals values."""
         # 1. min_approvals missing/None
@@ -432,6 +465,47 @@ class TestGovernanceConfigValidator(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0].file_path, "unmatched_file.txt")
         self.assertIn("does not match any governance rule", errors[0].message)
+
+    def test_ucp_rules_agent_markdown_globs(self):
+        """Test that AGENT*.md files in ucp-rules.yml match infra_and_tooling instead of fallback."""
+        rules_path = Path(__file__).resolve().parent.parent / "rules" / "ucp-rules.yml"
+        config = GovernanceConfigParser().parse_file(str(rules_path))
+        reqs = config.get_applicable_requirements(
+            ["AGENTS.md", "AGENT_CONTRIBUTOR.md", "AGENT_IMPLEMENTER.md"]
+        )
+        for filename, file_reqs in reqs.items():
+            self.assertEqual(
+                len(file_reqs), 1, f"Unexpected requirements for {filename}"
+            )
+            self.assertEqual(file_reqs[0].min_team, Team("devops-maintainers", 1))
+            self.assertEqual(file_reqs[0].min_approvals, 2)
+
+    def test_conformance_rules_suite_directory_globs(self):
+        """Test that RFC #520 suite directories match infra_and_tooling, not fallback."""
+        rules_path = (
+            Path(__file__).resolve().parent.parent / "rules" / "conformance-rules.yml"
+        )
+        config = GovernanceConfigParser().parse_file(str(rules_path))
+        reqs = config.get_applicable_requirements(
+            [
+                "framework/base_test.py",
+                "framework/__init__.py",
+                "platforms/google.yaml",
+                "shopping/checkout_lifecycle_test.py",
+                "shopping/test_data/flower_shop/products.csv",
+                "common/webhook_test.py",
+                "core/discovery_test.py",
+                "tests/__init__.py",
+                "tests/remote_target_test.py",
+                "runner.py",
+            ]
+        )
+        for filename, file_reqs in reqs.items():
+            self.assertEqual(
+                len(file_reqs), 1, f"Unexpected requirements for {filename}"
+            )
+            self.assertEqual(file_reqs[0].min_team, Team("devops-maintainers", 1))
+            self.assertEqual(file_reqs[0].min_approvals, 2)
 
 
 if __name__ == "__main__":

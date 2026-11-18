@@ -93,6 +93,8 @@ class ValidationLogger:
                 )
                 lines.append(f"* **File:** `{f_status.file_path}`")
                 lines.append(f"  * **Status:** {status_icon}")
+                if f_status.escalation_reason:
+                    lines.append(f"  * **Escalation:** ⚠️ {f_status.escalation_reason}")
                 lines.append("  * **Requirements:**")
                 for status in f_status.requirement_statuses:
                     formatted_status = self._format_requirement_status(
@@ -123,14 +125,22 @@ class ValidationLogger:
     ) -> str:
         """Formats the status details of a single requirement with Markdown styling."""
         req = status.requirement
-        team_desc = (
-            f"team '{req.team.name}'"
-            if req.team
-            else f"team '{req.min_team.name}' or higher in the UCP governance hierarchy"
-        )
+        if req.team:
+            team_desc = f"team '{req.team.name}'"
+        elif req.min_team and req.min_team.name == "technical-council":
+            team_desc = "any Technical Council (Level 3) or higher in the UCP governance hierarchy"
+        else:
+            team_desc = (
+                f"team '{req.min_team.name}' or higher in the UCP governance hierarchy"
+            )
 
         # A) The requirement description
         req_line = f"{indent}* **{req.min_approvals} approval{'s' if req.min_approvals > 1 else ''}** from {team_desc}"
+        reason_line = (
+            f"\n{indent}  * **Reason:** ⚠️ {req.escalation_reason}"
+            if req.escalation_reason
+            else ""
+        )
 
         # B) Which requirements have been met
         met_str = "🟢 Yes" if status.is_satisfied else "🔴 No"
@@ -144,7 +154,7 @@ class ValidationLogger:
 
         # C) Which still need to be met (Pending if not satisfied, omitted if satisfied)
         if status.is_satisfied:
-            return f"{req_line}\n{met_line}"
+            return f"{req_line}{reason_line}\n{met_line}"
 
         missing = req.min_approvals - status.approved_count
         if missing <= 0:
@@ -164,4 +174,4 @@ class ValidationLogger:
                 f"reviewer{'s' if status.assigned_count != 1 else ''} assigned). {hint}"
             )
 
-        return f"{req_line}\n{met_line}\n{pending_line}"
+        return f"{req_line}{reason_line}\n{met_line}\n{pending_line}"

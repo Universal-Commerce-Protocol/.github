@@ -24,28 +24,28 @@ design of the protocol for Shopping Domain.
 <!-- cSpell:ignore Amit Handa Anurag Sinha Daniel Wyckoff Drew Olson -->
 <!-- cSpell:ignore Gil Greenberg Greg Smith Ilya Grigorik Imran Hoosain -->
 <!-- cSpell:ignore James Andersen Jing Li Jordan Williams Lee Richmond -->
-<!-- cSpell:ignore Maxime Najim Patrick Jordan Prasad Wangikar Scot DeDeo -->
-<!-- cSpell:ignore Twum Djin Uddhav Kambli -->
+<!-- cSpell:ignore Maxime Najim Reid Kairalla Scot DeDeo -->
+<!-- cSpell:ignore Twum Djin Uddhav Kambli Vaithee Baskaran -->
 
-| Name            | Company    |
-| :-------------- | :--------- |
-| Amit Handa\*    | Google     |
-| Anurag Sinha    | Google     |
-| Daniel Wyckoff  | Shopify    |
-| Drew Olson      | Google     |
-| Gil Greenberg   | Shopify    |
-| Greg Smith      | Google     |
-| Ilya Grigorik   | Shopify    |
-| Imran Hoosain   | Etsy       |
-| James Andersen  | Meta       |
-| Jing Li         | Google     |
-| Jordan Williams | Amazon     |
-| Lee Richmond    | Shopify    |
-| Maxime Najim    | Target     |
-| Patrick Jordan  | Microsoft  |
-| Prasad Wangikar | Stripe     |
-| Scot DeDeo      | Salesforce |
-| Uddhav Kambli   | Wayfair    |
+| Name             | Company    |
+| :--------------- | :--------- |
+| Amit Handa\*     | Google     |
+| Anurag Sinha     | Google     |
+| Daniel Wyckoff   | Shopify    |
+| Drew Olson       | Google     |
+| Gil Greenberg    | Shopify    |
+| Greg Smith       | Google     |
+| Ilya Grigorik    | Shopify    |
+| Imran Hoosain    | Etsy       |
+| James Andersen   | Meta       |
+| Jing Li          | Google     |
+| Jordan Williams  | Amazon     |
+| Lee Richmond     | Shopify    |
+| Maxime Najim     | Target     |
+| Reid Kairalla    | Stripe     |
+| Scot DeDeo       | Salesforce |
+| Uddhav Kambli    | Wayfair    |
+| Vaithee Baskaran | Microsoft  |
 
 _\* Standing Governing Council (GC) member participating per [GOVERNANCE.md](GOVERNANCE.md#governing-council-gc) rules._
 
@@ -118,9 +118,9 @@ The Payments Tech Council is responsible for the technical direction and overall
 design of the protocol for Payments Domain.
 
 <!-- cSpell:ignore Archana Malhotra Daniel Wyckoff Drew Olson Ed Siok -->
-<!-- cSpell:ignore Fabrice Cheng Harsh Mehta Ilya Grigorik Jose Mendez -->
-<!-- cSpell:ignore Nick Chen Prasad Wangikar Prateek Dudeja Steven Chen -->
-<!-- cSpell:ignore Vita Valeikaite -->
+<!-- cSpell:ignore Fabrice Cheng Ilya Grigorik Jose Mendez Nick Chen -->
+<!-- cSpell:ignore Prateek Dudeja Reid Kairalla Rose Wiegley Simon Farrow -->
+<!-- cSpell:ignore Steven Chen Vita Valeikaite -->
 
 | Name             | Company           |
 | :--------------- | :---------------- |
@@ -129,12 +129,12 @@ design of the protocol for Payments Domain.
 | Drew Olson       | Google            |
 | Ed Siok          | PayPal            |
 | Fabrice Cheng    | Coinbase          |
-| Harsh Mehta      | Global Payments   |
 | Ilya Grigorik\*  | Shopify           |
 | Jose Mendez      | Adyen NV          |
-| Prasad Wangikar  | Stripe            |
+| Reid Kairalla    | Stripe            |
 | Prateek Dudeja   | Google            |
 | Rose Wiegley     | Shopify           |
+| Simon Farrow     | Global Payments   |
 | Steven Chen      | Ant International |
 | Vita Valeikaite  | Shopify           |
 | Open             | to be elected     |
@@ -156,3 +156,19 @@ the protocol.
 | Twum Djin     | Stripe        |
 | Open          | to be elected |
 | Open          | to be elected |
+
+## Domain Working Groups
+
+Domain Working Groups (DWG) are responsible for focused design work in specific
+areas of the protocol. Each DWG is chartered by the Governing Council and
+sponsored by one or more Domain Tech Councils (DTC), which review and approve
+its artifacts per [GOVERNANCE.md](GOVERNANCE.md#domain-working-groups-dwg).
+
+<!-- cSpell:ignore James Andersen Vinod Kumar Greg Smith Alex Jansen -->
+
+- **Bulk Product Discovery** | Active | **Sponsoring DTC:** Shopping |
+  Standardize bulk product feeds so businesses can publish, and platforms
+  consume, full catalogs at scale | **Chairs:** James Andersen (Meta), Vinod
+  Kumar (Meta), Greg Smith (Google), Alex Jansen (Google) |
+  [Charter](https://github.com/Universal-Commerce-Protocol/ucp/issues/682) |
+  [Participants & minutes](https://github.com/Universal-Commerce-Protocol/meeting-minutes/tree/main/tc/shopping/dwg/bulk-product-discovery#participants)

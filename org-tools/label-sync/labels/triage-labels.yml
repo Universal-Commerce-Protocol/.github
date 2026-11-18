@@ -41,6 +41,10 @@
   color: "BF3989"
   description: Issues and pull requests related to the Shopping vertical
 
+- name: area:common
+  color: "006B75"
+  description: Issues and pull requests related to common protocol schemas and specifications
+
 - name: gov:needs-tc-review
   color: "D93F0B"
   description: Requires review and approval from the Technical Council

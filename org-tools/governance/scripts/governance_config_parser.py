@@ -31,6 +31,9 @@ class GovernanceRule:
     patterns: List[str]
     requires_all: List[RuleRequirement]
     excluded_patterns: List[str] = field(default_factory=list)
+    # Opt-in: escalate Markdown files matched by this rule to Level 3 when
+    # they add, remove, or modify normative RFC 2119 clauses.
+    normative_escalation: bool = False
 
     # Internal compiled pattern fields
     _compiled_patterns: List[re.Pattern] = field(init=False, repr=False)
@@ -103,6 +106,12 @@ class GovernanceConfig:
             requirements.extend(r.requires_all)
 
         return merge_requirements(requirements)
+
+    def is_normative_escalation_file(self, file_path: str) -> bool:
+        """Return True if any rule matching the file opts into normative clause escalation."""
+        return any(
+            rule.normative_escalation and rule.matches(file_path) for rule in self.rules
+        )
 
     def get_applicable_requirements(
         self, changed_files: List[str]
@@ -211,12 +220,19 @@ class GovernanceConfigParser:
         if isinstance(excludes, str):
             excludes = [excludes]
 
+        normative_escalation = rule_data.get("normative_escalation", False)
+        if not isinstance(normative_escalation, bool):
+            raise ValueError(
+                f"Rule '{name}' has a non-boolean 'normative_escalation' value."
+            )
+
         requires_all = self._parse_requirements(rule_data.get("requires", []), teams)
         return GovernanceRule(
             name=name,
             patterns=patterns,
             requires_all=requires_all,
             excluded_patterns=excludes,
+            normative_escalation=normative_escalation,
         )
 
     def _resolve_team(

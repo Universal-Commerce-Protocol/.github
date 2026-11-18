@@ -24,6 +24,7 @@ rules:
       - ".pre-commit-config.yaml"
       - ".prettierrc"
       - "pyproject.toml"
+      - "ucp-lock.json"
       - "uv.lock"
       - "generate_models.sh"
       - "README.md"

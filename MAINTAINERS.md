@@ -24,28 +24,28 @@ design of the protocol for Shopping Domain.
 <!-- cSpell:ignore Amit Handa Anurag Sinha Daniel Wyckoff Drew Olson -->
 <!-- cSpell:ignore Gil Greenberg Greg Smith Ilya Grigorik Imran Hoosain -->
 <!-- cSpell:ignore James Andersen Jing Li Jordan Williams Lee Richmond -->
-<!-- cSpell:ignore Maxime Najim Patrick Jordan Reid Kairalla Scot DeDeo -->
-<!-- cSpell:ignore Twum Djin Uddhav Kambli -->
+<!-- cSpell:ignore Maxime Najim Reid Kairalla Scot DeDeo -->
+<!-- cSpell:ignore Twum Djin Uddhav Kambli Vaithee Baskaran -->
 
-| Name            | Company    |
-| :-------------- | :--------- |
-| Amit Handa\*    | Google     |
-| Anurag Sinha    | Google     |
-| Daniel Wyckoff  | Shopify    |
-| Drew Olson      | Google     |
-| Gil Greenberg   | Shopify    |
-| Greg Smith      | Google     |
-| Ilya Grigorik   | Shopify    |
-| Imran Hoosain   | Etsy       |
-| James Andersen  | Meta       |
-| Jing Li         | Google     |
-| Jordan Williams | Amazon     |
-| Lee Richmond    | Shopify    |
-| Maxime Najim    | Target     |
-| Patrick Jordan  | Microsoft  |
-| Reid Kairalla   | Stripe     |
-| Scot DeDeo      | Salesforce |
-| Uddhav Kambli   | Wayfair    |
+| Name             | Company    |
+| :--------------- | :--------- |
+| Amit Handa\*     | Google     |
+| Anurag Sinha     | Google     |
+| Daniel Wyckoff   | Shopify    |
+| Drew Olson       | Google     |
+| Gil Greenberg    | Shopify    |
+| Greg Smith       | Google     |
+| Ilya Grigorik    | Shopify    |
+| Imran Hoosain    | Etsy       |
+| James Andersen   | Meta       |
+| Jing Li          | Google     |
+| Jordan Williams  | Amazon     |
+| Lee Richmond     | Shopify    |
+| Maxime Najim     | Target     |
+| Reid Kairalla    | Stripe     |
+| Scot DeDeo       | Salesforce |
+| Uddhav Kambli    | Wayfair    |
+| Vaithee Baskaran | Microsoft  |
 
 _\* Standing Governing Council (GC) member participating per [GOVERNANCE.md](GOVERNANCE.md#governing-council-gc) rules._
 

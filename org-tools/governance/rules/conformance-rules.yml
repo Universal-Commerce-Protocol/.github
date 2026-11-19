@@ -30,6 +30,7 @@ rules:
       - "framework/**"
       - "platforms/**"
       - "pyproject.toml"
+      - "requirements/**"
       - "shopping/**"
       - "shopping-agent-test.json"
       - "test_data/**"

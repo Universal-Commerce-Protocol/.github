@@ -29,6 +29,7 @@ _Please select one or more categories that apply to this change._
 - [ ] I have added tests that prove my fix is effective or that my feature works.
 - [ ] New and existing unit tests pass locally with my changes.
 - [ ] (For Core/Capability) I have included/updated the relevant JSON schemas.
+- [ ] (For Core/Capability) Any new capability, extension, or payment handler is vendor-neutral (`dev.ucp.*`) rather than organization-specific (which should be [self-hosted](https://ucp.dev/latest/specification/overview/#namespace-governance) under the organization's reverse-domain namespace).
 - [ ] (For Breaking Schema Changes / Deprecations) I have used the [`transition` annotation](https://github.com/Universal-Commerce-Protocol/ucp-schema#schema-transitions) rather than changing field visibility or removing a field directly.
 - [ ] I have regenerated Python Pydantic models by running generate_models.sh under python_sdk.
 

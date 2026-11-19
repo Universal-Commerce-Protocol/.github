@@ -2,6 +2,10 @@ name: Feature request
 description: Suggest an idea for this project
 title: "[Feat]: "
 body:
+  - type: markdown
+    attributes:
+      value: |
+        > **Note:** The `Universal-Commerce-Protocol/ucp` repository only hosts vendor-neutral, cross-organization specifications and schemas under the `dev.ucp.*` namespace. Vendor- or organization-specific capabilities, extensions, and payment handlers (`com.{vendor}.*`, `org.{org}.*`) are **self-hosted** on your organization's domain and do not require an issue or pull request in this repository. See [Namespace Governance](https://ucp.dev/latest/specification/overview/#namespace-governance) for details.
   - type: textarea
     id: problem
     attributes:

@@ -21,31 +21,31 @@
 The Shopping Tech Council is responsible for the technical direction and overall
 design of the protocol for Shopping Domain.
 
-<!-- cSpell:ignore Amit Handa Anurag Sinha Daniel Wyckoff Drew Olson -->
-<!-- cSpell:ignore Gil Greenberg Greg Smith Ilya Grigorik Imran Hoosain -->
-<!-- cSpell:ignore James Andersen Jing Li Jordan Williams Lee Richmond -->
-<!-- cSpell:ignore Maxime Najim Reid Kairalla Scot DeDeo -->
+<!-- cSpell:ignore Amit Handa Daniel Wyckoff Drew Olson Gil Greenberg -->
+<!-- cSpell:ignore Greg Smith Ilya Grigorik Imran Hoosain James Andersen -->
+<!-- cSpell:ignore Jing Li Jordan Williams Lee Richmond Maxime Najim -->
+<!-- cSpell:ignore Niranjan Manjunath Reid Kairalla Scot DeDeo -->
 <!-- cSpell:ignore Twum Djin Uddhav Kambli Vaithee Baskaran -->
 
-| Name             | Company    |
-| :--------------- | :--------- |
-| Amit Handa\*     | Google     |
-| Anurag Sinha     | Google     |
-| Daniel Wyckoff   | Shopify    |
-| Drew Olson       | Google     |
-| Gil Greenberg    | Shopify    |
-| Greg Smith       | Google     |
-| Ilya Grigorik    | Shopify    |
-| Imran Hoosain    | Etsy       |
-| James Andersen   | Meta       |
-| Jing Li          | Google     |
-| Jordan Williams  | Amazon     |
-| Lee Richmond     | Shopify    |
-| Maxime Najim     | Target     |
-| Reid Kairalla    | Stripe     |
-| Scot DeDeo       | Salesforce |
-| Uddhav Kambli    | Wayfair    |
-| Vaithee Baskaran | Microsoft  |
+| Name               | Company    |
+| :----------------- | :--------- |
+| Amit Handa\*       | Google     |
+| Daniel Wyckoff     | Shopify    |
+| Drew Olson         | Google     |
+| Gil Greenberg      | Shopify    |
+| Greg Smith         | Google     |
+| Ilya Grigorik      | Shopify    |
+| Imran Hoosain      | Etsy       |
+| James Andersen     | Meta       |
+| Jing Li            | Google     |
+| Jordan Williams    | Amazon     |
+| Lee Richmond       | Shopify    |
+| Maxime Najim       | Target     |
+| Niranjan Manjunath | Google     |
+| Reid Kairalla      | Stripe     |
+| Scot DeDeo         | Salesforce |
+| Uddhav Kambli      | Wayfair    |
+| Vaithee Baskaran   | Microsoft  |
 
 _\* Standing Governing Council (GC) member participating per [GOVERNANCE.md](GOVERNANCE.md#governing-council-gc) rules._
 

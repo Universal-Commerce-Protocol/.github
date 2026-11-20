@@ -36,7 +36,9 @@ The pipeline manages a single public organization-level GitHub Project v2 board 
   - _Auto-archive items_: enabled
 - **Team Access:** Organization base role `Read`; `@devops-maintainers` granted `Admin`; Domain Technical Council teams (`@shopping-tech-council`, `@payments-tech-council`, `@food-tech-council`, `@lodging-tech-council`) granted `Write`.
 - **Scheduled Sync (`.github/workflows/dtc-pipeline.yml`):**
-  - Every 15 minutes: `sync-agenda-assignees --apply` resolves the Technical Council member who moved each card into `Next DTC Agenda` via `ProjectV2ItemStatusChangedEvent` timeline history, assigns them to the Issue or Pull Request, and stamps `Track = General Track` on open `gov:tc-meeting` items.
+  - Every 15 minutes:
+    - `sync-milestoned --apply` adds any open Issue or Pull Request assigned to any release milestone in `ucp` (`is:open milestone:*`) that is not yet on or archived in the Project board, setting `Status = Triage / Unscheduled` and `Track = General Track` (since GitHub's built-in _Auto-add to project_ workflow does not support milestone filters).
+    - `sync-agenda-assignees --apply` resolves the Technical Council member who moved each card into `Next DTC Agenda` via `ProjectV2ItemStatusChangedEvent` timeline history, assigns them to the Issue or Pull Request, and stamps `Track = General Track` on open `gov:tc-meeting` items.
   - Daily at 06:00 UTC: `scan-spotlight --apply` refreshes Community Spotlight eligibility and syncs `Track = Community Spotlight` and `Priority Score` onto the Project board without applying repository labels on `ucp`.
 
 ## Community Spotlight Selection
@@ -67,4 +69,7 @@ uv run python org-tools/dtc-pipeline/scripts/dtc_pipeline.py configure-views --p
 
 # Sync Next DTC Agenda assignees and General Track field
 uv run python org-tools/dtc-pipeline/scripts/dtc_pipeline.py sync-agenda-assignees --project-id PVT_... --apply
+
+# Auto-add open milestoned Issues and Pull Requests onto the Project board
+uv run python org-tools/dtc-pipeline/scripts/dtc_pipeline.py sync-milestoned --org Universal-Commerce-Protocol --repo ucp --project-id PVT_... --apply
 ```

@@ -187,6 +187,31 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Apply assignee mutations via GraphQL (defaults to dry-run preview).",
     )
+
+    milestoned_p = subparsers.add_parser(
+        "sync-milestoned",
+        help="Auto-add open Issues and Pull Requests assigned to any milestone onto the Project v2 board.",
+    )
+    milestoned_p.add_argument(
+        "--org",
+        default=DEFAULT_ORG,
+        help="GitHub organization (default: Universal-Commerce-Protocol).",
+    )
+    milestoned_p.add_argument(
+        "--repo",
+        default=DEFAULT_REPO,
+        help="GitHub repository (default: ucp).",
+    )
+    milestoned_p.add_argument(
+        "--project-id",
+        default=os.getenv("DTC_PROJECT_ID", ""),
+        help="GitHub Project v2 GraphQL node ID (or comma-separated IDs; defaults to DTC_PROJECT_ID env var).",
+    )
+    milestoned_p.add_argument(
+        "--apply",
+        action="store_true",
+        help="Add missing open milestoned items to the Project v2 board (defaults to dry-run preview).",
+    )
     return parser
 
 
@@ -323,6 +348,50 @@ def main(argv: list[str] | None = None) -> int:
                     item["number"],
                     item["assignee"],
                 )
+        return 0
+
+    if args.command == "sync-milestoned":
+        if not project_ids:
+            logger.info(
+                "No project ID provided (--project-id or DTC_PROJECT_ID); skipping sync-milestoned."
+            )
+            return 0
+        for pid in project_ids:
+            res = manager.sync_milestoned_items(
+                pid,
+                org=args.org,
+                repo=args.repo,
+                apply=args.apply,
+            )
+            for item in res["added"]:
+                mode = "Added" if args.apply else "[DRY-RUN] Would add"
+                logger.info(
+                    "[%s] %s #%s (milestone='%s'): %s",
+                    pid,
+                    mode,
+                    item["number"],
+                    item["milestone"],
+                    item["title"],
+                )
+            for item in res.get("synced_tracks", []):
+                mode = "Stamped" if args.apply else "[DRY-RUN] Would stamp"
+                logger.info(
+                    "[%s] %s Track='%s' on #%s (%s)",
+                    pid,
+                    mode,
+                    item["track"],
+                    item["number"],
+                    item["title"],
+                )
+            logger.info(
+                "[%s] Milestoned sync summary (%s/%s): %d added, %d tracks stamped, %d already on board.",
+                pid,
+                args.org,
+                args.repo,
+                len(res["added"]),
+                len(res.get("synced_tracks", [])),
+                len(res["already_present"]),
+            )
         return 0
 
     return 0

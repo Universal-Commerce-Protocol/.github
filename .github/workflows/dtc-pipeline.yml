@@ -16,7 +16,7 @@ name: DTC Review Pipeline
 
 on:
   schedule:
-    # Sync Next DTC Agenda assignees and General Track field every 15 minutes
+    # Sync milestoned items, Next DTC Agenda assignees, and General Track field every 15 minutes
     - cron: "*/15 * * * *"
     # Refresh Community Spotlight scores and pool daily at 06:00 UTC
     - cron: "0 6 * * *"
@@ -26,11 +26,12 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Command to execute (sync-agenda-assignees or scan-spotlight)"
+        description: "Command to execute (sync-agenda-assignees, sync-milestoned, or scan-spotlight)"
         required: false
         type: choice
         options:
           - sync-agenda-assignees
+          - sync-milestoned
           - scan-spotlight
         default: "sync-agenda-assignees"
 
@@ -55,15 +56,23 @@ jobs:
           python-version: "3.12"
           enable-cache: "false"
 
+      - name: Sync milestoned items to Project
+        if: (github.event_name == 'schedule' && github.event.schedule == '*/15 * * * *') || github.event_name == 'repository_dispatch' || inputs.mode == 'sync-milestoned'
+        env:
+          ORG_TRIAGE_TOKEN: ${{ secrets.ORG_TRIAGE_TOKEN }}
+          DTC_PROJECT_ID: ${{ vars.DTC_PROJECT_ID }}
+          ORG_NAME: ${{ github.repository_owner }}
+        run: uv run --frozen python org-tools/dtc-pipeline/scripts/dtc_pipeline.py sync-milestoned --org "$ORG_NAME" --repo ucp --apply
+
       - name: Sync Next DTC Agenda assignees and General Track
-        if: inputs.mode != 'scan-spotlight' && github.event.schedule != '0 6 * * *'
+        if: (github.event_name == 'schedule' && github.event.schedule == '*/15 * * * *') || github.event_name == 'repository_dispatch' || inputs.mode == 'sync-agenda-assignees'
         env:
           ORG_TRIAGE_TOKEN: ${{ secrets.ORG_TRIAGE_TOKEN }}
           DTC_PROJECT_ID: ${{ vars.DTC_PROJECT_ID }}
         run: uv run --frozen python org-tools/dtc-pipeline/scripts/dtc_pipeline.py sync-agenda-assignees --apply
 
       - name: Run Community Spotlight scan
-        if: inputs.mode == 'scan-spotlight' || github.event.schedule == '0 6 * * *'
+        if: (github.event_name == 'schedule' && github.event.schedule == '0 6 * * *') || inputs.mode == 'scan-spotlight'
         env:
           ORG_TRIAGE_TOKEN: ${{ secrets.ORG_TRIAGE_TOKEN }}
           DTC_PROJECT_ID: ${{ vars.DTC_PROJECT_ID }}

@@ -789,6 +789,170 @@ class TestDtcPipeline(unittest.TestCase):
         self.assertFalse(cla_passed)
         self.assertTrue(ci_passed)
 
+    def test_sync_milestoned_items_adds_missing_and_skips_archived_or_existing(
+        self,
+    ) -> None:
+        mutations: list[tuple[str, dict]] = []
+
+        class StubManager(dp.GitHubProjectV2Manager):
+            def graphql(self, query: str, variables: dict | None = None) -> dict:
+                if "search(query: $query" in query:
+                    assert variables is not None
+                    self.test_search_query = variables["query"]
+                    return {
+                        "search": {
+                            "pageInfo": {"hasNextPage": False, "endCursor": None},
+                            "nodes": [
+                                {
+                                    "id": "PR_1104",
+                                    "number": 1104,
+                                    "title": "New milestoned PR",
+                                    "milestone": {"title": "2026-12-08"},
+                                },
+                                {
+                                    "id": "PR_979",
+                                    "number": 979,
+                                    "title": "Already on board as Spotlight",
+                                    "milestone": {"title": "2026-12-08"},
+                                },
+                                {
+                                    "id": "I_1002",
+                                    "number": 1002,
+                                    "title": "On board with missing Track",
+                                    "milestone": {"title": "2027-03-30"},
+                                },
+                                {
+                                    "id": "I_999",
+                                    "number": 999,
+                                    "title": "Archived card",
+                                    "milestone": {"title": "2026-12-08"},
+                                },
+                            ],
+                        }
+                    }
+                if "fields(first: 30)" in query:
+                    return {
+                        "node": {
+                            "fields": {
+                                "nodes": [
+                                    {
+                                        "id": "F_status",
+                                        "name": "Status",
+                                        "options": [
+                                            {
+                                                "id": "OPT_triage",
+                                                "name": "Triage / Unscheduled",
+                                            }
+                                        ],
+                                    },
+                                    {
+                                        "id": "F_track",
+                                        "name": "Track",
+                                        "options": [
+                                            {
+                                                "id": "OPT_gt",
+                                                "name": "General Track",
+                                            },
+                                            {
+                                                "id": "OPT_cs",
+                                                "name": "Community Spotlight",
+                                            },
+                                        ],
+                                    },
+                                ]
+                            },
+                            "items": {
+                                "pageInfo": {"hasNextPage": False, "endCursor": None},
+                                "nodes": [
+                                    {
+                                        "id": "PVTI_979",
+                                        "isArchived": False,
+                                        "content": {"id": "PR_979", "number": 979},
+                                        "statusVal": {"name": "Follow-up / Revisions"},
+                                        "trackVal": {"name": "Community Spotlight"},
+                                    },
+                                    {
+                                        "id": "PVTI_1002",
+                                        "isArchived": False,
+                                        "content": {"id": "I_1002", "number": 1002},
+                                        "statusVal": {"name": "Next DTC Agenda"},
+                                        "trackVal": None,
+                                    },
+                                    {
+                                        "id": "PVTI_999",
+                                        "isArchived": True,
+                                        "content": {"id": "I_999", "number": 999},
+                                        "statusVal": {"name": "Triage / Unscheduled"},
+                                        "trackVal": None,
+                                    },
+                                ],
+                            },
+                        }
+                    }
+                if "addProjectV2ItemById" in query:
+                    assert variables is not None
+                    mutations.append(("add_item", variables))
+                    return {"addProjectV2ItemById": {"item": {"id": "PVTI_1104"}}}
+                if "updateProjectV2ItemFieldValue" in query:
+                    assert variables is not None
+                    mutations.append(("update_field", variables))
+                    return {
+                        "updateProjectV2ItemFieldValue": {
+                            "projectV2Item": {"id": variables["itemId"]}
+                        }
+                    }
+                return {}
+
+        mgr = StubManager(token="fake")
+        res = mgr.sync_milestoned_items(
+            "PVT_prod",
+            org="Universal-Commerce-Protocol",
+            repo="ucp",
+            apply=True,
+        )
+        self.assertEqual(
+            mgr.test_search_query,
+            "repo:Universal-Commerce-Protocol/ucp is:open milestone:*",
+        )
+        self.assertEqual([i["number"] for i in res["added"]], [1104])
+        self.assertEqual([i["number"] for i in res["synced_tracks"]], [1002])
+        self.assertEqual(
+            [i["number"] for i in res["already_present"]], [979, 1002, 999]
+        )
+        self.assertEqual(
+            mutations,
+            [
+                ("add_item", {"projectId": "PVT_prod", "contentId": "PR_1104"}),
+                (
+                    "update_field",
+                    {
+                        "projectId": "PVT_prod",
+                        "itemId": "PVTI_1104",
+                        "fieldId": "F_status",
+                        "optId": "OPT_triage",
+                    },
+                ),
+                (
+                    "update_field",
+                    {
+                        "projectId": "PVT_prod",
+                        "itemId": "PVTI_1104",
+                        "fieldId": "F_track",
+                        "optId": "OPT_gt",
+                    },
+                ),
+                (
+                    "update_field",
+                    {
+                        "projectId": "PVT_prod",
+                        "itemId": "PVTI_1002",
+                        "fieldId": "F_track",
+                        "optId": "OPT_gt",
+                    },
+                ),
+            ],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

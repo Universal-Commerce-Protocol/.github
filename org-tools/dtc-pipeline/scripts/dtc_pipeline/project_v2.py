@@ -1059,3 +1059,244 @@ class GitHubProjectV2Manager:
             "already_assigned": already_assigned,
             "synced_tracks": synced_tracks,
         }
+
+    def sync_milestoned_items(
+        self,
+        project_id: str,
+        org: str = DEFAULT_ORG,
+        repo: str = DEFAULT_REPO,
+        apply: bool = False,
+    ) -> dict[str, list[dict]]:
+        """Adds open Issues and Pull Requests assigned to any milestone in `org/repo` onto `project_id`."""
+        milestoned_nodes: list[dict] = []
+        search_cursor: str | None = None
+        search_query = f"repo:{org}/{repo} is:open milestone:*"
+        while True:
+            search_data = self.graphql(
+                """
+                query($query: String!, $cursor: String) {
+                  search(query: $query, type: ISSUE, first: 100, after: $cursor) {
+                    pageInfo { hasNextPage endCursor }
+                    nodes {
+                      ... on Issue {
+                        id
+                        number
+                        title
+                        milestone { title }
+                      }
+                      ... on PullRequest {
+                        id
+                        number
+                        title
+                        milestone { title }
+                      }
+                    }
+                  }
+                }
+                """,
+                {"query": search_query, "cursor": search_cursor},
+            )
+            conn = search_data.get("search") or {}
+            for node in conn.get("nodes") or []:
+                if node and node.get("id") and node.get("number") is not None:
+                    milestoned_nodes.append(node)
+            page_info = conn.get("pageInfo") or {}
+            if not page_info.get("hasNextPage"):
+                break
+            search_cursor = page_info.get("endCursor")
+
+        fields: dict[str, str] = {}
+        options: dict[str, dict[str, str]] = {}
+        existing_by_id: dict[str, dict] = {}
+        existing_by_num: dict[int, dict] = {}
+        proj_cursor: str | None = None
+        while True:
+            proj_data = self.graphql(
+                """
+                query($projectId: ID!, $cursor: String) {
+                  node(id: $projectId) {
+                    ... on ProjectV2 {
+                      fields(first: 30) {
+                        nodes {
+                          ... on ProjectV2FieldCommon { id name }
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options { id name }
+                          }
+                        }
+                      }
+                      items(first: 100, after: $cursor) {
+                        pageInfo { hasNextPage endCursor }
+                        nodes {
+                          id
+                          isArchived
+                          content {
+                            ... on Issue { id number }
+                            ... on PullRequest { id number }
+                          }
+                          statusVal: fieldValueByName(name: "Status") {
+                            ... on ProjectV2ItemFieldSingleSelectValue { name }
+                          }
+                          trackVal: fieldValueByName(name: "Track") {
+                            ... on ProjectV2ItemFieldSingleSelectValue { name }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                """,
+                {"projectId": project_id, "cursor": proj_cursor},
+            )
+            pnode = proj_data.get("node") or {}
+            if not fields:
+                for f in (pnode.get("fields") or {}).get("nodes") or []:
+                    if not f or "name" not in f:
+                        continue
+                    fields[f["name"]] = f["id"]
+                    if "options" in f:
+                        options[f["name"]] = {o["name"]: o["id"] for o in f["options"]}
+            items_conn = pnode.get("items") or {}
+            for inode in items_conn.get("nodes") or []:
+                if not inode:
+                    continue
+                c = inode.get("content") or {}
+                if c.get("id"):
+                    existing_by_id[c["id"]] = inode
+                if c.get("number") is not None:
+                    existing_by_num[c["number"]] = inode
+            page_info = items_conn.get("pageInfo") or {}
+            if not page_info.get("hasNextPage"):
+                break
+            proj_cursor = page_info.get("endCursor")
+
+        added: list[dict] = []
+        synced_tracks: list[dict] = []
+        already_present: list[dict] = []
+        triage_opt_id = options.get("Status", {}).get("Triage / Unscheduled")
+        general_track_opt_id = options.get("Track", {}).get("General Track")
+
+        for node in milestoned_nodes:
+            content_id = node["id"]
+            number = node["number"]
+            title = node.get("title") or ""
+            ms_title = (node.get("milestone") or {}).get("title") or ""
+            existing = existing_by_id.get(content_id) or existing_by_num.get(number)
+            if existing:
+                already_present.append(
+                    {
+                        "number": number,
+                        "title": title,
+                        "milestone": ms_title,
+                        "archived": bool(existing.get("isArchived")),
+                    }
+                )
+                curr_track = (
+                    (existing.get("trackVal") or {}).get("name") or ""
+                ).strip()
+                if (
+                    not existing.get("isArchived")
+                    and not curr_track
+                    and "Track" in fields
+                    and general_track_opt_id
+                ):
+                    if apply:
+                        self.graphql(
+                            """
+                            mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optId: String!) {
+                              updateProjectV2ItemFieldValue(input: {
+                                projectId: $projectId,
+                                itemId: $itemId,
+                                fieldId: $fieldId,
+                                value: { singleSelectOptionId: $optId }
+                              }) {
+                                projectV2Item { id }
+                              }
+                            }
+                            """,
+                            {
+                                "projectId": project_id,
+                                "itemId": existing["id"],
+                                "fieldId": fields["Track"],
+                                "optId": general_track_opt_id,
+                            },
+                        )
+                    synced_tracks.append(
+                        {
+                            "number": number,
+                            "title": title,
+                            "track": "General Track",
+                            "applied": apply,
+                        }
+                    )
+                continue
+
+            if apply:
+                add_res = self.graphql(
+                    """
+                    mutation($projectId: ID!, $contentId: ID!) {
+                      addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
+                        item { id }
+                      }
+                    }
+                    """,
+                    {"projectId": project_id, "contentId": content_id},
+                )
+                item_id = add_res["addProjectV2ItemById"]["item"]["id"]
+                if "Status" in fields and triage_opt_id:
+                    self.graphql(
+                        """
+                        mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optId: String!) {
+                          updateProjectV2ItemFieldValue(input: {
+                            projectId: $projectId,
+                            itemId: $itemId,
+                            fieldId: $fieldId,
+                            value: { singleSelectOptionId: $optId }
+                          }) {
+                            projectV2Item { id }
+                          }
+                        }
+                        """,
+                        {
+                            "projectId": project_id,
+                            "itemId": item_id,
+                            "fieldId": fields["Status"],
+                            "optId": triage_opt_id,
+                        },
+                    )
+                if "Track" in fields and general_track_opt_id:
+                    self.graphql(
+                        """
+                        mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optId: String!) {
+                          updateProjectV2ItemFieldValue(input: {
+                            projectId: $projectId,
+                            itemId: $itemId,
+                            fieldId: $fieldId,
+                            value: { singleSelectOptionId: $optId }
+                          }) {
+                            projectV2Item { id }
+                          }
+                        }
+                        """,
+                        {
+                            "projectId": project_id,
+                            "itemId": item_id,
+                            "fieldId": fields["Track"],
+                            "optId": general_track_opt_id,
+                        },
+                    )
+            added.append(
+                {
+                    "number": number,
+                    "title": title,
+                    "milestone": ms_title,
+                    "applied": apply,
+                }
+            )
+
+        return {
+            "added": added,
+            "synced_tracks": synced_tracks,
+            "already_present": already_present,
+        }

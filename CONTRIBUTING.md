@@ -243,10 +243,12 @@ to resolve annotations for specific operations at runtime.
 2. Make updates to JSON files in `source/`
 3. Run `ucp-schema lint source/` to validate syntax and references
 
-If you change any JSON schemas, you may need to regenerate SDK client libraries.
-For example, to regenerate Python Pydantic models run
-`bash sdk/python/generate_models.sh`. Our CI system runs
-`scripts/ci_check_models.sh` to verify that models can be generated
+SDK client libraries are generated from these schemas in their own
+repositories. For example, to regenerate Python Pydantic models from your
+local UCP checkout, run `./generate_models.sh --spec-dir /path/to/ucp` in
+[`python-sdk`](https://github.com/Universal-Commerce-Protocol/python-sdk).
+In `ucp`, CI runs the "Validate IR compilation" step in
+`.github/workflows/docs.yml` to verify that types can be generated
 successfully from the schemas.
 
 ### Documentation Development

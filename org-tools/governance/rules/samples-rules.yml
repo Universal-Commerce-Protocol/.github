@@ -27,8 +27,10 @@ rules:
       - ".prettierrc"
       - "README.md"
       - "SECURITY.md"
-      - "a2a/**"
-      - "rest/**"
+      - "platform/**"
+      - "rest/python/**" # Transitional until conformance migrates to store/
+      - "store/**"
+      - "ucp-lock.json"
     requires:
       # Grants access to devops (L1), maintainers (L2), tech councils (L3),
       # and governance-council (L4)

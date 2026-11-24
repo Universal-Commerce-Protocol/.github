@@ -510,6 +510,45 @@ class TestGovernanceConfigValidator(unittest.TestCase):
             self.assertEqual(file_reqs[0].min_team, Team("devops-maintainers", 1))
             self.assertEqual(file_reqs[0].min_approvals, 2)
 
+    def test_samples_rules_scope_globs(self):
+        """Test samples-rules.yml matches store/, platform/, ucp-lock.json, and transitional rest/python/ while escalating retired paths."""
+        rules_path = (
+            Path(__file__).resolve().parent.parent / "rules" / "samples-rules.yml"
+        )
+        config = GovernanceConfigParser().parse_file(str(rules_path))
+
+        active_reqs = config.get_applicable_requirements(
+            [
+                "store/README.md",
+                "store/app/main.py",
+                "platform/README.md",
+                "platform/src/client.py",
+                "ucp-lock.json",
+                "rest/python/server/server.py",
+            ]
+        )
+        for filename, file_reqs in active_reqs.items():
+            self.assertEqual(
+                len(file_reqs), 1, f"Unexpected requirements for {filename}"
+            )
+            self.assertEqual(file_reqs[0].min_team, Team("devops-maintainers", 1))
+            self.assertEqual(file_reqs[0].min_approvals, 2)
+
+        retired_reqs = config.get_applicable_requirements(
+            [
+                "a2a/README.md",
+                "a2a/business_agent/main.py",
+                "rest/nodejs/src/api/checkout.ts",
+                "rest/go/main.go",
+            ]
+        )
+        for filename, file_reqs in retired_reqs.items():
+            self.assertEqual(
+                len(file_reqs), 1, f"Unexpected requirements for {filename}"
+            )
+            self.assertEqual(file_reqs[0].min_team, Team("governance-council", 4))
+            self.assertEqual(file_reqs[0].min_approvals, 2)
+
 
 if __name__ == "__main__":
     unittest.main()
